@@ -1,0 +1,20 @@
+{
+  "name": "@venore/plugin-zammad",
+  "version": "0.1.0",
+  "description": "Abertura de chamados no Zammad em passos guiados, com os campos de cada setor lidos do próprio Zammad (plugin do Venore Docks).",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./manifest": "./manifest.ts",
+    "./route-table": "./routes/route-table.ts",
+    "./contributions": "./contributions.ts",
+    "./package.json": "./package.json"
+  },
+  "peerDependencies": {
+    "next": ">=16",
+    "react": ">=19",
+    "sonner": ">=2",
+    "zod": ">=4"
+  }
+}
