@@ -25,7 +25,7 @@ async function readSiteManifest(request: Request): Promise<BaseManifest | null> 
 export const getAppManifest = asPluginApiHandler(async (request) => {
   if (!(await isPluginActive("zammad"))) return Response.json({ error: "O plugin de chamados está desativado." }, { status: 404 });
   const [base, brand, config] = await Promise.all([readSiteManifest(request), getBrandConfig(), readWizardConfig()]);
-  const manifest = buildAppManifest({ base, appName: config.appName, siteName: brand.siteName, iconVersion: iconVersion(brand.faviconUrl) });
+  const manifest = buildAppManifest({ base, appName: config.appName, siteName: brand.siteName, iconVersion: iconVersion(brand.pwaIconUrl ?? brand.faviconUrl) });
   return new Response(JSON.stringify(manifest), {
     headers: {
       "Content-Type": "application/manifest+json; charset=utf-8",

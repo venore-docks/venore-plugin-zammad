@@ -83,7 +83,8 @@ quando a versão nova chega no `main`. O repo precisa ser **público**, senão o
 - **Diretório** (`shared/directory.ts` + `team-rules.ts`): papéis (`roles?expand=true`) e a EQUIPE por busca
   `users/search?query=role_ids:N` (lista completa de usuários passa de 500 e leva ~10 s/página — não usar).
   Acesso a grupo = usuário ∪ papéis; "dono" do grupo = `full`/`change`. Cache de 5 min.
-- **Ícone/nome do app**: ícone = favicon do site renderizado por `next/og` em `/api/zammad/app/icon`
+- **Ícone/nome do app**: ícone = `brand.pwaIconUrl` (Identidade do site; senão o favicon) renderizado por
+  `next/og` em `/api/zammad/app/icon`
   (`shared/icon-source.ts`: formato pelos bytes; .ico → quadro PNG); nome = setting `zammad.wizard.appName`
   (admin), senão "Chamados · <site>". Ambos públicos (o navegador busca manifest/ícone sem cookies).
 - **PWA**: a página é servida por `/ext` (área `standalone`) e declara `generateMetadata` → `manifest`

@@ -45,9 +45,10 @@ Quem é agente, gestor ou admin vem dos **papéis do Zammad** (nada a configurar
 `full`/`change` ao grupo pode receber chamados dele. Chamado atribuído a outro agente não aparece para
 agente comum (quem quiser ver usa o Zammad).
 
-- **Nome e ícone:** o nome vem de **/admin/zammad → Nome do app (PWA)** (ex.: "Colabora FEM"); o ícone é o **favicon do
-  site** (Configurações → Marca), desenhado em PNG 192/512/180 por `/api/zammad/app/icon` (aceita PNG, JPEG, GIF,
-  SVG e .ico com quadro PNG; outro formato cai no ícone padrão do core).
+- **Nome e ícone:** o nome vem de **/admin/zammad → Nome do app (PWA)** (ex.: "Colabora FEM"); o ícone é o **"Ícone do app (PWA)"**
+  de Configurações → Identidade do site (sem ele, o **favicon**), desenhado em PNG 192/512/180 por
+  `/api/zammad/app/icon` (aceita PNG, JPEG, GIF, SVG e .ico com quadro PNG; outro formato cai no ícone padrão do
+  core). Imagem sem transparência preenche o ícone inteiro. Requer o core com `brand.pwaIconMediaId`.
 - **Instalar:** abrir `/ext/zammad/app` no celular e usar "Instalar" (Android/Chrome) ou "Compartilhar →
   Adicionar à Tela de Início" (iOS). A página aponta para o manifest próprio
   (`/api/zammad/app/manifest`), montado a partir do manifest do site (cores, ícones e idioma do tema) com

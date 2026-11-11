@@ -18,7 +18,7 @@ export async function appMetadata(): Promise<Metadata> {
     icons: {
       icon: brand.faviconUrl,
       shortcut: brand.faviconUrl,
-      apple: [{ url: iconUrl(180, { version: iconVersion(brand.faviconUrl) }), sizes: "180x180", type: "image/png" }],
+      apple: [{ url: iconUrl(180, { version: iconVersion(brand.pwaIconUrl ?? brand.faviconUrl) }), sizes: "180x180", type: "image/png" }],
     },
     appleWebApp: { capable: true, title: shortName, statusBarStyle: "default" },
     formatDetection: { telephone: false },

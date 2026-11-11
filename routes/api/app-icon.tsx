@@ -34,7 +34,8 @@ export const getAppIcon = asPluginApiHandler(async (request) => {
   const background = HEX.test(params.get("bg") ?? "") ? (params.get("bg") as string) : "#ffffff";
 
   const brand = await getBrandConfig();
-  const favicon = await readFavicon(new URL(brand.faviconUrl, request.url).toString());
+  // "Ícone do app (PWA)" da identidade do site (/admin/settings/brand); sem ele, o favicon.
+  const favicon = await readFavicon(new URL(brand.pwaIconUrl ?? brand.faviconUrl, request.url).toString());
   if (!favicon) {
     // Formato que não dá para desenhar (ex.: .ico antigo, WebP): cai nos ícones do core em vez de quebrar a instalação.
     const fallback = maskable ? "/icons/icon-maskable-512.png" : size >= 512 ? "/icons/icon-512.png" : "/icons/icon-192.png";
