@@ -42,6 +42,23 @@ async function loadStates(): Promise<OperationResult<ZammadTicketState[]>> {
   return result;
 }
 
+type ZammadRole = { id: number; name: string; permissions?: string[] };
+let rolesCache: { at: number; roles: ZammadRole[] } | null = null;
+
+// Encerrar/reabrir chamado é da EQUIPE: papel com `ticket.agent` ou `admin` no Zammad. Colaborador
+// comum (papel "Clientes") só conversa. Se a lista de papéis não carregar, nega (falha segura).
+export async function canManageTicketState(requester: Requester): Promise<boolean> {
+  if (!rolesCache || Date.now() - rolesCache.at > 10 * 60 * 1000) {
+    const result = await zammadRequest<ZammadRole[]>("roles?expand=true");
+    if (!result.success) return false;
+    rolesCache = { at: Date.now(), roles: Array.isArray(result.data) ? result.data : [] };
+  }
+  const mine = new Set(requester.zammadUser.role_ids);
+  return rolesCache.roles.some(
+    (role) => mine.has(role.id) && (role.permissions ?? []).some((permission) => permission === "ticket.agent" || permission === "admin"),
+  );
+}
+
 // Estados que a pessoa pode pedir: o Zammad só deixa cliente usar "new" e "closed".
 export async function resolveStateId(name: "new" | "closed"): Promise<OperationResult<number>> {
   const states = await loadStates();

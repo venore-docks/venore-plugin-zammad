@@ -101,7 +101,7 @@ export function ReplyBox({ ticketId, closed }: { ticketId: number; closed: boole
   return (
     <form id="responder" onSubmit={submit} className="scroll-mt-24 space-y-3 rounded-xl border border-t-4 border-t-chart-2 bg-card p-5" noValidate>
       <label htmlFor="reply-message" className="block font-medium text-foreground">
-        {closed ? "Precisa de mais alguma coisa? Escreva para reabrir" : "Responder à equipe"}
+        {closed ? "Precisa de mais alguma coisa? Escreva aqui" : "Responder à equipe"}
       </label>
       <Textarea
         id="reply-message"
@@ -162,7 +162,7 @@ export function ReplyBox({ ticketId, closed }: { ticketId: number; closed: boole
         </div>
         <Button type="submit" disabled={pending}>
           <Send className="size-4" />
-          {pending ? "Enviando…" : closed ? "Enviar e reabrir" : "Enviar mensagem"}
+          {pending ? "Enviando…" : "Enviar mensagem"}
         </Button>
       </div>
     </form>

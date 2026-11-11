@@ -45,7 +45,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ t
         <p className="text-sm text-muted-foreground">
           #{ticket.number} · {ticket.group} · aberto em {formatDateTime(ticket.createdAt)}
         </p>
-        <TicketStateButton ticketId={ticket.id} closed={ticket.closed} />
+        {ticket.canClose && <TicketStateButton ticketId={ticket.id} closed={ticket.closed} />}
       </header>
 
       {ticket.awaitingYou && (
@@ -63,7 +63,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ t
         <div className="flex items-start gap-3 rounded-xl border border-success-border bg-success-soft p-4 text-sm text-foreground">
           <CircleCheck className="mt-0.5 size-5 shrink-0 text-success" />
           <span>
-            <strong>Este chamado foi encerrado.</strong> Se ainda precisa de ajuda, escreva abaixo — ele será reaberto.
+            <strong>Este chamado foi encerrado.</strong> Se ainda precisa de ajuda, escreva abaixo — a equipe será avisada.
           </span>
         </div>
       )}
@@ -106,6 +106,19 @@ function Message({ message, first }: { message: TicketMessage; first: boolean })
           <p className="text-xs text-muted-foreground">{formatDateTime(message.createdAt)}</p>
         </div>
         {message.text && <p className="text-sm leading-relaxed break-words whitespace-pre-wrap text-foreground">{message.text}</p>}
+        {message.answers.length > 0 && (
+          <div className="space-y-3 rounded-lg border bg-background/70 p-4">
+            <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Respostas do formulário</p>
+            <dl className="grid gap-x-8 gap-y-3.5 sm:grid-cols-2">
+              {message.answers.map((answer) => (
+                <div key={answer.label} className="min-w-0 space-y-0.5">
+                  <dt className="text-xs leading-snug text-muted-foreground">{answer.label}</dt>
+                  <dd className="text-sm font-medium break-words whitespace-pre-wrap text-foreground">{answer.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )}
         {message.attachments.length > 0 && (
           <ul className="flex flex-wrap gap-2 pt-1">
             {message.attachments.map((file) =>

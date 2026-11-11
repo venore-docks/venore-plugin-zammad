@@ -15,8 +15,9 @@ o motor e a fila da equipe) e toda a experiência do solicitante acontece no por
 - **`/chamados`**: os chamados da pessoa, separados em "A equipe respondeu — sua vez", "Em andamento" e
   "Encerrados".
 - **`/chamados/:id`**: a conversa. Mensagens da equipe e da pessoa, anexos (imagens em miniatura),
-  responder (com anexos), **encerrar** (com confirmação) e **reabrir**. Responder num chamado encerrado
-  o reabre.
+  responder (com anexos) e, **só para agente/admin do Zammad** (papel com `ticket.agent` ou `admin`),
+  **encerrar** (com confirmação) e **reabrir**. Colaborador comum apenas conversa; o botão nem aparece
+  e o servidor também recusa.
 - **`/admin/zammad`**: estado da conexão, setores visíveis, agrupamento das perguntas em etapas,
   textos de ajuda e regras do Zammad que o portal não sabe aplicar.
 

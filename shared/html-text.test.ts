@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { articleToText, cleanSenderName, htmlToText } from "./html-text";
+import { articleToText, cleanSenderName, extractFormAnswers, htmlToText } from "./html-text";
 
 describe("htmlToText", () => {
   it("e-mail real da equipe: divs e br viram linhas", () => {
@@ -26,6 +26,29 @@ describe("htmlToText", () => {
   it("texto puro mantém quebras e não decodifica entidades", () => {
     expect(articleToText("a &amp; b\r\n\r\n\r\n\r\nc", "text/plain")).toBe("a &amp; b\n\nc");
     expect(articleToText("<b>a</b>", "text/html")).toBe("a");
+  });
+});
+
+describe("extractFormAnswers", () => {
+  const html =
+    "<p>Quero algo WOW!</p><hr><p><strong>Respostas do formulário</strong></p><ul>" +
+    "<li><strong>Prioridade inicial</strong>: Normal</li>" +
+    "<li><strong>Quem é o público alvo?</strong>: alunos, pais</li>" +
+    "<li><strong>Orientação (cores &amp; tamanho)?</strong>: Faz o que Jesus tocar</li></ul>" +
+    "<p><em>Aberto pelo Colaborador FEM.</em></p>";
+
+  it("separa o resumo do texto e devolve pergunta/resposta", () => {
+    const result = extractFormAnswers(html);
+    expect(result.answers).toEqual([
+      { label: "Prioridade inicial", value: "Normal" },
+      { label: "Quem é o público alvo?", value: "alunos, pais" },
+      { label: "Orientação (cores & tamanho)?", value: "Faz o que Jesus tocar" },
+    ]);
+    expect(htmlToText(result.html)).toBe("Quero algo WOW!");
+  });
+
+  it("mensagem sem resumo passa intacta", () => {
+    expect(extractFormAnswers("<p>Oi</p>")).toEqual({ html: "<p>Oi</p>", answers: [] });
   });
 });
 

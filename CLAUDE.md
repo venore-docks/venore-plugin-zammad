@@ -59,8 +59,12 @@ quando a versão nova chega no `main`. O repo precisa ser **público**, senão o
 - **Autor da mensagem** = `created_by_id` do artigo (não `sender`: um agente que abre o próprio
   chamado aparece como `Agent`). HTML dos artigos vira texto em `shared/html-text.ts` (nunca renderize
   o HTML do Zammad).
-- **Escrita NÃO testada contra o Zammad real** (responder, encerrar, reabrir): o cliente só pode usar
-  os estados `new` e `closed`; reabrir = `new`. Se algum falhar, ver o erro em `/chamados/:id`.
+- **Escrita NÃO testada contra o Zammad real** (responder, encerrar, reabrir). Encerrar/reabrir só
+  para quem tem `ticket.agent`/`admin` (`canManageTicketState` em `shared/own-ticket.ts`, lê
+  `GET /roles?expand=true`; vale no botão e no servidor). Estados via `new`/`closed` por nome.
+  Resposta em chamado encerrado tenta reabrir (best-effort).
+- **Resumo das respostas** no 1º artigo (`composeBody`) é extraído por `extractFormAnswers`
+  (`shared/html-text.ts`) e exibido como lista; mudar o formato do resumo exige mudar os dois.
 - **Cores**: só tokens do tema (`chart-1/2/6/7`, `success`, `warning`, `primary`) em
   `routes/public/palette.ts` e `shared.tsx`. Classes do Tailwind por extenso (nunca montadas por
   string). Ícone por nome do setor via `sectorIcon()` (função de renderização, não componente).

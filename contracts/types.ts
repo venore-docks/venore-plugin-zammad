@@ -74,6 +74,8 @@ export type TicketMessage = {
   authorName: string;
   text: string;
   createdAt: string;
+  // Resumo das respostas do formulário (só no 1º artigo de chamados abertos pelo portal).
+  answers: { label: string; value: string }[];
   attachments: TicketAttachmentInfo[];
 };
 
@@ -86,6 +88,8 @@ export type TicketDetail = {
   stateTone: TicketStateTone;
   closed: boolean;
   awaitingYou: boolean;
+  // Só agente/admin do Zammad encerra e reabre; colaborador comum só responde.
+  canClose: boolean;
   createdAt: string;
   updatedAt: string;
   messages: TicketMessage[];

@@ -1,7 +1,7 @@
 import type { TicketAttachmentInfo, TicketMessage } from "../../contracts/types";
 import type { ZammadArticle } from "../../contracts/zammad";
-import { articleToText, cleanSenderName } from "../../shared/html-text";
-import { loadOwnTicket, loadPublicArticles } from "../../shared/own-ticket";
+import { articleToText, cleanSenderName, extractFormAnswers } from "../../shared/html-text";
+import { canManageTicketState, loadOwnTicket, loadPublicArticles } from "../../shared/own-ticket";
 import type { Requester } from "../../shared/requester";
 import { describeState, isAwaitingYou } from "../../shared/ticket-state";
 import type { GetTicketInput, GetTicketResult } from "./types";
@@ -15,6 +15,8 @@ const SAFE_IMAGE = /^image\/(png|jpe?g|gif|webp|bmp)$/i;
 function toMessage(article: ZammadArticle, requester: Requester): TicketMessage {
   const mine = article.created_by_id === requester.zammadUser.id;
   const system = article.sender === "System";
+  const isHtml = (article.content_type ?? "").toLowerCase().includes("html");
+  const split = isHtml ? extractFormAnswers(article.body ?? "") : { html: article.body ?? "", answers: [] };
   const attachments: TicketAttachmentInfo[] = (article.attachments ?? []).map((file) => {
     const mime = String(file.preferences?.["Content-Type"] ?? file.preferences?.["Mime-Type"] ?? "");
     return {
@@ -29,7 +31,8 @@ function toMessage(article: ZammadArticle, requester: Requester): TicketMessage 
     id: article.id,
     role: system ? "system" : mine ? "me" : "team",
     authorName: mine ? "Você" : cleanSenderName(article.from) || (system ? "Sistema" : "Equipe"),
-    text: articleToText(article.body ?? "", article.content_type ?? "text/plain"),
+    text: articleToText(split.html, article.content_type ?? "text/plain"),
+    answers: split.answers,
     createdAt: article.created_at,
     attachments,
   };
@@ -55,6 +58,7 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
       stateTone: state.tone,
       closed: state.closed,
       awaitingYou: isAwaitingYou(ticket.data, state.closed),
+      canClose: await canManageTicketState(requester),
       createdAt: ticket.data.created_at,
       updatedAt: ticket.data.updated_at,
       messages,

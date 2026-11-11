@@ -1,5 +1,5 @@
 import { beginOperation, endOperation } from "@venore/plugin-sdk/observability";
-import { loadOwnTicket, resolveStateId } from "../../shared/own-ticket";
+import { canManageTicketState, loadOwnTicket, resolveStateId } from "../../shared/own-ticket";
 import type { Requester } from "../../shared/requester";
 import { failure } from "../../shared/results";
 import { describeState } from "../../shared/ticket-state";
@@ -14,6 +14,9 @@ export async function changeTicketState(requester: Requester, input: ChangeTicke
   };
   if (input.action !== "close" && input.action !== "reopen") return finish(failure("invalid_action", "Ação inválida."));
 
+  if (!(await canManageTicketState(requester))) {
+    return finish(failure("forbidden_state_change", "Só a equipe do setor pode encerrar ou reabrir chamados. Para continuar o assunto, responda na conversa."));
+  }
   const ticket = await loadOwnTicket(requester, input.ticketId);
   if (!ticket.success) return finish(ticket);
   const closed = describeState(ticket.data.state ?? "").closed;

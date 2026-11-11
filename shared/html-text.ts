@@ -69,6 +69,27 @@ export function articleToText(body: string, contentType: string): string {
   return contentType.toLowerCase().includes("html") ? htmlToText(body) : normalizeText(body.replace(/\r\n?/g, "\n"));
 }
 
+export type FormAnswer = { label: string; value: string };
+
+function plain(fragment: string): string {
+  return decodeEntities(fragment.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]*>/g, "")).trim();
+}
+
+// O 1º artigo de um chamado aberto pelo portal termina com um resumo das respostas do formulário
+// (`composeBody` em answers.ts): <hr><p><strong>Respostas do formulário</strong></p><ul><li><strong>
+// pergunta</strong>: resposta</li>…</ul><p><em>Aberto pelo …</em></p>. Aqui esse bloco é separado do
+// texto para a tela mostrar como lista (pergunta/resposta) em vez de texto corrido.
+export function extractFormAnswers(html: string): { html: string; answers: FormAnswer[] } {
+  const block = /<hr\s*\/?>\s*<p>\s*<strong>\s*Respostas do formulário\s*<\/strong>\s*<\/p>\s*<ul>([\s\S]*?)<\/ul>(\s*<p>\s*<em>[\s\S]*?<\/em>\s*<\/p>)?/i.exec(html);
+  if (!block) return { html, answers: [] };
+  const answers: FormAnswer[] = [];
+  for (const item of block[1].matchAll(/<li>\s*<strong>([\s\S]*?)<\/strong>\s*:\s*([\s\S]*?)<\/li>/gi)) {
+    const label = plain(item[1]);
+    if (label) answers.push({ label, value: plain(item[2]) || "—" });
+  }
+  return { html: html.replace(block[0], ""), answers };
+}
+
 // Remetente de e-mail do Zammad: "Felipe Cardoso via Zammad Helpdesk Support <suporte@…>" → "Felipe Cardoso".
 export function cleanSenderName(from: string | null | undefined): string {
   if (!from || from.trim() === "-") return "";
