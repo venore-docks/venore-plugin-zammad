@@ -1,5 +1,6 @@
 import type { TicketAttachmentInfo, TicketMessage } from "../../contracts/types";
 import type { ZammadArticle } from "../../contracts/zammad";
+import { resolveAvatars } from "../../shared/avatars";
 import { articleToText, cleanSenderName, extractFormAnswers } from "../../shared/html-text";
 import { canManageTicketState, loadOwnTicket, loadPublicArticles } from "../../shared/own-ticket";
 import type { Requester } from "../../shared/requester";
@@ -12,7 +13,7 @@ export function attachmentHref(ticketId: number, articleId: number, attachmentId
 
 const SAFE_IMAGE = /^image\/(png|jpe?g|gif|webp|bmp)$/i;
 
-function toMessage(article: ZammadArticle, requester: Requester): TicketMessage {
+function toMessage(article: ZammadArticle, requester: Requester, avatars: Map<number, string>): TicketMessage {
   const mine = article.created_by_id === requester.zammadUser.id;
   const system = article.sender === "System";
   const isHtml = (article.content_type ?? "").toLowerCase().includes("html");
@@ -31,6 +32,7 @@ function toMessage(article: ZammadArticle, requester: Requester): TicketMessage 
     id: article.id,
     role: system ? "system" : mine ? "me" : "team",
     authorName: mine ? "Você" : cleanSenderName(article.from) || (system ? "Sistema" : "Equipe"),
+    avatarUrl: system ? null : (avatars.get(article.created_by_id) ?? null),
     text: articleToText(split.html, article.content_type ?? "text/plain"),
     answers: split.answers,
     createdAt: article.created_at,
@@ -46,7 +48,11 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
 
   const state = describeState(ticket.data.state ?? "");
   // Mensagem de sistema (ex.: "e-mail não enviado") é ruído interno; fica de fora.
-  const messages = articles.data.map((article) => toMessage(article, requester)).filter((message) => message.role !== "system");
+  const avatars = await resolveAvatars(
+    requester,
+    articles.data.filter((article) => article.sender !== "System").map((article) => article.created_by_id),
+  ).catch(() => new Map<number, string>());
+  const messages = articles.data.map((article) => toMessage(article, requester, avatars)).filter((message) => message.role !== "system");
   return {
     success: true,
     data: {

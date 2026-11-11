@@ -86,11 +86,16 @@ function Message({ message, first }: { message: TicketMessage; first: boolean })
       <span
         aria-hidden
         className={cn(
-          "mt-1 grid size-9 shrink-0 place-items-center rounded-full text-xs font-semibold text-foreground",
-          mine ? "bg-primary/20" : "bg-chart-2/20",
+          "mt-1 grid size-9 shrink-0 place-items-center overflow-hidden rounded-full text-xs font-semibold text-foreground ring-2",
+          mine ? "bg-primary/20 ring-primary/30" : "bg-chart-2/20 ring-chart-2/30",
         )}
       >
-        {initials(message.authorName)}
+        {message.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={message.avatarUrl} alt="" loading="lazy" referrerPolicy="no-referrer" className="size-full object-cover" />
+        ) : (
+          initials(message.authorName)
+        )}
       </span>
       <div
         className={cn(

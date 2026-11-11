@@ -9,7 +9,14 @@ import { findZammadUserByEmail } from "./schema";
 
 // Quem está abrindo/consultando chamados: usuário logado no portal, com `zammad.tickets`, e a conta
 // dele no Zammad (mesmo e-mail).
-export type Requester = { actorId: string; email: string; name: string | null; zammadUser: ZammadUser };
+export type Requester = {
+  actorId: string;
+  email: string;
+  name: string | null;
+  avatarMediaId: string | null;
+  image: string | null;
+  zammadUser: ZammadUser;
+};
 
 export async function resolveRequester(): Promise<OperationResult<Requester>> {
   const authz = await authorizeActor(ZAMMAD_PERMISSIONS.tickets);
@@ -30,5 +37,15 @@ export async function resolveRequester(): Promise<OperationResult<Requester>> {
   }
   if (!found.data.active) return failure("zammad_user_inactive", "Sua conta no Zammad está desativada. Procure o suporte.");
 
-  return { success: true, data: { actorId: authz.actorId, email, name: current.data.name, zammadUser: found.data } };
+  return {
+    success: true,
+    data: {
+      actorId: authz.actorId,
+      email,
+      name: current.data.name,
+      avatarMediaId: current.data.avatarMediaId,
+      image: current.data.image,
+      zammadUser: found.data,
+    },
+  };
 }

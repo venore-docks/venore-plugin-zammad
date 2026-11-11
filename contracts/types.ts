@@ -72,6 +72,8 @@ export type TicketMessage = {
   id: number;
   role: MessageRole;
   authorName: string;
+  // Avatar da conta do portal (null = só as iniciais).
+  avatarUrl: string | null;
   text: string;
   createdAt: string;
   // Resumo das respostas do formulário (só no 1º artigo de chamados abertos pelo portal).
