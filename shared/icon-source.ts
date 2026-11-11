@@ -40,14 +40,42 @@ export function extractPngFromIco(bytes: Uint8Array): Uint8Array | null {
 
 const MIME: Record<Exclude<ImageKind, "ico">, string> = { png: "image/png", jpeg: "image/jpeg", gif: "image/gif", svg: "image/svg+xml" };
 
-// Imagem pronta para o gerador de ícones (data URI), ou null se o formato não for suportado.
-export function toIconDataUri(bytes: Uint8Array): string | null {
+// PNG sem transparência (cor RGB ou cinza, sem chunk tRNS): a imagem já é um quadrado cheio e deve ocupar o
+// ícone INTEIRO. Com transparência (RGBA, paleta com tRNS), SVG e GIF, o desenho é centralizado sobre a cor
+// de fundo. JPEG nunca tem transparência.
+export function isOpaquePng(bytes: Uint8Array): boolean {
+  if (!startsWith(bytes, PNG_SIGNATURE) || bytes.length < 33) return false;
+  const colorType = bytes[25];
+  if (colorType === 4 || colorType === 6) return false;
+  if (colorType === 3) {
+    // Paleta: só é opaca se não houver tRNS antes dos dados.
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    let offset = 8;
+    while (offset + 8 <= bytes.length) {
+      const length = view.getUint32(offset);
+      const type = String.fromCharCode(bytes[offset + 4], bytes[offset + 5], bytes[offset + 6], bytes[offset + 7]);
+      if (type === "tRNS") return false;
+      if (type === "IDAT") break;
+      offset += 12 + length;
+    }
+  }
+  return true;
+}
+
+export type IconSource = { uri: string; opaque: boolean };
+
+// Imagem pronta para o gerador de ícones (data URI + se preenche o quadrado), ou null se o formato não for
+// suportado.
+export function toIconSource(bytes: Uint8Array): IconSource | null {
   const kind = sniffImage(bytes);
   if (!kind) return null;
   const source = kind === "ico" ? extractPngFromIco(bytes) : bytes;
   if (!source) return null;
-  const mime = MIME[kind === "ico" ? "png" : kind];
-  return `data:${mime};base64,${Buffer.from(source).toString("base64")}`;
+  const effective: Exclude<ImageKind, "ico"> = kind === "ico" ? "png" : kind;
+  return {
+    uri: `data:${MIME[effective]};base64,${Buffer.from(source).toString("base64")}`,
+    opaque: effective === "jpeg" || (effective === "png" && isOpaquePng(source)),
+  };
 }
 
 // Muda quando o favicon muda: entra na URL dos ícones para o navegador/CDN não servir o antigo.
@@ -55,4 +83,12 @@ export function versionOf(text: string): string {
   let hash = 5381;
   for (let index = 0; index < text.length; index += 1) hash = ((hash << 5) + hash + text.charCodeAt(index)) >>> 0;
   return hash.toString(36);
+}
+
+// Revisão do DESENHO do ícone: sobe quando a forma de renderizar muda (ex.: passou a preencher o quadrado),
+// para o navegador/CDN não servirem o PNG antigo da mesma URL.
+const RENDER_REVISION = "2";
+
+export function iconVersion(faviconUrl: string): string {
+  return versionOf(`${faviconUrl}|r${RENDER_REVISION}`);
 }

@@ -1,7 +1,7 @@
 import { asPluginApiHandler, isPluginActive } from "@venore/plugin-sdk";
 import { getBrandConfig } from "@venore/plugin-sdk/brand";
 import { buildAppManifest, type BaseManifest } from "../../shared/app-manifest";
-import { versionOf } from "../../shared/icon-source";
+import { iconVersion } from "../../shared/icon-source";
 import { readWizardConfig } from "../../shared/wizard-config";
 
 // GET /api/zammad/app/manifest — manifest da PWA.
@@ -25,12 +25,13 @@ async function readSiteManifest(request: Request): Promise<BaseManifest | null> 
 export const getAppManifest = asPluginApiHandler(async (request) => {
   if (!(await isPluginActive("zammad"))) return Response.json({ error: "O plugin de chamados está desativado." }, { status: 404 });
   const [base, brand, config] = await Promise.all([readSiteManifest(request), getBrandConfig(), readWizardConfig()]);
-  const manifest = buildAppManifest({ base, appName: config.appName, siteName: brand.siteName, iconVersion: versionOf(brand.faviconUrl) });
+  const manifest = buildAppManifest({ base, appName: config.appName, siteName: brand.siteName, iconVersion: iconVersion(brand.faviconUrl) });
   return new Response(JSON.stringify(manifest), {
     headers: {
       "Content-Type": "application/manifest+json; charset=utf-8",
-      // Muda raramente; uma hora de cache poupa o self-fetch (trocar o nome no admin vale em até 1 h).
-      "Cache-Control": "public, max-age=3600, s-maxage=3600",
+      // Cache CURTO e sempre revalidado: trocar o nome do app no admin precisa valer na próxima instalação (com 1 h
+      // de cache, quem reinstalava logo depois ainda recebia o manifest antigo).
+      "Cache-Control": "public, max-age=0, s-maxage=60, must-revalidate",
     },
   });
 });

@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { asPluginApiHandler, isPluginActive } from "@venore/plugin-sdk";
 import { getBrandConfig } from "@venore/plugin-sdk/brand";
-import { toIconDataUri } from "../../shared/icon-source";
+import { toIconSource, type IconSource } from "../../shared/icon-source";
 
 // GET /api/zammad/app/icon?size=192|512|180&maskable=1&bg=%23rrggbb&v=<versão>
 //
@@ -13,12 +13,12 @@ const SIZES = new Set([180, 192, 512]);
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const MAX_FAVICON_BYTES = 2 * 1024 * 1024;
 
-async function readFavicon(url: string): Promise<string | null> {
+async function readFavicon(url: string): Promise<IconSource | null> {
   try {
     const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
     if (!response.ok) return null;
     const bytes = new Uint8Array(await response.arrayBuffer());
-    return bytes.length > 0 && bytes.length <= MAX_FAVICON_BYTES ? toIconDataUri(bytes) : null;
+    return bytes.length > 0 && bytes.length <= MAX_FAVICON_BYTES ? toIconSource(bytes) : null;
   } catch {
     return null;
   }
@@ -41,13 +41,15 @@ export const getAppIcon = asPluginApiHandler(async (request) => {
     return Response.redirect(new URL(fallback, request.url), 302);
   }
 
-  // Maskable: o sistema recorta até 20% das bordas, então o desenho fica na zona segura (≈56%).
-  const inner = Math.round(size * (maskable ? 0.56 : 0.72));
+  // Favicon que já é um quadrado cheio (PNG/JPEG sem transparência) ocupa o ícone TODO — encaixá-lo numa moldura
+  // de outra cor fica feio. Com transparência (ou SVG), o desenho vai centralizado sobre a cor de fundo; no
+  // maskable o sistema recorta até 20% das bordas, então fica na zona segura (≈56%).
+  const inner = favicon.opaque ? size : Math.round(size * (maskable ? 0.56 : 0.72));
   return new ImageResponse(
     (
       <div style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", background }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={favicon} width={inner} height={inner} alt="" style={{ objectFit: "contain" }} />
+        <img src={favicon.uri} width={inner} height={inner} alt="" style={{ objectFit: favicon.opaque ? "cover" : "contain" }} />
       </div>
     ),
     {
