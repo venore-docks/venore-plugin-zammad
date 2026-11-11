@@ -1,8 +1,8 @@
 import type { OperationResult } from "@venore/plugin-sdk";
 import { authorizeActor } from "@venore/plugin-sdk/rbac";
 import { ZAMMAD_PERMISSIONS } from "../../shared/permissions";
-import { reloadSchema, saveGroupConfig, saveIntro } from "./service";
-import type { ReloadSchemaResult, SaveConfigResult, SaveGroupConfigInput, SaveIntroInput } from "./types";
+import { reloadSchema, saveAppName, saveGroupConfig, saveIntro } from "./service";
+import type { ReloadSchemaResult, SaveAppNameInput, SaveConfigResult, SaveGroupConfigInput, SaveIntroInput } from "./types";
 
 async function authorizeManager(): Promise<OperationResult<string>> {
   const authz = await authorizeActor(ZAMMAD_PERMISSIONS.settingsManage);
@@ -20,6 +20,12 @@ export async function saveIntroHandler(input: SaveIntroInput): Promise<SaveConfi
   const actor = await authorizeManager();
   if (!actor.success) return actor;
   return saveIntro(actor.data, input);
+}
+
+export async function saveAppNameHandler(input: SaveAppNameInput): Promise<SaveConfigResult> {
+  const actor = await authorizeManager();
+  if (!actor.success) return actor;
+  return saveAppName(actor.data, input);
 }
 
 export async function reloadSchemaHandler(): Promise<ReloadSchemaResult> {

@@ -4,6 +4,7 @@ import AppHomePage from "./app/home-page";
 import { appMetadata } from "./app/metadata";
 import AppNewTicketPage from "./app/new-page";
 import AppTicketPage from "./app/ticket-page";
+import { getAppIcon } from "./api/app-icon";
 import { getAppManifest } from "./api/app-manifest";
 import { getTicketAttachment } from "./api/attachment";
 import NewTicketPage from "./public/new-ticket-page";
@@ -32,5 +33,7 @@ export const zammadRouteTable: PluginRouteTable = {
     },
     // Público (o navegador busca o manifest sem cookies).
     { pattern: "app/manifest", handlers: { GET: getAppManifest } },
+    // Ícone do app = favicon do site em PNG (192/512/180). Também público.
+    { pattern: "app/icon", handlers: { GET: getAppIcon } },
   ],
 };

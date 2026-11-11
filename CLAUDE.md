@@ -71,14 +71,21 @@ quando a versão nova chega no `main`. O repo precisa ser **público**, senão o
   normal no Zammad; o portal a extrai (`extractReplyQuote`, só em mensagens da própria pessoa) e
   mostra como cartão, linkando (`#msg-<id>`) à mensagem original achada por autor + trecho
   (`linkQuotes`). Os dois lados dependem desse formato — mude os dois juntos.
-- **App do agente (PWA)** em `routes/app/` + `/api/zammad/app/manifest`. Regras de acesso em
-  `shared/access-rules.ts` (puro, testado): `viewerMode` decide "customer" | "agent" | nada; agente vê o
-  que está COM ele e a fila (owner_id 1 = sem responsável), mas só TRABALHA (responder, nota, estado,
-  prioridade, devolver) o que está com ele (`canWorkTicket`). Toda leitura de chamado passa por
-  `loadTicketForViewer(requester, id, asAgent)`; notas internas só com `includeInternal` (agente).
-  Resposta pública do agente = artigo `email` com `to` = e-mail do solicitante; nota = `note` interna.
-  **Nunca** citar nota interna em resposta pública (`quote_internal`). Escritas do agente NÃO foram
-  testadas no Zammad real (só a busca `owner_id:`).
+- **App do agente/gestor (PWA)** em `routes/app/`. Papéis (`shared/access-rules.ts`, puro e testado):
+  `customer` | `agent` | `manager` | `admin`, derivados dos papéis do Zammad por `staffRoleOf` (`admin` >
+  `report` > `ticket.agent`). **Agente só vê/trabalha o que está COM ele; NÃO vê a fila (owner_id 1) nem
+  aloca.** Só gestor/admin veem fila e equipe, alocam (`ownerId` em `agent-update-ticket`, destino validado
+  por `assigneesFor`) e mexem em estado/prioridade de chamado alheio; responder/nota só no chamado dele
+  (`canWorkTicket`). Toda leitura de chamado: `loadTicketForViewer(requester, id, asAgent)`; notas
+  internas só com `includeInternal`. Resposta pública do agente = artigo `email` com `to`; nota = `note`
+  interna; **nunca** citar nota interna em resposta pública. Escritas do agente/gestor NÃO foram testadas
+  no Zammad real (só leituras: busca `owner_id:`, papéis, `users/search?query=role_ids:`).
+- **Diretório** (`shared/directory.ts` + `team-rules.ts`): papéis (`roles?expand=true`) e a EQUIPE por busca
+  `users/search?query=role_ids:N` (lista completa de usuários passa de 500 e leva ~10 s/página — não usar).
+  Acesso a grupo = usuário ∪ papéis; "dono" do grupo = `full`/`change`. Cache de 5 min.
+- **Ícone/nome do app**: ícone = favicon do site renderizado por `next/og` em `/api/zammad/app/icon`
+  (`shared/icon-source.ts`: formato pelos bytes; .ico → quadro PNG); nome = setting `zammad.wizard.appName`
+  (admin), senão "Chamados · <site>". Ambos públicos (o navegador busca manifest/ícone sem cookies).
 - **PWA**: a página é servida por `/ext` (área `standalone`) e declara `generateMetadata` → `manifest`
   próprio (precisa do core com `generateMetadata` em standalone). O manifest é PÚBLICO (o navegador o busca
   sem cookies) e deriva cores/ícones do `/manifest.webmanifest` do core (`shared/app-manifest.ts`).

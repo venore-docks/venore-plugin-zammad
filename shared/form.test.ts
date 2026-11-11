@@ -3,7 +3,7 @@ import type { WizardConfig } from "../contracts/types";
 import { FEM_SCHEMA } from "./__fixtures__/fem-schema";
 import { DEFAULT_GROUP_CONFIG, buildSectorForms } from "./form";
 
-const EMPTY: WizardConfig = { intro: null, groups: {} };
+const EMPTY: WizardConfig = { intro: null, appName: null, groups: {} };
 
 describe("buildSectorForms", () => {
   it("um setor por grupo ativo, subgrupo com parentId, em ordem alfabética", () => {
@@ -73,7 +73,7 @@ describe("buildSectorForms", () => {
   });
 
   it("setor oculto some para quem abre chamado, mas continua na visão do admin", () => {
-    const config: WizardConfig = { intro: null, groups: { "12": { ...DEFAULT_GROUP_CONFIG, enabled: false } } };
+    const config: WizardConfig = { intro: null, appName: null, groups: { "12": { ...DEFAULT_GROUP_CONFIG, enabled: false } } };
     expect(buildSectorForms(FEM_SCHEMA, config).sectors.some((sector) => sector.groupId === 12)).toBe(false);
     expect(buildSectorForms(FEM_SCHEMA, config, { includeDisabled: true }).sectors.some((sector) => sector.groupId === 12)).toBe(true);
   });

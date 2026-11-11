@@ -94,10 +94,18 @@ export type TicketMessage = {
 export type AgentStateOption = { id: number; label: string; tone: TicketStateTone; needsPending: boolean };
 export type AgentPriorityOption = { id: number; label: string };
 
-// Controles do agente (app). `canWork` = o chamado está com ele: só então responde, escreve nota,
-// muda estado/prioridade ou devolve à fila. Chamado na fila (sem responsável): só pode assumir.
+// Controles do agente/gestor (app).
+//   canWork      o chamado está COM a pessoa: só então responde ou escreve nota.
+//   canAllocate  gestor/admin: atribui, realoca ou devolve à fila (agente comum NUNCA aloca).
+//   canEdit      muda estado e prioridade: quem trabalha o chamado ou o supervisiona.
+// Chamado sem responsável (fila) só aparece para gestor/admin.
 export type AgentControls = {
   canWork: boolean;
+  canAllocate: boolean;
+  canEdit: boolean;
+  ownerId: number | null;
+  // Quem pode receber este chamado (agentes do grupo). Só vem com canAllocate.
+  assignees: { id: number; name: string }[];
   stateId: number;
   priorityId: number;
   states: AgentStateOption[];
@@ -145,5 +153,7 @@ export type GroupWizardConfig = {
 
 export type WizardConfig = {
   intro: string | null;
+  // Nome do app instalável (PWA), ex.: "Colabora FEM". Vazio = "Chamados · <nome do site>".
+  appName: string | null;
   groups: Record<string, GroupWizardConfig>;
 };

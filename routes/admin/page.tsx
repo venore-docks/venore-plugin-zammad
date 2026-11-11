@@ -3,7 +3,7 @@ import { CircleAlert, CircleCheck, ExternalLink } from "lucide-react";
 import { getPluginAdminPageData } from "@venore/plugin-sdk/admin";
 import { AdminAccessDenied, AdminPageHeader, Button, Card, CardContent, CardHeader, CardTitle } from "@venore/plugin-sdk/ui";
 import { getAdminOverview } from "../../index";
-import { GroupConfigCard, IntroForm, ReloadSchemaButton } from "./config-forms";
+import { AppNameForm, GroupConfigCard, IntroForm, ReloadSchemaButton } from "./config-forms";
 
 function formatDateTime(iso: string): string {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "medium", timeZone: "America/Sao_Paulo" }).format(new Date(iso));
@@ -81,6 +81,8 @@ export default async function ZammadAdminPage() {
           )}
         </CardContent>
       </Card>
+
+      <AppNameForm appName={overview.appName} />
 
       <IntroForm intro={overview.intro} />
 

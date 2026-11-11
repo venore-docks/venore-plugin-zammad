@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { isPluginActive } from "@venore/plugin-sdk";
-import { reloadSchema, saveGroupConfig, saveIntro } from "../../index";
+import { reloadSchema, saveAppName, saveGroupConfig, saveIntro } from "../../index";
 
 export type AdminActionResult = { ok: true } | { ok: false; error: string };
 
@@ -24,6 +24,14 @@ export async function saveIntroAction(intro: string): Promise<AdminActionResult>
   if (!result.success) return { ok: false, error: result.error.message };
   revalidatePath(BASE_PATH);
   revalidatePath("/chamados/novo");
+  return { ok: true };
+}
+
+export async function saveAppNameAction(appName: string): Promise<AdminActionResult> {
+  if (!(await isPluginActive("zammad"))) return { ok: false, error: DISABLED };
+  const result = await saveAppName({ appName });
+  if (!result.success) return { ok: false, error: result.error.message };
+  revalidatePath(BASE_PATH);
   return { ok: true };
 }
 

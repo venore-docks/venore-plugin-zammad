@@ -1,11 +1,15 @@
 import { asPluginApiHandler, isPluginActive } from "@venore/plugin-sdk";
+import { getBrandConfig } from "@venore/plugin-sdk/brand";
 import { buildAppManifest, type BaseManifest } from "../../shared/app-manifest";
+import { versionOf } from "../../shared/icon-source";
+import { readWizardConfig } from "../../shared/wizard-config";
 
-// GET /api/zammad/app/manifest — manifest da PWA "Chamados".
+// GET /api/zammad/app/manifest — manifest da PWA.
 //
 // PÚBLICO, de propósito: o navegador busca o manifest sem cookies (é assim que `<link rel="manifest">` se
-// comporta), então aqui não há dado de ninguém — só a identidade do app + cores/ícones do site, que vêm
-// do manifest que o próprio core já publica em /manifest.webmanifest.
+// comporta), então aqui não há dado de ninguém — só o nome do app (configurado no admin), o favicon do site
+// (via /api/zammad/app/icon) e as cores do tema, que vêm do manifest que o core publica em
+// /manifest.webmanifest.
 async function readSiteManifest(request: Request): Promise<BaseManifest | null> {
   try {
     const response = await fetch(new URL("/manifest.webmanifest", request.url), {
@@ -20,11 +24,12 @@ async function readSiteManifest(request: Request): Promise<BaseManifest | null> 
 
 export const getAppManifest = asPluginApiHandler(async (request) => {
   if (!(await isPluginActive("zammad"))) return Response.json({ error: "O plugin de chamados está desativado." }, { status: 404 });
-  const manifest = buildAppManifest(await readSiteManifest(request));
+  const [base, brand, config] = await Promise.all([readSiteManifest(request), getBrandConfig(), readWizardConfig()]);
+  const manifest = buildAppManifest({ base, appName: config.appName, siteName: brand.siteName, iconVersion: versionOf(brand.faviconUrl) });
   return new Response(JSON.stringify(manifest), {
     headers: {
       "Content-Type": "application/manifest+json; charset=utf-8",
-      // Muda raramente (nome do site, cores do tema); uma hora de cache poupa o self-fetch.
+      // Muda raramente; uma hora de cache poupa o self-fetch (trocar o nome no admin vale em até 1 h).
       "Cache-Control": "public, max-age=3600, s-maxage=3600",
     },
   });

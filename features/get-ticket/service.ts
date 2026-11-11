@@ -1,6 +1,7 @@
 import type { AgentControls, TicketAttachmentInfo, TicketMessage } from "../../contracts/types";
 import type { ZammadArticle, ZammadExpandedTicket } from "../../contracts/zammad";
-import { canWorkTicket, type ViewerMode } from "../../shared/access-rules";
+import { canAllocate, canEditTicket, canWorkTicket, isUnassigned, type StaffRole, type ViewerMode } from "../../shared/access-rules";
+import { assigneesFor } from "../../shared/directory";
 import { resolveAvatars } from "../../shared/avatars";
 import { articleToText, cleanSenderName, extractFormAnswers, extractReplyQuote, makeExcerpt } from "../../shared/html-text";
 import { canManageTicketState, loadAgentOptions, loadArticles, loadTicketForViewer } from "../../shared/own-ticket";
@@ -71,11 +72,17 @@ function linkQuotes(messages: TicketMessage[]): void {
   }
 }
 
-async function buildAgentControls(ticket: ZammadExpandedTicket, requester: Requester, mode: ViewerMode): Promise<AgentControls | null> {
+async function buildAgentControls(ticket: ZammadExpandedTicket, requester: Requester, mode: ViewerMode, role: StaffRole): Promise<AgentControls | null> {
   if (mode !== "agent") return null;
-  const options = await loadAgentOptions();
+  const meId = requester.zammadUser.id;
+  const allocate = canAllocate(mode, role);
+  const [options, assignees] = await Promise.all([loadAgentOptions(), allocate ? assigneesFor(ticket.group_id) : Promise.resolve([])]);
   return {
-    canWork: canWorkTicket(mode, ticket.owner_id, requester.zammadUser.id),
+    canWork: canWorkTicket(mode, ticket.owner_id, meId),
+    canAllocate: allocate,
+    canEdit: canEditTicket(mode, role, ticket.owner_id, meId),
+    ownerId: isUnassigned(ticket.owner_id) ? null : ticket.owner_id,
+    assignees: assignees.map((person) => ({ id: person.id, name: person.name })),
     stateId: ticket.state_id,
     priorityId: ticket.priority_id,
     states: options.success ? options.data.states.map(({ id, label, tone, needsPending }) => ({ id, label, tone, needsPending })) : [],
@@ -86,7 +93,7 @@ async function buildAgentControls(ticket: ZammadExpandedTicket, requester: Reque
 export async function getTicket(requester: Requester, input: GetTicketInput): Promise<GetTicketResult> {
   const viewed = await loadTicketForViewer(requester, input.ticketId, Boolean(input.asAgent));
   if (!viewed.success) return viewed;
-  const { ticket, mode } = viewed.data;
+  const { ticket, mode, role } = viewed.data;
   const articles = await loadArticles(requester, input.ticketId, { includeInternal: mode === "agent" });
   if (!articles.success) return articles;
 
@@ -105,7 +112,7 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
   const [requesterPerson, ownerPerson, agent, canClose] = await Promise.all([
     ticket.customer_id === meId ? Promise.resolve(null) : getPerson(ticket.customer_id),
     ticket.owner_id && ticket.owner_id !== meId ? getPerson(ticket.owner_id) : Promise.resolve(null),
-    buildAgentControls(ticket, requester, mode),
+    buildAgentControls(ticket, requester, mode, role),
     canManageTicketState(requester),
   ]);
   const unassigned = !ticket.owner_id || ticket.owner_id === 1;

@@ -65,6 +65,7 @@ export type ZammadExpandedTicket = {
   group: string;
   state: string;
   state_id: number;
+  group_id: number;
   priority_id: number;
   priority?: string;
   owner_id: number | null;

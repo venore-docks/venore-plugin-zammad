@@ -33,16 +33,21 @@ Uma superfície própria para celular, instalável como app: **`/ext/zammad/app`
 core (rotas `standalone`), então **não leva a casca do Venore Docks** (sem menu, cabeçalho nem rodapé do
 portal) — só o cabeçalho e a barra de abas do app, com respeito à área segura do celular.
 
-| Quem | O que vê |
+| Quem (papel no Zammad) | O que vê e faz |
 |---|---|
-| Colaborador | **Meus** (conversa, responder, citar) e **Novo** (o mesmo passo a passo do portal) |
-| Agente (papel com `ticket.agent` ou `admin` no Zammad) | tudo isso + **Atribuídos** (chamados dele) e **Fila** (sem responsável, nos setores dele) |
+| **Colaborador** | **Meus** (conversa, responder, citar) e **Novo** (o mesmo passo a passo do portal) |
+| **Agente** (`ticket.agent`) | tudo isso + **Atribuídos**: SÓ os chamados que foram atribuídos a ele. Responde ao solicitante (e-mail) ou escreve nota interna, muda estado (com data nos "pendente") e prioridade. **Não vê a fila e não aloca** — nem assume chamado. |
+| **Gestor** (papel com `report` + `ticket.agent`) | tudo do agente + **Fila** (sem responsável, nos setores que ele gerencia) + **Equipe** (cada agente e a carga: abertos e aguardando). **Aloca**: atribui a um agente do setor, realoca ou devolve à fila. Acompanha estado e prioridade dos chamados da equipe; só RESPONDE o que está com ele. |
+| **Admin** (`admin`) | como o gestor, sobre o que a conta admin enxerga no Zammad |
 
-No chamado, o agente vê as **notas internas** e o solicitante, e tem os controles: **Assumir** (da fila),
-**estado** (com data quando for "pendente"), **prioridade**, **devolver à fila**, responder ao
-solicitante (vai por **e-mail**, como no Zammad) ou escrever **nota interna** (o solicitante nunca vê). Só
-trabalha o chamado que está com ele; chamado de outro agente não aparece no app.
+Quem é agente, gestor ou admin vem dos **papéis do Zammad** (nada a configurar aqui): `admin` > `report` >
+`ticket.agent`. O acesso a um setor é a união do que o usuário e os papéis dele têm; só quem tem acesso
+`full`/`change` ao grupo pode receber chamados dele. Chamado atribuído a outro agente não aparece para
+agente comum (quem quiser ver usa o Zammad).
 
+- **Nome e ícone:** o nome vem de **/admin/zammad → Nome do app (PWA)** (ex.: "Colabora FEM"); o ícone é o **favicon do
+  site** (Configurações → Marca), desenhado em PNG 192/512/180 por `/api/zammad/app/icon` (aceita PNG, JPEG, GIF,
+  SVG e .ico com quadro PNG; outro formato cai no ícone padrão do core).
 - **Instalar:** abrir `/ext/zammad/app` no celular e usar "Instalar" (Android/Chrome) ou "Compartilhar →
   Adicionar à Tela de Início" (iOS). A página aponta para o manifest próprio
   (`/api/zammad/app/manifest`), montado a partir do manifest do site (cores, ícones e idioma do tema) com

@@ -14,7 +14,7 @@ import {
 } from "./answers";
 import { buildSectorForms } from "./form";
 
-const EMPTY: WizardConfig = { intro: null, groups: {} };
+const EMPTY: WizardConfig = { intro: null, appName: null, groups: {} };
 const marketingFields = (): WizardField[] =>
   buildSectorForms(FEM_SCHEMA, EMPTY)
     .sectors.find((sector) => sector.groupId === 6)!

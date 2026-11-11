@@ -70,8 +70,9 @@ export function TicketStateButton({ ticketId, closed }: { ticketId: number; clos
 }
 
 // `agent` = visão do agente (app): responde ao solicitante (e-mail) ou escreve nota interna. Sem `agent`,
-// é o solicitante conversando. `canWork` falso = chamado na fila: antes de responder, é preciso assumir.
-export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number; closed: boolean; agent?: { canWork: boolean } | null }) {
+// é o solicitante conversando. `canWork` falso = o chamado não está com a pessoa (fila ou de outro agente):
+// só quem atende responde; `blockedMessage` explica.
+export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number; closed: boolean; agent?: { canWork: boolean; blockedMessage?: string } | null }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -86,7 +87,7 @@ export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number;
   if (agent && !agent.canWork) {
     return (
       <div id="responder" className="rounded-xl border border-warning-border bg-warning-soft p-4 text-sm text-foreground">
-        Este chamado está na fila. <strong>Assuma</strong> para responder, escrever notas ou mudar o estado.
+        {agent.blockedMessage ?? "Este chamado não está com você."}
       </div>
     );
   }

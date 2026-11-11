@@ -13,6 +13,14 @@ import { AppShell } from "./shell";
 
 // /ext/zammad/app/chamado/:ticketId — a conversa no app. Solicitante: como no portal. Agente (chamado com ele
 // ou na fila): vê notas internas e o solicitante, e tem os controles de atendimento.
+// Por que a pessoa não pode responder este chamado (ele não está com ela).
+function blockedMessage(ownerName: string | null, canAllocate: boolean): string {
+  if (ownerName === null) {
+    return canAllocate ? "Este chamado está na fila. Atribua a um agente (acima) para ele atender e responder." : "Este chamado não está atribuído a você.";
+  }
+  return `Este chamado está com ${ownerName}. Só quem atende responde ao solicitante.`;
+}
+
 export default async function AppTicketPage({ params }: { params: Promise<{ ticketId: string }> }) {
   if (!(await isPluginActive("zammad"))) notFound();
   const { ticketId } = await params;
@@ -63,10 +71,9 @@ export default async function AppTicketPage({ params }: { params: Promise<{ tick
 
           {agent && (
             <AgentControls
-              key={`${ticket.id}-${agent.stateId}-${agent.priorityId}-${agent.canWork}`}
+              key={`${ticket.id}-${agent.stateId}-${agent.priorityId}-${agent.ownerId}`}
               ticketId={ticket.id}
               controls={agent}
-              unassigned={ticket.owner === null}
             />
           )}
 
@@ -98,7 +105,11 @@ export default async function AppTicketPage({ params }: { params: Promise<{ tick
 
           <Conversation messages={ticket.messages} />
 
-          <ReplyBox ticketId={ticket.id} closed={ticket.closed} agent={agent ? { canWork: agent.canWork } : null} />
+          <ReplyBox
+            ticketId={ticket.id}
+            closed={ticket.closed}
+            agent={agent ? { canWork: agent.canWork, blockedMessage: blockedMessage(ticket.owner?.name ?? null, agent.canAllocate) } : null}
+          />
         </div>
       </ReplyProvider>
     </AppShell>

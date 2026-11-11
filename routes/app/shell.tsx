@@ -1,23 +1,31 @@
 import Link from "next/link";
-import { ArrowLeft, Inbox, Layers, MessagesSquare, PlusCircle, type LucideIcon } from "lucide-react";
+import { ArrowLeft, Inbox, Layers, MessagesSquare, PlusCircle, Users, type LucideIcon } from "lucide-react";
 import { cn } from "@venore/plugin-sdk/ui";
 import { APP_BASE } from "../../shared/routes";
 
 // Casca do app "Chamados": cabeçalho fixo + navegação inferior, no formato de app de celular. NÃO usa a
 // casca do Venore Docks (a página roda sob /ext, fora do layout da plataforma). Respeita a área segura
 // (notch e barra de gestos) via env(safe-area-inset-*), habilitada pelo viewport-fit=cover do layout raiz.
-export type AppTab = "assigned" | "queue" | "mine" | "new";
+export type AppTab = "assigned" | "queue" | "team" | "mine" | "new";
 
-type TabDef = { key: AppTab; label: string; href: string; icon: LucideIcon; agentOnly: boolean };
+// Quem vê o quê: o agente comum só tem "Atribuídos" (o que lhe foi dado); a fila e a equipe são do
+// gestor/admin, que é quem aloca.
+type Audience = "all" | "staff" | "supervisor";
+type TabDef = { key: AppTab; label: string; href: string; icon: LucideIcon; audience: Audience };
 
 const TABS: TabDef[] = [
-  { key: "assigned", label: "Atribuídos", href: `${APP_BASE}?aba=atribuidos`, icon: Inbox, agentOnly: true },
-  { key: "queue", label: "Fila", href: `${APP_BASE}?aba=fila`, icon: Layers, agentOnly: true },
-  { key: "mine", label: "Meus", href: `${APP_BASE}?aba=meus`, icon: MessagesSquare, agentOnly: false },
-  { key: "new", label: "Novo", href: `${APP_BASE}/novo`, icon: PlusCircle, agentOnly: false },
+  { key: "queue", label: "Fila", href: `${APP_BASE}?aba=fila`, icon: Layers, audience: "supervisor" },
+  { key: "team", label: "Equipe", href: `${APP_BASE}?aba=equipe`, icon: Users, audience: "supervisor" },
+  { key: "assigned", label: "Atribuídos", href: `${APP_BASE}?aba=atribuidos`, icon: Inbox, audience: "staff" },
+  { key: "mine", label: "Meus", href: `${APP_BASE}?aba=meus`, icon: MessagesSquare, audience: "all" },
+  { key: "new", label: "Novo", href: `${APP_BASE}/novo`, icon: PlusCircle, audience: "all" },
 ];
 
-export type AppNav = { active: AppTab; isAgent: boolean; counts?: Partial<Record<AppTab, number>> };
+export type AppNav = { active: AppTab; isStaff: boolean; isSupervisor: boolean; counts?: Partial<Record<AppTab, number>> };
+
+function visibleTo(tab: TabDef, nav: AppNav): boolean {
+  return tab.audience === "all" || (tab.audience === "staff" && nav.isStaff) || (tab.audience === "supervisor" && nav.isSupervisor);
+}
 
 export function AppShell({
   title,
@@ -32,7 +40,7 @@ export function AppShell({
   nav?: AppNav;
   children: React.ReactNode;
 }) {
-  const tabs = nav ? TABS.filter((tab) => nav.isAgent || !tab.agentOnly) : [];
+  const tabs = nav ? TABS.filter((tab) => visibleTo(tab, nav)) : [];
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground">
       <header className="sticky top-0 z-30 border-b bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur">

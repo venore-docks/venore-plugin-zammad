@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Switch, Textarea } from "@venore/plugin-sdk/ui";
 import type { GroupWizardConfig } from "../../contracts/types";
 import type { AdminSector } from "../../features/admin-overview/types";
-import { reloadSchemaAction, saveGroupConfigAction, saveIntroAction } from "./actions";
+import { reloadSchemaAction, saveAppNameAction, saveGroupConfigAction, saveIntroAction } from "./actions";
 
 const TYPE_LABELS: Record<string, string> = {
   select: "escolha",
@@ -36,6 +36,37 @@ export function ReloadSchemaButton() {
       <RefreshCw className={pending ? "size-4 animate-spin" : "size-4"} />
       Recarregar do Zammad
     </Button>
+  );
+}
+
+export function AppNameForm({ appName }: { appName: string | null }) {
+  const [value, setValue] = useState(appName ?? "");
+  const [pending, startTransition] = useTransition();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Nome do app (PWA)</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          É o nome que aparece no ícone do celular e na tela de instalação do app em /ext/zammad/app. Em branco, usa “Chamados · nome do site”. O ícone é o favicon do
+          site (Configurações → Marca). Quem já instalou o app pode precisar reinstalar para ver a mudança.
+        </p>
+        <Input value={value} maxLength={30} placeholder="Colabora FEM" onChange={(event) => setValue(event.target.value)} />
+        <Button
+          disabled={pending}
+          onClick={() =>
+            startTransition(async () => {
+              const result = await saveAppNameAction(value);
+              if (result.ok) toast.success("Nome do app salvo.");
+              else toast.error(result.error);
+            })
+          }
+        >
+          Salvar nome
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

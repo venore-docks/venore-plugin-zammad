@@ -25,6 +25,7 @@ export type AdminOverview = {
   connection: ConnectionStatus;
   schemaFetchedAt: string | null;
   intro: string | null;
+  appName: string | null;
   sectors: AdminSector[];
   unsupported: string[];
   skippedFields: string[];

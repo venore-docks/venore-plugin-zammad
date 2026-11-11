@@ -1,14 +1,21 @@
 import type { Metadata } from "next";
+import { getBrandConfig } from "@venore/plugin-sdk/brand";
+import { appNames, iconUrl } from "../../shared/app-manifest";
+import { versionOf } from "../../shared/icon-source";
+import { readWizardConfig } from "../../shared/wizard-config";
 
 // <head> de toda página do app (o dispatcher /ext do core lê o generateMetadata da entrada): aponta para o
-// manifest PRÓPRIO — é ele que faz o navegador oferecer "instalar Chamados" em vez do portal inteiro — e
-// marca o app como instalável no iOS. `noindex`: é uma área logada.
-export function appMetadata(): Metadata {
+// manifest PRÓPRIO — é ele que faz o navegador oferecer "instalar" o app em vez do portal inteiro —, define o
+// ícone do iOS (o favicon do site) e marca o app como instalável. `noindex`: é uma área logada.
+export async function appMetadata(): Promise<Metadata> {
+  const [brand, config] = await Promise.all([getBrandConfig(), readWizardConfig()]);
+  const { name, shortName } = appNames(config.appName, brand.siteName);
   return {
-    title: "Chamados",
-    applicationName: "Chamados",
+    title: name,
+    applicationName: name,
     manifest: "/api/zammad/app/manifest",
-    appleWebApp: { capable: true, title: "Chamados", statusBarStyle: "default" },
+    icons: { apple: [{ url: iconUrl(180, { version: versionOf(brand.faviconUrl) }), sizes: "180x180", type: "image/png" }] },
+    appleWebApp: { capable: true, title: shortName, statusBarStyle: "default" },
     formatDetection: { telephone: false },
     robots: { index: false, follow: false },
   };

@@ -1,5 +1,6 @@
 import { beginOperation, endOperation } from "@venore/plugin-sdk/observability";
-import { UNASSIGNED_OWNER_ID, canWorkTicket } from "../../shared/access-rules";
+import { UNASSIGNED_OWNER_ID, canAllocate, canEditTicket, isUnassigned } from "../../shared/access-rules";
+import { assigneesFor } from "../../shared/directory";
 import { loadAgentOptions, loadTicketForViewer } from "../../shared/own-ticket";
 import type { Requester } from "../../shared/requester";
 import { failure } from "../../shared/results";
@@ -16,30 +17,33 @@ export async function agentUpdateTicket(requester: Requester, input: AgentUpdate
 
   const viewed = await loadTicketForViewer(requester, input.ticketId, true);
   if (!viewed.success) return finish(viewed);
-  const { ticket, mode } = viewed.data;
-  if (mode !== "agent") return finish(failure("not_agent", "Só agentes podem alterar o chamado por aqui."));
+  const { ticket, mode, role } = viewed.data;
+  if (mode !== "agent") return finish(failure("not_agent", "Só a equipe de atendimento pode alterar o chamado por aqui."));
 
   const meId = requester.zammadUser.id;
   const body: Record<string, unknown> = {};
   const changed: string[] = [];
 
-  if (input.owner === "me") {
-    // Assumir: vale para a fila e para o que já é dele; chamado de outro agente nem chega aqui.
-    if (ticket.owner_id !== meId) {
-      body.owner_id = meId;
+  if (input.ownerId !== undefined) {
+    // Alocar chamado é do gestor/admin — o agente comum não atribui nem devolve (nem a si mesmo).
+    if (!canAllocate(mode, role)) return finish(failure("forbidden_allocation", "Só o gestor ou o admin pode atribuir chamados."));
+    let target = UNASSIGNED_OWNER_ID;
+    if (input.ownerId !== null) {
+      const assignees = await assigneesFor(ticket.group_id);
+      if (!assignees.some((person) => person.id === input.ownerId)) return finish(failure("invalid_assignee", "Essa pessoa não atende este setor."));
+      target = input.ownerId;
+    }
+    const current = isUnassigned(ticket.owner_id) ? UNASSIGNED_OWNER_ID : (ticket.owner_id as number);
+    if (target !== current) {
+      body.owner_id = target;
       changed.push("owner");
     }
-  } else if (input.owner === "release") {
-    if (!canWorkTicket(mode, ticket.owner_id, meId)) return finish(failure("not_owner", "Só quem está com o chamado pode devolvê-lo à fila."));
-    body.owner_id = UNASSIGNED_OWNER_ID;
-    changed.push("owner");
   }
 
-  const wantsStateOrPriority = input.stateId !== undefined || input.priorityId !== undefined;
-  if (wantsStateOrPriority) {
-    // Estado e prioridade só com o chamado na mão do agente (assumir pode vir no mesmo envio).
-    const willOwn = ticket.owner_id === meId || input.owner === "me";
-    if (!willOwn) return finish(failure("not_owner", "Assuma o chamado antes de alterar estado ou prioridade."));
+  if (input.stateId !== undefined || input.priorityId !== undefined) {
+    if (!canEditTicket(mode, role, ticket.owner_id, meId)) {
+      return finish(failure("not_owner", "Só quem atende ou supervisiona este chamado altera estado ou prioridade."));
+    }
     const options = await loadAgentOptions();
     if (!options.success) return finish(options);
 

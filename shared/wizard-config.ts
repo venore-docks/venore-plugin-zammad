@@ -26,10 +26,12 @@ export const groupConfigSchema = z.object({
 
 const wizardConfigSchema = z.object({
   intro: nullableText(1000),
+  // Opcional no documento salvo: configs anteriores à v0.5 não têm o campo.
+  appName: nullableText(30).optional().transform((value) => value ?? null),
   groups: z.record(z.string(), groupConfigSchema),
 });
 
-export const EMPTY_CONFIG: WizardConfig = { intro: null, groups: {} };
+export const EMPTY_CONFIG: WizardConfig = { intro: null, appName: null, groups: {} };
 
 export async function readWizardConfig(): Promise<WizardConfig> {
   const result = await getSetting({ key: WIZARD_SETTING_KEY });

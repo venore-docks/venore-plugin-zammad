@@ -1,7 +1,8 @@
 import "server-only";
 import type { OperationResult } from "@venore/plugin-sdk";
 import type { ZammadArticle, ZammadExpandedTicket, ZammadTicketPriority, ZammadTicketState } from "../contracts/zammad";
-import { viewerMode, type ViewerMode } from "./access-rules";
+import { isStaff, viewerMode, type StaffRole, type ViewerMode } from "./access-rules";
+import { staffRoleFor } from "./directory";
 import type { Requester } from "./requester";
 import { buildPriorityOptions, buildStateOptions, type PriorityOption, type StateOption } from "./ticket-options";
 import { failure } from "./results";
@@ -30,7 +31,7 @@ export async function loadOwnTicket(requester: Requester, ticketId: number): Pro
 //   asAgent=true  (app): agente vê os atribuídos a ele e a fila; solicitante vê os dele.
 // Devolve também em que modo a pessoa está vendo (decide o que a tela mostra e o que o servidor deixa
 // fazer). 404 igual para "não existe" e "não é seu".
-export type ViewedTicket = { ticket: ZammadExpandedTicket; mode: ViewerMode; isAgent: boolean };
+export type ViewedTicket = { ticket: ZammadExpandedTicket; mode: ViewerMode; role: StaffRole };
 
 export async function loadTicketForViewer(requester: Requester, ticketId: number, asAgent: boolean): Promise<OperationResult<ViewedTicket>> {
   if (!Number.isInteger(ticketId) || ticketId <= 0) return failure("ticket_not_found", NOT_FOUND);
@@ -40,16 +41,16 @@ export async function loadTicketForViewer(requester: Requester, ticketId: number
       ? failure("ticket_not_found", NOT_FOUND)
       : result;
   }
-  const isAgent = asAgent ? await canManageTicketState(requester) : false;
+  const role = asAgent ? await staffRoleFor(requester) : "customer";
   const mode = viewerMode({
     customerId: result.data.customer_id,
     ownerId: result.data.owner_id,
     meId: requester.zammadUser.id,
-    isAgent,
+    role,
     asAgent,
   });
   if (!mode) return failure("ticket_not_found", NOT_FOUND);
-  return { success: true, data: { ticket: result.data, mode, isAgent } };
+  return { success: true, data: { ticket: result.data, mode, role } };
 }
 
 // Artigos do chamado, do mais antigo ao mais novo. Nota interna da equipe só vem quando pedida
@@ -95,21 +96,10 @@ async function loadStates(): Promise<OperationResult<ZammadTicketState[]>> {
   return result;
 }
 
-type ZammadRole = { id: number; name: string; permissions?: string[] };
-let rolesCache: { at: number; roles: ZammadRole[] } | null = null;
-
-// Encerrar/reabrir chamado é da EQUIPE: papel com `ticket.agent` ou `admin` no Zammad. Colaborador
-// comum (papel "Clientes") só conversa. Se a lista de papéis não carregar, nega (falha segura).
+// Equipe de atendimento (agente, gestor ou admin): é quem pode encerrar/reabrir pelo portal e entrar no
+// app como agente. Colaborador comum (papel "Clientes") só conversa. Falha ao ler os papéis = nega.
 export async function canManageTicketState(requester: Requester): Promise<boolean> {
-  if (!rolesCache || Date.now() - rolesCache.at > 10 * 60 * 1000) {
-    const result = await zammadRequest<ZammadRole[]>("roles?expand=true");
-    if (!result.success) return false;
-    rolesCache = { at: Date.now(), roles: Array.isArray(result.data) ? result.data : [] };
-  }
-  const mine = new Set(requester.zammadUser.role_ids);
-  return rolesCache.roles.some(
-    (role) => mine.has(role.id) && (role.permissions ?? []).some((permission) => permission === "ticket.agent" || permission === "admin"),
-  );
+  return isStaff(await staffRoleFor(requester));
 }
 
 // Estados que a pessoa pode pedir: o Zammad só deixa cliente usar "new" e "closed".

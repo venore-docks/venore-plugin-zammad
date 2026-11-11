@@ -2,7 +2,7 @@ import { beginOperation, endOperation } from "@venore/plugin-sdk/observability";
 import { failure } from "../../shared/results";
 import { clearSchemaCache, loadSchema } from "../../shared/schema";
 import { parseGroupConfig, readWizardConfig, writeWizardConfig } from "../../shared/wizard-config";
-import type { ReloadSchemaResult, SaveConfigResult, SaveGroupConfigInput, SaveIntroInput } from "./types";
+import type { ReloadSchemaResult, SaveAppNameInput, SaveConfigResult, SaveGroupConfigInput, SaveIntroInput } from "./types";
 
 export async function saveGroupConfig(actorId: string, input: SaveGroupConfigInput): Promise<SaveConfigResult> {
   const handle = beginOperation({ useCase: "zammad.save-group-config", actor: { id: actorId, type: "user" }, kind: "write" });
@@ -21,6 +21,14 @@ export async function saveIntro(actorId: string, input: SaveIntroInput): Promise
   const handle = beginOperation({ useCase: "zammad.save-intro", actor: { id: actorId, type: "user" }, kind: "write" });
   const current = await readWizardConfig();
   const result = await writeWizardConfig({ ...current, intro: input.intro?.trim() || null });
+  endOperation(handle, result);
+  return result;
+}
+
+export async function saveAppName(actorId: string, input: SaveAppNameInput): Promise<SaveConfigResult> {
+  const handle = beginOperation({ useCase: "zammad.save-app-name", actor: { id: actorId, type: "user" }, kind: "write" });
+  const current = await readWizardConfig();
+  const result = await writeWizardConfig({ ...current, appName: input.appName?.trim() || null });
   endOperation(handle, result);
   return result;
 }

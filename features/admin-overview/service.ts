@@ -10,7 +10,7 @@ export async function getAdminOverview(): Promise<GetAdminOverviewResult> {
   if (!connection) {
     return {
       success: true,
-      data: { connection: { configured: false }, schemaFetchedAt: null, intro: config.intro, sectors: [], unsupported: [], skippedFields: [] },
+      data: { connection: { configured: false }, schemaFetchedAt: null, intro: config.intro, appName: config.appName, sectors: [], unsupported: [], skippedFields: [] },
     };
   }
 
@@ -24,6 +24,7 @@ export async function getAdminOverview(): Promise<GetAdminOverviewResult> {
     connection: { configured: true, baseUrl: connection.baseUrl, tokenOwner, error },
     schemaFetchedAt: schema.success ? schema.data.fetchedAt : null,
     intro: config.intro,
+    appName: config.appName,
     sectors: [],
     unsupported: [],
     skippedFields: [],
