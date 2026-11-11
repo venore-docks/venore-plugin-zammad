@@ -65,6 +65,9 @@ export type ZammadExpandedTicket = {
   group: string;
   state: string;
   state_id: number;
+  priority_id: number;
+  priority?: string;
+  owner_id: number | null;
   customer_id: number;
   created_at: string;
   updated_at: string;
@@ -73,6 +76,7 @@ export type ZammadExpandedTicket = {
 };
 
 export type ZammadTicketState = { id: number; name: string; state_type_id: number; active: boolean };
+export type ZammadTicketPriority = { id: number; name: string; active: boolean };
 
 export type ZammadAttachment = {
   id: number;

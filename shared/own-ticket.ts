@@ -1,7 +1,9 @@
 import "server-only";
 import type { OperationResult } from "@venore/plugin-sdk";
-import type { ZammadArticle, ZammadExpandedTicket, ZammadTicketState } from "../contracts/zammad";
+import type { ZammadArticle, ZammadExpandedTicket, ZammadTicketPriority, ZammadTicketState } from "../contracts/zammad";
+import { viewerMode, type ViewerMode } from "./access-rules";
 import type { Requester } from "./requester";
+import { buildPriorityOptions, buildStateOptions, type PriorityOption, type StateOption } from "./ticket-options";
 import { failure } from "./results";
 import { zammadRequest } from "./zammad-client";
 
@@ -23,13 +25,64 @@ export async function loadOwnTicket(requester: Requester, ticketId: number): Pro
   return result;
 }
 
-// Só artigos públicos: nota interna da equipe nunca chega à pessoa (o Zammad já filtra para cliente,
-// mas um agente em nome próprio receberia tudo).
-export async function loadPublicArticles(requester: Requester, ticketId: number): Promise<OperationResult<ZammadArticle[]>> {
+// Um chamado para quem está olhando, na visão pedida:
+//   asAgent=false (portal): só o que a pessoa abriu — como sempre.
+//   asAgent=true  (app): agente vê os atribuídos a ele e a fila; solicitante vê os dele.
+// Devolve também em que modo a pessoa está vendo (decide o que a tela mostra e o que o servidor deixa
+// fazer). 404 igual para "não existe" e "não é seu".
+export type ViewedTicket = { ticket: ZammadExpandedTicket; mode: ViewerMode; isAgent: boolean };
+
+export async function loadTicketForViewer(requester: Requester, ticketId: number, asAgent: boolean): Promise<OperationResult<ViewedTicket>> {
+  if (!Number.isInteger(ticketId) || ticketId <= 0) return failure("ticket_not_found", NOT_FOUND);
+  const result = await zammadRequest<ZammadExpandedTicket>(`tickets/${ticketId}?expand=true`, { onBehalfOf: requester.email });
+  if (!result.success) {
+    return result.error.code === "zammad.request_failed" || result.error.code === "zammad.forbidden"
+      ? failure("ticket_not_found", NOT_FOUND)
+      : result;
+  }
+  const isAgent = asAgent ? await canManageTicketState(requester) : false;
+  const mode = viewerMode({
+    customerId: result.data.customer_id,
+    ownerId: result.data.owner_id,
+    meId: requester.zammadUser.id,
+    isAgent,
+    asAgent,
+  });
+  if (!mode) return failure("ticket_not_found", NOT_FOUND);
+  return { success: true, data: { ticket: result.data, mode, isAgent } };
+}
+
+// Artigos do chamado, do mais antigo ao mais novo. Nota interna da equipe só vem quando pedida
+// (`includeInternal`, visão do agente): o Zammad já a esconde de cliente, mas um agente em nome próprio
+// receberia tudo, então o filtro também é nosso.
+export async function loadArticles(
+  requester: Requester,
+  ticketId: number,
+  options: { includeInternal?: boolean } = {},
+): Promise<OperationResult<ZammadArticle[]>> {
   const result = await zammadRequest<ZammadArticle[]>(`ticket_articles/by_ticket/${ticketId}?expand=true`, { onBehalfOf: requester.email });
   if (!result.success) return result;
-  const articles = (Array.isArray(result.data) ? result.data : []).filter((article) => !article.internal);
+  const articles = (Array.isArray(result.data) ? result.data : []).filter((article) => options.includeInternal || !article.internal);
   return { success: true, data: articles.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) };
+}
+
+// Só artigos públicos: nota interna da equipe nunca chega à pessoa.
+export async function loadPublicArticles(requester: Requester, ticketId: number): Promise<OperationResult<ZammadArticle[]>> {
+  return loadArticles(requester, ticketId);
+}
+
+let prioritiesCache: { at: number; priorities: ZammadTicketPriority[] } | null = null;
+
+// Estados e prioridades que o agente pode escolher (dados do Zammad, em cache de 10 min).
+export async function loadAgentOptions(): Promise<OperationResult<{ states: StateOption[]; priorities: PriorityOption[] }>> {
+  const states = await loadStates();
+  if (!states.success) return states;
+  if (!prioritiesCache || Date.now() - prioritiesCache.at > 10 * 60 * 1000) {
+    const result = await zammadRequest<ZammadTicketPriority[]>("ticket_priorities");
+    if (!result.success) return result;
+    prioritiesCache = { at: Date.now(), priorities: result.data };
+  }
+  return { success: true, data: { states: buildStateOptions(states.data), priorities: buildPriorityOptions(prioritiesCache.priorities) } };
 }
 
 let statesCache: { at: number; states: ZammadTicketState[] } | null = null;

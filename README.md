@@ -27,6 +27,32 @@ por e-mail do Zammad continuam saindo; os links dentro dos e-mails apontam para 
 **desligue o link/`ticket_hook` dos templates de notificação do cliente** ou troque-os por um link
 para `/chamados`.
 
+## App "Chamados" (PWA, fora da casca do portal)
+
+Uma superfície própria para celular, instalável como app: **`/ext/zammad/app`**. Ela roda sob o `/ext` do
+core (rotas `standalone`), então **não leva a casca do Venore Docks** (sem menu, cabeçalho nem rodapé do
+portal) — só o cabeçalho e a barra de abas do app, com respeito à área segura do celular.
+
+| Quem | O que vê |
+|---|---|
+| Colaborador | **Meus** (conversa, responder, citar) e **Novo** (o mesmo passo a passo do portal) |
+| Agente (papel com `ticket.agent` ou `admin` no Zammad) | tudo isso + **Atribuídos** (chamados dele) e **Fila** (sem responsável, nos setores dele) |
+
+No chamado, o agente vê as **notas internas** e o solicitante, e tem os controles: **Assumir** (da fila),
+**estado** (com data quando for "pendente"), **prioridade**, **devolver à fila**, responder ao
+solicitante (vai por **e-mail**, como no Zammad) ou escrever **nota interna** (o solicitante nunca vê). Só
+trabalha o chamado que está com ele; chamado de outro agente não aparece no app.
+
+- **Instalar:** abrir `/ext/zammad/app` no celular e usar "Instalar" (Android/Chrome) ou "Compartilhar →
+  Adicionar à Tela de Início" (iOS). A página aponta para o manifest próprio
+  (`/api/zammad/app/manifest`), montado a partir do manifest do site (cores, ícones e idioma do tema) com
+  nome, id e página inicial do app. O service worker é o do core (escopo `/`).
+- **Login:** a página de login é a do portal (mesma conta). O manifest usa `scope: "/"` para o login não
+  abrir uma barra de endereço por cima do app.
+- **Exige no core:** rotas `standalone` com `generateMetadata` (core ≥ commit `78b2276`).
+- **Ainda não tem:** notificação push de "novo chamado atribuído" (a infra de push do core existe; falta
+  o webhook do Zammad) e modo offline (o core mostra a página `/offline`).
+
 ## Quem manda em quê
 
 | O quê | Onde |

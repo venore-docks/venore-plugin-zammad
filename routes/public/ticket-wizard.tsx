@@ -33,6 +33,7 @@ import {
   validateTitle,
   type Answers,
 } from "../../shared/answers";
+import { APP_SURFACE, PORTAL_SURFACE } from "../../shared/routes";
 import { createTicketAction } from "./actions";
 import { accentFor, sectorIcon, type Accent } from "./palette";
 
@@ -60,7 +61,10 @@ function initialAnswers(sector: SectorForm | undefined): Answers {
   return answers;
 }
 
-export function TicketWizard({ data, initialGroupId }: { data: WizardData; initialGroupId: number | null }) {
+// surface: onde o wizard roda — decide para onde levam "Cancelar" e "Acompanhar este chamado" (função não
+// atravessa a fronteira servidor→cliente, por isso só a chave).
+export function TicketWizard({ data, initialGroupId, surface = "portal" }: { data: WizardData; initialGroupId: number | null; surface?: "portal" | "app" }) {
+  const paths = surface === "app" ? APP_SURFACE : PORTAL_SURFACE;
   const sectors = data.sectors;
   const byId = useMemo(() => new Map(sectors.map((sector) => [sector.groupId, sector])), [sectors]);
   const initialSector = initialGroupId ? byId.get(initialGroupId) : undefined;
@@ -153,7 +157,7 @@ export function TicketWizard({ data, initialGroupId }: { data: WizardData; initi
     setIndex(0);
   }
 
-  if (created) return <CreatedScreen ticket={created} onRestart={restart} />;
+  if (created) return <CreatedScreen ticket={created} onRestart={restart} detailHref={paths.detail(created.id)} />;
 
   if (sectors.length === 0) {
     return (
@@ -236,7 +240,7 @@ export function TicketWizard({ data, initialGroupId }: { data: WizardData; initi
           </Button>
         ) : (
           <Button type="button" variant="ghost" asChild>
-            <Link href="/chamados">Cancelar</Link>
+            <Link href={paths.list}>Cancelar</Link>
           </Button>
         )}
         <Button type="submit" size="lg" disabled={pending} className="min-w-40">
@@ -768,7 +772,7 @@ function FieldError({ message }: { message?: string }) {
   );
 }
 
-function CreatedScreen({ ticket, onRestart }: { ticket: CreatedTicket; onRestart: () => void }) {
+function CreatedScreen({ ticket, onRestart, detailHref }: { ticket: CreatedTicket; onRestart: () => void; detailHref: string }) {
   return (
     <div className="space-y-6 rounded-xl border border-t-4 border-success-border border-t-success bg-success-soft p-8 text-center sm:p-12">
       <span className="mx-auto grid size-16 place-items-center rounded-full bg-success text-success-foreground">
@@ -780,7 +784,7 @@ function CreatedScreen({ ticket, onRestart }: { ticket: CreatedTicket; onRestart
       </div>
       <div className="flex flex-wrap justify-center gap-3">
         <Button size="lg" asChild>
-          <Link href={`/chamados/${ticket.id}`}>
+          <Link href={detailHref}>
             <MessagesSquare className="size-4" />
             Acompanhar este chamado
           </Link>

@@ -1,5 +1,10 @@
-import { asPluginPage, type PluginRouteTable } from "@venore/plugin-sdk";
+import { asPluginMetadata, asPluginPage, type PluginRouteTable } from "@venore/plugin-sdk";
 import AdminPage from "./admin/page";
+import AppHomePage from "./app/home-page";
+import { appMetadata } from "./app/metadata";
+import AppNewTicketPage from "./app/new-page";
+import AppTicketPage from "./app/ticket-page";
+import { getAppManifest } from "./api/app-manifest";
 import { getTicketAttachment } from "./api/attachment";
 import NewTicketPage from "./public/new-ticket-page";
 import TicketDetailPage from "./public/ticket-detail-page";
@@ -13,10 +18,19 @@ export const zammadRouteTable: PluginRouteTable = {
     { pattern: "chamados/novo", Component: asPluginPage(NewTicketPage) },
     { pattern: "chamados/:ticketId", Component: asPluginPage(TicketDetailPage) },
   ],
+  // O APP (PWA): fora da casca do Venore Docks, servido pelo dispatcher /ext → /ext/zammad/app…
+  // `generateMetadata` aponta cada página para o manifest próprio do app.
+  standalone: [
+    { pattern: "zammad/app", Component: asPluginPage(AppHomePage), generateMetadata: asPluginMetadata(appMetadata) },
+    { pattern: "zammad/app/novo", Component: asPluginPage(AppNewTicketPage), generateMetadata: asPluginMetadata(appMetadata) },
+    { pattern: "zammad/app/chamado/:ticketId", Component: asPluginPage(AppTicketPage), generateMetadata: asPluginMetadata(appMetadata) },
+  ],
   api: [
     {
       pattern: "tickets/:ticketId/articles/:articleId/attachments/:attachmentId",
       handlers: { GET: getTicketAttachment },
     },
+    // Público (o navegador busca o manifest sem cookies).
+    { pattern: "app/manifest", handlers: { GET: getAppManifest } },
   ],
 };

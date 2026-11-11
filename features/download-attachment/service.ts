@@ -1,4 +1,4 @@
-import { loadOwnTicket, loadPublicArticles } from "../../shared/own-ticket";
+import { loadArticles, loadTicketForViewer } from "../../shared/own-ticket";
 import type { Requester } from "../../shared/requester";
 import { failure } from "../../shared/results";
 import { zammadFetchRaw } from "../../shared/zammad-client";
@@ -7,10 +7,12 @@ import type { DownloadAttachmentInput, DownloadAttachmentResult } from "./types"
 const INLINE_IMAGE = /^image\/(png|jpe?g|gif|webp|bmp)$/i;
 
 export async function downloadAttachment(requester: Requester, input: DownloadAttachmentInput): Promise<DownloadAttachmentResult> {
-  const ticket = await loadOwnTicket(requester, input.ticketId);
-  if (!ticket.success) return ticket;
-  // O anexo precisa estar em um artigo PÚBLICO deste chamado: nunca confiamos nos ids da URL.
-  const articles = await loadPublicArticles(requester, input.ticketId);
+  // Mesma regra de acesso da conversa: solicitante vê os dele; agente, os atribuídos a ele e a fila.
+  const viewed = await loadTicketForViewer(requester, input.ticketId, true);
+  if (!viewed.success) return viewed;
+  // O anexo precisa estar num artigo que ESTA pessoa pode ver (internos só para o agente): nunca
+  // confiamos nos ids da URL.
+  const articles = await loadArticles(requester, input.ticketId, { includeInternal: viewed.data.mode === "agent" });
   if (!articles.success) return articles;
   const file = articles.data.find((article) => article.id === input.articleId)?.attachments?.find((attachment) => attachment.id === input.attachmentId);
   if (!file) return failure("attachment_not_found", "Arquivo não encontrado.");

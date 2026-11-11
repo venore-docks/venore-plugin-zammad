@@ -71,6 +71,19 @@ quando a versão nova chega no `main`. O repo precisa ser **público**, senão o
   normal no Zammad; o portal a extrai (`extractReplyQuote`, só em mensagens da própria pessoa) e
   mostra como cartão, linkando (`#msg-<id>`) à mensagem original achada por autor + trecho
   (`linkQuotes`). Os dois lados dependem desse formato — mude os dois juntos.
+- **App do agente (PWA)** em `routes/app/` + `/api/zammad/app/manifest`. Regras de acesso em
+  `shared/access-rules.ts` (puro, testado): `viewerMode` decide "customer" | "agent" | nada; agente vê o
+  que está COM ele e a fila (owner_id 1 = sem responsável), mas só TRABALHA (responder, nota, estado,
+  prioridade, devolver) o que está com ele (`canWorkTicket`). Toda leitura de chamado passa por
+  `loadTicketForViewer(requester, id, asAgent)`; notas internas só com `includeInternal` (agente).
+  Resposta pública do agente = artigo `email` com `to` = e-mail do solicitante; nota = `note` interna.
+  **Nunca** citar nota interna em resposta pública (`quote_internal`). Escritas do agente NÃO foram
+  testadas no Zammad real (só a busca `owner_id:`).
+- **PWA**: a página é servida por `/ext` (área `standalone`) e declara `generateMetadata` → `manifest`
+  próprio (precisa do core com `generateMetadata` em standalone). O manifest é PÚBLICO (o navegador o busca
+  sem cookies) e deriva cores/ícones do `/manifest.webmanifest` do core (`shared/app-manifest.ts`).
+  Caminhos das duas superfícies em `shared/routes.ts`; o wizard recebe só `surface: "portal" | "app"`
+  (função não atravessa servidor→cliente). Actions revalidam as DUAS superfícies.
 - **Cores**: só tokens do tema (`chart-1/2/6/7`, `success`, `warning`, `primary`) em
   `routes/public/palette.ts` e `shared.tsx`. Classes do Tailwind por extenso (nunca montadas por
   string). Ícone por nome do setor via `sectorIcon()` (função de renderização, não componente).

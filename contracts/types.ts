@@ -51,6 +51,9 @@ export type TicketSummary = {
   closed: boolean;
   // A equipe respondeu e a pessoa ainda não (o chamado está esperando por ela).
   awaitingYou: boolean;
+  priorityLabel: string;
+  // Nome do solicitante (só nas listas do agente; nas do próprio solicitante é null).
+  requesterName: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -66,11 +69,15 @@ export type TicketAttachmentInfo = {
   href: string;
 };
 
-export type MessageRole = "me" | "team" | "system";
+// me = a própria pessoa; customer = o solicitante (só aparece na visão do agente); team = a equipe (ou,
+// na visão do solicitante, qualquer outra pessoa que não ele).
+export type MessageRole = "me" | "team" | "customer" | "system";
 
 export type TicketMessage = {
   id: number;
   role: MessageRole;
+  // Nota interna da equipe: só a visão do agente recebe estas mensagens.
+  internal: boolean;
   authorName: string;
   // Avatar da conta do portal (null = só as iniciais).
   avatarUrl: string | null;
@@ -84,6 +91,19 @@ export type TicketMessage = {
   attachments: TicketAttachmentInfo[];
 };
 
+export type AgentStateOption = { id: number; label: string; tone: TicketStateTone; needsPending: boolean };
+export type AgentPriorityOption = { id: number; label: string };
+
+// Controles do agente (app). `canWork` = o chamado está com ele: só então responde, escreve nota,
+// muda estado/prioridade ou devolve à fila. Chamado na fila (sem responsável): só pode assumir.
+export type AgentControls = {
+  canWork: boolean;
+  stateId: number;
+  priorityId: number;
+  states: AgentStateOption[];
+  priorities: AgentPriorityOption[];
+};
+
 export type TicketDetail = {
   id: number;
   number: string;
@@ -93,10 +113,21 @@ export type TicketDetail = {
   stateTone: TicketStateTone;
   closed: boolean;
   awaitingYou: boolean;
+  // O solicitante escreveu por último: na visão do agente, o chamado espera resposta dele.
+  customerWaiting: boolean;
   // Só agente/admin do Zammad encerra e reabre; colaborador comum só responde.
   canClose: boolean;
   createdAt: string;
   updatedAt: string;
+  priorityLabel: string;
+  // "agent" = visão do agente (app): notas internas, solicitante, controles. "customer" = a do solicitante.
+  viewer: "customer" | "agent";
+  requester: { name: string; email: string | null };
+  // null = sem responsável (na fila).
+  owner: { name: string } | null;
+  assignedToMe: boolean;
+  // Só na visão do agente.
+  agent: AgentControls | null;
   messages: TicketMessage[];
 };
 

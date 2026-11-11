@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { isPluginActive } from "@venore/plugin-sdk";
-import { changeTicketState, createTicket, replyTicket } from "../../index";
-import type { AnswerValue, CreatedTicket, TicketAttachment } from "../../index";
+import { agentUpdateTicket, changeTicketState, createTicket, replyTicket } from "../../index";
+import type { AgentUpdateInput, AnswerValue, CreatedTicket, TicketAttachment } from "../../index";
+import { APP_SURFACE, PORTAL_SURFACE } from "../../shared/routes";
 
-// Toda action passa pelo handler do barrel (autorização + conta no Zammad lá dentro).
+// Toda action passa pelo handler do barrel (autorização + conta no Zammad lá dentro). Servem às DUAS
+// superfícies (portal e app): ao mudar um chamado, as duas são revalidadas.
 export type ZammadActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
 const DISABLED = "A abertura de chamados está desativada.";
@@ -18,6 +20,17 @@ async function readAttachments(formData: FormData): Promise<TicketAttachment[]> 
     attachments.push({ filename: entry.name || "anexo", mimeType: entry.type, size: bytes.byteLength, base64: bytes.toString("base64") });
   }
   return attachments;
+}
+
+function revalidateLists(): void {
+  revalidatePath(PORTAL_SURFACE.list);
+  revalidatePath(APP_SURFACE.list);
+}
+
+function revalidateTicket(ticketId: number): void {
+  revalidateLists();
+  revalidatePath(PORTAL_SURFACE.detail(ticketId));
+  revalidatePath(APP_SURFACE.detail(ticketId));
 }
 
 // FormData: `payload` (JSON com groupId, title, description, answers) + `attachments` (arquivos).
@@ -43,11 +56,11 @@ export async function createTicketAction(formData: FormData): Promise<ZammadActi
     attachments: await readAttachments(formData),
   });
   if (!result.success) return { ok: false, error: result.error.message };
-  revalidatePath("/chamados");
+  revalidateLists();
   return { ok: true, data: result.data };
 }
 
-// FormData: `ticketId`, `message` + `attachments`.
+// FormData: `ticketId`, `message`, `quoteArticleId?`, `asAgent?` ("1"), `internal?` ("1") + `attachments`.
 export async function replyTicketAction(formData: FormData): Promise<ZammadActionResult<{ reopened: boolean }>> {
   if (!(await isPluginActive("zammad"))) return { ok: false, error: DISABLED };
   const ticketId = Number(formData.get("ticketId"));
@@ -57,10 +70,11 @@ export async function replyTicketAction(formData: FormData): Promise<ZammadActio
     quoteArticleId: Number.isInteger(quoteId) && quoteId > 0 ? quoteId : null,
     message: String(formData.get("message") ?? ""),
     attachments: await readAttachments(formData),
+    asAgent: formData.get("asAgent") === "1",
+    internal: formData.get("internal") === "1",
   });
   if (!result.success) return { ok: false, error: result.error.message };
-  revalidatePath("/chamados");
-  revalidatePath(`/chamados/${ticketId}`);
+  revalidateTicket(ticketId);
   return { ok: true, data: result.data };
 }
 
@@ -68,7 +82,15 @@ export async function changeTicketStateAction(ticketId: number, action: "close" 
   if (!(await isPluginActive("zammad"))) return { ok: false, error: DISABLED };
   const result = await changeTicketState({ ticketId, action });
   if (!result.success) return { ok: false, error: result.error.message };
-  revalidatePath("/chamados");
-  revalidatePath(`/chamados/${ticketId}`);
+  revalidateTicket(ticketId);
+  return { ok: true, data: result.data };
+}
+
+// App do agente: estado, prioridade, assumir/devolver (vão juntos num único envio).
+export async function agentUpdateTicketAction(input: AgentUpdateInput): Promise<ZammadActionResult<{ changed: string[] }>> {
+  if (!(await isPluginActive("zammad"))) return { ok: false, error: DISABLED };
+  const result = await agentUpdateTicket(input);
+  if (!result.success) return { ok: false, error: result.error.message };
+  revalidateTicket(input.ticketId);
   return { ok: true, data: result.data };
 }

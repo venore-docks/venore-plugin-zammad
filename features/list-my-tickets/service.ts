@@ -1,6 +1,7 @@
 import type { TicketSummary } from "../../contracts/types";
 import type { ZammadExpandedTicket } from "../../contracts/zammad";
 import type { Requester } from "../../shared/requester";
+import { priorityLabel } from "../../shared/ticket-options";
 import { describeState, isAwaitingYou } from "../../shared/ticket-state";
 import { zammadRequest } from "../../shared/zammad-client";
 import type { ListMyTicketsResult } from "./types";
@@ -31,6 +32,8 @@ export async function listMyTickets(requester: Requester): Promise<ListMyTickets
       stateTone: state.tone,
       closed: state.closed,
       awaitingYou: isAwaitingYou(ticket, state.closed),
+      priorityLabel: priorityLabel(ticket.priority ?? ""),
+      requesterName: null,
       createdAt: ticket.created_at,
       updatedAt: ticket.updated_at,
     };

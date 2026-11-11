@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CircleCheck, Paperclip, RotateCcw, Send, X } from "lucide-react";
+import { CircleCheck, Lock, Paperclip, RotateCcw, Send, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -16,6 +16,7 @@ import {
   AlertDialogTrigger,
   Button,
   Textarea,
+  cn,
 } from "@venore/plugin-sdk/ui";
 import { ATTACHMENT_LIMITS, formatBytes, validateAttachments, validateReply } from "../../shared/answers";
 import { changeTicketStateAction, replyTicketAction } from "./actions";
@@ -68,14 +69,27 @@ export function TicketStateButton({ ticketId, closed }: { ticketId: number; clos
   );
 }
 
-export function ReplyBox({ ticketId, closed }: { ticketId: number; closed: boolean }) {
+// `agent` = visão do agente (app): responde ao solicitante (e-mail) ou escreve nota interna. Sem `agent`,
+// é o solicitante conversando. `canWork` falso = chamado na fila: antes de responder, é preciso assumir.
+export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number; closed: boolean; agent?: { canWork: boolean } | null }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [chosenInternal, setChosenInternal] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { quote, setQuote } = useReplyQuote();
+  // Citar uma nota interna só é permitido em outra nota interna: força o modo.
+  const internal = Boolean(agent) && (chosenInternal || Boolean(quote?.internal));
+
+  if (agent && !agent.canWork) {
+    return (
+      <div id="responder" className="rounded-xl border border-warning-border bg-warning-soft p-4 text-sm text-foreground">
+        Este chamado está na fila. <strong>Assuma</strong> para responder, escrever notas ou mudar o estado.
+      </div>
+    );
+  }
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -87,6 +101,8 @@ export function ReplyBox({ ticketId, closed }: { ticketId: number; closed: boole
     formData.set("ticketId", String(ticketId));
     formData.set("message", message);
     if (quote) formData.set("quoteArticleId", String(quote.articleId));
+    if (agent) formData.set("asAgent", "1");
+    if (internal) formData.set("internal", "1");
     files.forEach((file) => formData.append("attachments", file));
     startTransition(async () => {
       const result = await replyTicketAction(formData);
@@ -94,7 +110,7 @@ export function ReplyBox({ ticketId, closed }: { ticketId: number; closed: boole
         toast.error(result.error);
         return;
       }
-      toast.success(result.data.reopened ? "Mensagem enviada e chamado reaberto." : "Mensagem enviada.");
+      toast.success(internal ? "Nota salva." : result.data.reopened ? "Mensagem enviada e chamado reaberto." : "Mensagem enviada.");
       setMessage("");
       setFiles([]);
       setQuote(null);
@@ -104,9 +120,37 @@ export function ReplyBox({ ticketId, closed }: { ticketId: number; closed: boole
 
   return (
     <form id="responder" onSubmit={submit} className="scroll-mt-24 space-y-3 rounded-xl border border-t-4 border-t-chart-2 bg-card p-5" noValidate>
-      <label htmlFor="reply-message" className="block font-medium text-foreground">
-        {closed ? "Precisa de mais alguma coisa? Escreva aqui" : "Responder à equipe"}
-      </label>
+      {agent ? (
+        <div className="space-y-2">
+          <div role="group" aria-label="Tipo de mensagem" className="inline-flex rounded-lg border bg-muted/50 p-0.5 text-sm">
+            <button
+              type="button"
+              aria-pressed={!internal}
+              disabled={Boolean(quote?.internal)}
+              onClick={() => setChosenInternal(false)}
+              className={cn("rounded-md px-3 py-1.5 transition-colors disabled:opacity-50", !internal ? "bg-background font-medium shadow-sm" : "text-muted-foreground")}
+            >
+              Ao solicitante
+            </button>
+            <button
+              type="button"
+              aria-pressed={internal}
+              onClick={() => setChosenInternal(true)}
+              className={cn("inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors", internal ? "bg-warning-soft font-medium shadow-sm" : "text-muted-foreground")}
+            >
+              <Lock className="size-3.5" />
+              Nota interna
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {internal ? "Só a equipe vê esta nota. O solicitante não recebe nada." : "Vai por e-mail para o solicitante e aparece na conversa dele."}
+          </p>
+        </div>
+      ) : (
+        <label htmlFor="reply-message" className="block font-medium text-foreground">
+          {closed ? "Precisa de mais alguma coisa? Escreva aqui" : "Responder à equipe"}
+        </label>
+      )}
       {quote && (
         <div className="flex items-start gap-3 rounded-lg border border-s-4 border-border border-s-chart-6 bg-muted/50 p-3">
           <div className="min-w-0 flex-1 space-y-0.5">
@@ -128,9 +172,9 @@ export function ReplyBox({ ticketId, closed }: { ticketId: number; closed: boole
         rows={4}
         value={message}
         onChange={(event) => setMessage(event.target.value)}
-        placeholder="Escreva a sua mensagem…"
+        placeholder={internal ? "Escreva a nota interna…" : "Escreva a sua mensagem…"}
         aria-invalid={Boolean(error)}
-        className="text-base"
+        className={cn("text-base", internal && "border-dashed border-warning-border bg-warning-soft")}
       />
       {error && (
         <p role="alert" className="text-sm font-medium text-destructive">
@@ -182,7 +226,7 @@ export function ReplyBox({ ticketId, closed }: { ticketId: number; closed: boole
         </div>
         <Button type="submit" disabled={pending}>
           <Send className="size-4" />
-          {pending ? "Enviando…" : "Enviar mensagem"}
+          {pending ? "Enviando…" : internal ? "Salvar nota" : agent ? "Enviar ao solicitante" : "Enviar mensagem"}
         </Button>
       </div>
     </form>

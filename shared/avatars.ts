@@ -2,7 +2,7 @@ import "server-only";
 import { findUserByEmail } from "@venore/plugin-sdk/auth";
 import { getMediaAssetUrls } from "@venore/plugin-sdk/media";
 import type { Requester } from "./requester";
-import { zammadRequest } from "./zammad-client";
+import { getPerson } from "./people";
 
 // Avatar de quem escreveu cada mensagem, vindo da conta do PORTAL (as contas são as mesmas nos dois
 // sistemas, casadas pelo e-mail). Quem não tem conta no portal, ou não tem avatar, fica com as iniciais.
@@ -12,19 +12,7 @@ import { zammadRequest } from "./zammad-client";
 //
 // Falha em qualquer passo = sem avatar; nunca derruba a conversa.
 
-type ZammadPerson = { id: number; email?: string | null };
-const peopleCache = new Map<number, { at: number; email: string | null }>();
-const TTL_MS = 10 * 60 * 1000;
 const AVATAR_WIDTH = 72;
-
-async function emailOf(zammadUserId: number): Promise<string | null> {
-  const hit = peopleCache.get(zammadUserId);
-  if (hit && Date.now() - hit.at < TTL_MS) return hit.email;
-  const result = await zammadRequest<ZammadPerson>(`users/${zammadUserId}`);
-  const email = result.success && result.data.email ? result.data.email.trim().toLowerCase() : null;
-  peopleCache.set(zammadUserId, { at: Date.now(), email });
-  return email;
-}
 
 type Pending = { zammadUserId: number; mediaId: string | null; image: string | null };
 
@@ -39,9 +27,9 @@ export async function resolveAvatars(requester: Requester, authorIds: number[]):
         pending.push({ zammadUserId, mediaId: requester.avatarMediaId, image: requester.image });
         return;
       }
-      const email = await emailOf(zammadUserId);
-      if (!email) return;
-      const user = await findUserByEmail({ email });
+      const person = await getPerson(zammadUserId);
+      if (!person?.email) return;
+      const user = await findUserByEmail({ email: person.email });
       if (user.success) pending.push({ zammadUserId, mediaId: user.data.avatarMediaId, image: user.data.image });
     }),
   );

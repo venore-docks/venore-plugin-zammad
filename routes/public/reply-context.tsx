@@ -5,7 +5,8 @@ import { Reply } from "lucide-react";
 
 // Mensagem que a pessoa escolheu responder ("Responder", como no WhatsApp). Estado compartilhado entre
 // o botão em cada mensagem (servidor renderiza a lista) e a caixa de resposta lá embaixo.
-export type QuotedMessage = { articleId: number; author: string; preview: string };
+// internal: a mensagem citada é uma nota interna (só pode ser citada em outra nota interna).
+export type QuotedMessage = { articleId: number; author: string; preview: string; internal?: boolean };
 
 type ReplyState = { quote: QuotedMessage | null; setQuote: (quote: QuotedMessage | null) => void };
 
