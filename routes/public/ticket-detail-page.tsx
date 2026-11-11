@@ -7,6 +7,7 @@ import { cn } from "@venore/plugin-sdk/ui";
 import { getTicket } from "../../index";
 import type { TicketMessage } from "../../index";
 import { formatBytes } from "../../shared/answers";
+import { ImageLightbox } from "./image-lightbox";
 import { initials } from "./palette";
 import { BlockedNotice, StateBadge, formatDateTime } from "./shared";
 import { ReplyBox, TicketStateButton } from "./ticket-actions";
@@ -110,10 +111,7 @@ function Message({ message, first }: { message: TicketMessage; first: boolean })
             {message.attachments.map((file) =>
               file.isImage ? (
                 <li key={file.id}>
-                  <a href={file.href} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg border bg-background" title={file.filename}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={file.href} alt={file.filename} loading="lazy" className="max-h-40 w-auto max-w-full object-cover" />
-                  </a>
+                  <ImageLightbox src={file.href} filename={file.filename} />
                 </li>
               ) : (
                 <li key={file.id}>
