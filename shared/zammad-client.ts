@@ -22,12 +22,8 @@ export function readConnection(): ZammadConnection | null {
 export const NOT_CONFIGURED_MESSAGE =
   "A integração com o Zammad não está configurada (variáveis ZAMMAD_URL e ZAMMAD_API_TOKEN).";
 
-export function ticketUrl(baseUrl: string, ticketId: number): string {
-  return `${baseUrl}/#ticket/zoom/${ticketId}`;
-}
-
 type RequestOptions = {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "PUT";
   body?: unknown;
   onBehalfOf?: string;
   timeoutMs?: number;
@@ -81,4 +77,23 @@ export async function zammadRequest<T>(path: string, options: RequestOptions = {
     return failure("request_failed", `O Zammad respondeu com erro: ${human}`);
   }
   return { success: true, data: data as T };
+}
+
+// Download binário (anexos). Devolve a Response crua do Zammad para o chamador repassar o corpo em
+// stream, sem carregar o arquivo inteiro na memória.
+export async function zammadFetchRaw(path: string, options: { onBehalfOf: string; timeoutMs?: number }): Promise<OperationResult<Response>> {
+  const connection = readConnection();
+  if (!connection) return failure("not_configured", NOT_CONFIGURED_MESSAGE);
+  let response: Response;
+  try {
+    response = await fetch(`${connection.baseUrl}/api/v1/${path.replace(/^\/+/, "")}`, {
+      headers: { Authorization: `Token token=${connection.token}`, "X-On-Behalf-Of": options.onBehalfOf },
+      cache: "no-store",
+      signal: AbortSignal.timeout(options.timeoutMs ?? 30000),
+    });
+  } catch {
+    return failure("unreachable", "Não foi possível baixar o arquivo agora. Tente de novo em instantes.");
+  }
+  if (!response.ok) return failure("attachment_not_found", "Arquivo não encontrado.");
+  return { success: true, data: response };
 }

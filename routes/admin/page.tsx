@@ -89,7 +89,7 @@ export default async function ZammadAdminPage() {
           <div>
             <h2 className="text-lg font-semibold text-foreground">Setores</h2>
             <p className="text-sm text-muted-foreground">
-              Cada grupo ativo do Zammad é um setor. Sem configuração, cada campo vira uma etapa própria, na ordem do Zammad.
+              Cada grupo ativo do Zammad é um setor. Sem configuração, as perguntas são agrupadas automaticamente em poucas etapas (escolhas sozinhas, datas juntas, opcionais no fim).
             </p>
           </div>
           {overview.sectors.map((sector) => (

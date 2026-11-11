@@ -139,7 +139,16 @@ export function displayAnswer(field: WizardField, value: AnswerValue | null | un
   }
 }
 
-function escapeHtml(text: string): string {
+export const REPLY_MIN = 2;
+
+export function validateReply(message: string): string | null {
+  const length = message.trim().length;
+  if (length < REPLY_MIN) return "Escreva a sua mensagem.";
+  if (length > DESCRIPTION_MAX) return "A mensagem está longa demais. Anexe um arquivo com os detalhes.";
+  return null;
+}
+
+export function escapeHtml(text: string): string {
   return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 }
 

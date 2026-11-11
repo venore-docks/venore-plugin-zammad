@@ -49,3 +49,22 @@ Testes: `.\scripts\run-tests.ps1` (cria e remove sozinho o junction de node_modu
 
 `package.json#version` = tag `vX.Y.Z` = `manifest.ts#version`. O workflow `tag-release` cria a tag
 quando a versão nova chega no `main`. O repo precisa ser **público**, senão o install na Vercel falha.
+
+## Conversa do chamado (v0.2.0)
+
+- **Zammad headless**: nenhuma tela linka para o Zammad. Todo acesso a UM chamado passa por
+  `shared/own-ticket.ts` (`loadOwnTicket` exige `customer_id` = a pessoa; 404 igual para alheio) e só
+  lê artigos públicos (`loadPublicArticles`). A rota de anexo (`routes/api/attachment.ts`) revalida
+  ticket + artigo público + anexo antes de repassar o stream.
+- **Autor da mensagem** = `created_by_id` do artigo (não `sender`: um agente que abre o próprio
+  chamado aparece como `Agent`). HTML dos artigos vira texto em `shared/html-text.ts` (nunca renderize
+  o HTML do Zammad).
+- **Escrita NÃO testada contra o Zammad real** (responder, encerrar, reabrir): o cliente só pode usar
+  os estados `new` e `closed`; reabrir = `new`. Se algum falhar, ver o erro em `/chamados/:id`.
+- **Cores**: só tokens do tema (`chart-1/2/6/7`, `success`, `warning`, `primary`) em
+  `routes/public/palette.ts` e `shared.tsx`. Classes do Tailwind por extenso (nunca montadas por
+  string). Ícone por nome do setor via `sectorIcon()` (função de renderização, não componente).
+- **Etapas automáticas**: `autoSteps` em `shared/form.ts` (escolhas sozinhas, datas juntas, rápidas em
+  lotes de 3, opcionais no fim); mudar a regra exige atualizar `form.test.ts`.
+- **Heredoc no Bash**: código com `\s`, `\n` ou crases em `cat <<EOF`/`node -` perde as barras — use a
+  ferramenta Write/Edit.

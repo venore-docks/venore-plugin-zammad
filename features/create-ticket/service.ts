@@ -13,7 +13,7 @@ import type { Requester } from "../../shared/requester";
 import { failure } from "../../shared/results";
 import { loadSchema } from "../../shared/schema";
 import { readWizardConfig } from "../../shared/wizard-config";
-import { readConnection, ticketUrl, zammadRequest } from "../../shared/zammad-client";
+import { zammadRequest } from "../../shared/zammad-client";
 import type { CreateTicketInput, CreateTicketResult } from "./types";
 
 type CreatedTicketResponse = { id: number; number: string };
@@ -77,7 +77,5 @@ export async function createTicket(requester: Requester, input: CreateTicketInpu
   });
   if (!created.success) return finish(created);
 
-  const connection = readConnection();
-  const url = connection ? ticketUrl(connection.baseUrl, created.data.id) : "";
-  return finish({ success: true, data: { id: created.data.id, number: String(created.data.number), url } });
+  return finish({ success: true, data: { id: created.data.id, number: String(created.data.number) } });
 }

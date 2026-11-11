@@ -27,9 +27,9 @@ export default async function NewTicketPage({ searchParams }: { searchParams: Pr
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 py-10">
-      <div className="space-y-1">
+      <div className="space-y-1 rounded-xl border border-primary/20 bg-primary/10 p-5">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Abrir chamado</h1>
-        <p className="text-sm text-muted-foreground">Uma pergunta por vez — leva poucos minutos.</p>
+        <p className="text-sm text-foreground/80">Vamos guiar você, uma pergunta por vez. Leva poucos minutos.</p>
       </div>
       <TicketWizard data={result.data} initialGroupId={initialGroupId} />
     </div>

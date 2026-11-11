@@ -137,7 +137,8 @@ export function GroupConfigCard({ sector }: { sector: AdminSector }) {
           <div className="space-y-2">
             <p className="text-sm font-medium text-foreground">Perguntas (do Zammad)</p>
             <p className="text-xs text-muted-foreground">
-              Campos com o mesmo número de etapa aparecem juntos na mesma tela. Sem número, cada campo é uma etapa, depois das numeradas.
+              Campos com o mesmo número de etapa aparecem juntos na mesma tela. Sem número, o portal agrupa sozinho: perguntas de escolha ficam
+              sozinhas, datas vão juntas, perguntas rápidas em lotes de 3 e tudo que é opcional numa etapa só, no fim.
             </p>
             <div className="divide-y rounded-lg border">
               {sector.fields.map((field) => (

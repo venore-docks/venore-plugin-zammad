@@ -18,7 +18,8 @@ export type WizardField = {
   defaultValue: AnswerValue | null;
 };
 
-export type WizardStep = { key: string; title: string; fields: WizardField[] };
+// optional: todos os campos da etapa são opcionais (a interface avisa que pode seguir sem responder).
+export type WizardStep = { key: string; title: string; fields: WizardField[]; optional: boolean };
 
 export type SectorForm = {
   groupId: number;
@@ -45,15 +46,50 @@ export type TicketSummary = {
   number: string;
   title: string;
   group: string;
-  state: string;
   stateLabel: string;
   stateTone: TicketStateTone;
+  closed: boolean;
+  // A equipe respondeu e a pessoa ainda não (o chamado está esperando por ela).
+  awaitingYou: boolean;
   createdAt: string;
   updatedAt: string;
-  url: string;
 };
 
-export type CreatedTicket = { id: number; number: string; url: string };
+export type CreatedTicket = { id: number; number: string };
+
+export type TicketAttachmentInfo = {
+  id: number;
+  filename: string;
+  size: number;
+  isImage: boolean;
+  // Rota do próprio portal (o Zammad não é exposto): /api/zammad/tickets/:t/articles/:a/attachments/:id
+  href: string;
+};
+
+export type MessageRole = "me" | "team" | "system";
+
+export type TicketMessage = {
+  id: number;
+  role: MessageRole;
+  authorName: string;
+  text: string;
+  createdAt: string;
+  attachments: TicketAttachmentInfo[];
+};
+
+export type TicketDetail = {
+  id: number;
+  number: string;
+  title: string;
+  group: string;
+  stateLabel: string;
+  stateTone: TicketStateTone;
+  closed: boolean;
+  awaitingYou: boolean;
+  createdAt: string;
+  updatedAt: string;
+  messages: TicketMessage[];
+};
 
 // Configuração de apresentação guardada no setting `zammad.wizard` (o Zammad continua dono dos campos).
 export type GroupWizardConfig = {

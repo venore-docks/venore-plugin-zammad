@@ -57,13 +57,41 @@ export type ZammadUser = {
   active: boolean;
 };
 
-// /tickets/search?expand=true — `group`/`state`/`priority` já vêm como nome.
+// /tickets/search?expand=true e /tickets/:id?expand=true — `group`/`state`/`priority` já vêm como nome.
 export type ZammadExpandedTicket = {
   id: number;
   number: string;
   title: string;
   group: string;
   state: string;
+  state_id: number;
+  customer_id: number;
   created_at: string;
   updated_at: string;
+  last_contact_agent_at?: string | null;
+  last_contact_customer_at?: string | null;
+};
+
+export type ZammadTicketState = { id: number; name: string; state_type_id: number; active: boolean };
+
+export type ZammadAttachment = {
+  id: number;
+  filename: string;
+  size: string | number;
+  preferences?: Record<string, unknown> | null;
+};
+
+// /ticket_articles/by_ticket/:id?expand=true
+export type ZammadArticle = {
+  id: number;
+  ticket_id: number;
+  type: string;
+  sender: string;
+  internal: boolean;
+  from?: string | null;
+  content_type: string;
+  body: string;
+  created_at: string;
+  created_by_id: number;
+  attachments?: ZammadAttachment[];
 };

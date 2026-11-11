@@ -6,9 +6,9 @@ export const zammadManifest: PluginManifest = {
   manifestVersion: "1.0.0",
   key: "zammad",
   name: "Chamados (Zammad)",
-  version: "0.1.0",
+  version: "0.2.0",
   description:
-    "Abertura de chamados no Zammad em passos guiados: a pessoa escolhe o setor e responde uma pergunta por vez. Os campos de cada setor vêm do próprio Zammad (atributos e Core Workflows); aqui só se ajusta a apresentação.",
+    "Abertura e acompanhamento de chamados no Zammad (headless) em passos guiados: a pessoa escolhe o setor, responde uma pergunta por vez e depois conversa com a equipe pelo portal. Os campos de cada setor vêm do próprio Zammad (atributos e Core Workflows); aqui só se ajusta a apresentação.",
   compatibility: { coreVersion: ">=2.0.0 <3.0.0" },
   permissions: [
     { key: "zammad.tickets", label: "Abrir chamados e acompanhar os próprios chamados" },

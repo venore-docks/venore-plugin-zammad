@@ -2,20 +2,23 @@
 
 import Link from "next/link";
 import { useMemo, useRef, useState, useTransition } from "react";
-import { ArrowLeft, ArrowRight, Check, ChevronRight, CircleCheck, ExternalLink, Paperclip, Pencil, Sparkles, X } from "lucide-react";
-import { toast } from "sonner";
 import {
-  Button,
-  Input,
-  Progress,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Textarea,
-  cn,
-} from "@venore/plugin-sdk/ui";
+  ArrowLeft,
+  ArrowRight,
+  BellRing,
+  Check,
+  ChevronRight,
+  CircleCheck,
+  Inbox,
+  Lightbulb,
+  MessagesSquare,
+  Paperclip,
+  Pencil,
+  Send,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
+import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea, cn } from "@venore/plugin-sdk/ui";
 import type { AnswerValue, CreatedTicket, SectorForm, WizardData, WizardField, WizardStep } from "../../contracts/types";
 import {
   DESCRIPTION_MIN,
@@ -31,16 +34,15 @@ import {
   type Answers,
 } from "../../shared/answers";
 import { createTicketAction } from "./actions";
+import { accentFor, sectorIcon, type Accent } from "./palette";
 
 type StepDef =
   | { kind: "sector"; title: string }
   | { kind: "fields"; title: string; step: WizardStep }
-  | { kind: "description"; title: string }
-  | { kind: "title"; title: string }
+  | { kind: "details"; title: string }
   | { kind: "review"; title: string };
 
-const DEFAULT_INTRO =
-  "Responda algumas perguntas rápidas. Assim o chamado chega no setor certo, com tudo o que a equipe precisa para resolver mais rápido.";
+const DEFAULT_INTRO = "Escolha o setor que pode ajudar. Se não tiver certeza, escolha o mais próximo — a equipe encaminha se for preciso.";
 const DEFAULT_BODY_HINTS = [
   "O que você precisa ou o que aconteceu?",
   "Onde? (sala, prédio, sistema, equipamento)",
@@ -58,13 +60,6 @@ function initialAnswers(sector: SectorForm | undefined): Answers {
   return answers;
 }
 
-function suggestTitle(sector: SectorForm | undefined, description: string): string {
-  const firstLine = description.trim().split(/[\n.!?]/)[0]?.trim() ?? "";
-  const base = firstLine.length > 80 ? `${firstLine.slice(0, 77).trimEnd()}…` : firstLine;
-  if (!base) return sector?.label ?? "";
-  return base.charAt(0).toUpperCase() + base.slice(1);
-}
-
 export function TicketWizard({ data, initialGroupId }: { data: WizardData; initialGroupId: number | null }) {
   const sectors = data.sectors;
   const byId = useMemo(() => new Map(sectors.map((sector) => [sector.groupId, sector])), [sectors]);
@@ -72,8 +67,8 @@ export function TicketWizard({ data, initialGroupId }: { data: WizardData; initi
 
   const [groupId, setGroupId] = useState<number | null>(initialSector?.groupId ?? null);
   const [answers, setAnswers] = useState<Answers>(() => initialAnswers(initialSector));
-  const [description, setDescription] = useState("");
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [index, setIndex] = useState(initialSector ? 1 : 0);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -82,23 +77,24 @@ export function TicketWizard({ data, initialGroupId }: { data: WizardData; initi
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   const sector = groupId ? byId.get(groupId) : undefined;
-  const steps: StepDef[] = useMemo(
-    () => [
-      { kind: "sector", title: "Para qual setor é o seu pedido?" },
-      ...(sector?.steps ?? []).map((step): StepDef => ({ kind: "fields", title: step.title, step })),
-      { kind: "description", title: "Conte o que você precisa" },
-      { kind: "title", title: "Dê um título ao chamado" },
-      { kind: "review", title: "Confira antes de enviar" },
-    ],
-    [sector],
-  );
+  // Subgrupo (ex.: "Eventos::Som e Projeção") usa a cor do setor-pai.
+  const rootId = sector ? (sector.parentId !== null && byId.has(sector.parentId) ? sector.parentId : sector.groupId) : 0;
+  const accent = accentFor(rootId);
+  const hasQuestions = (sector?.steps.length ?? 0) > 0;
+
+  const steps: StepDef[] = [
+    { kind: "sector", title: "Com qual setor você precisa falar?" },
+    ...(sector?.steps ?? []).map((step): StepDef => ({ kind: "fields", title: step.title, step })),
+    { kind: "details", title: "Agora, conte o que está precisando" },
+    { kind: "review", title: "Tudo certo? Confira e envie" },
+  ];
   const current = steps[Math.min(index, steps.length - 1)];
-  const progress = Math.round(((index + 1) / steps.length) * 100);
+  const questionSteps = steps.filter((step) => step.kind === "fields");
+  const questionNumber = current.kind === "fields" ? questionSteps.indexOf(current) + 1 : 0;
 
   function goTo(next: number) {
     setErrors({});
     setIndex(next);
-    if (steps[next]?.kind === "title" && title.trim().length === 0) setTitle(suggestTitle(sector, description));
     requestAnimationFrame(() => headingRef.current?.focus());
   }
 
@@ -113,15 +109,13 @@ export function TicketWizard({ data, initialGroupId }: { data: WizardData; initi
     let next: Record<string, string> = {};
     if (current.kind === "sector" && !sector) next = { sector: "Escolha o setor para continuar." };
     if (current.kind === "fields") next = validateFields(current.step.fields, answers);
-    if (current.kind === "description") {
+    if (current.kind === "details") {
+      const titleError = validateTitle(title);
       const descriptionError = validateDescription(description);
       const attachmentError = validateAttachments(files, data.limits);
+      if (titleError) next.title = titleError;
       if (descriptionError) next.description = descriptionError;
       if (attachmentError) next.attachments = attachmentError;
-    }
-    if (current.kind === "title") {
-      const titleError = validateTitle(title);
-      if (titleError) next.title = titleError;
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -152,8 +146,8 @@ export function TicketWizard({ data, initialGroupId }: { data: WizardData; initi
     setCreated(null);
     setGroupId(null);
     setAnswers({});
-    setDescription("");
     setTitle("");
+    setDescription("");
     setFiles([]);
     setErrors({});
     setIndex(0);
@@ -163,46 +157,50 @@ export function TicketWizard({ data, initialGroupId }: { data: WizardData; initi
 
   if (sectors.length === 0) {
     return (
-      <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
+      <div className="rounded-xl border border-warning-border bg-warning-soft p-8 text-center text-sm text-foreground">
         Nenhum setor está recebendo chamados por aqui no momento.
       </div>
     );
   }
 
+  const phase = current.kind === "sector" ? 0 : current.kind === "fields" ? 1 : current.kind === "details" ? (hasQuestions ? 2 : 1) : hasQuestions ? 3 : 2;
+  const phases = ["Setor", ...(!sector || hasQuestions ? ["Detalhes"] : []), "Pedido", "Revisão"];
+
   return (
     <form onSubmit={handleNext} className="space-y-6" noValidate>
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>
-            Etapa {index + 1} de {steps.length}
-          </span>
-          {sector && current.kind !== "sector" && <span className="truncate">{sector.label}</span>}
-        </div>
-        <Progress value={progress} />
-      </div>
+      <PhaseBar phases={phases} current={phase} />
 
-      <section className="space-y-6 rounded-xl border bg-card p-6 sm:p-8">
-        <h2 ref={headingRef} tabIndex={-1} className="text-xl font-semibold tracking-tight text-foreground outline-none sm:text-2xl">
-          {current.title}
-        </h2>
+      <section className={cn("space-y-6 rounded-xl border border-t-4 bg-card p-6 shadow-sm sm:p-8", sector ? accent.top : "border-t-primary")}>
+        {sector && current.kind !== "sector" && <SectorTag sector={sector} accent={accent} />}
+
+        <div className="space-y-1.5">
+          {current.kind === "fields" && (
+            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              Pergunta {questionNumber} de {questionSteps.length}
+              {current.step.optional && <span className="ms-2 rounded-full bg-warning-soft px-2 py-0.5 text-warning normal-case">opcional</span>}
+            </p>
+          )}
+          <h2 ref={headingRef} tabIndex={-1} className="text-xl font-semibold tracking-tight text-foreground outline-none sm:text-2xl">
+            {current.title}
+          </h2>
+        </div>
 
         {current.kind === "sector" && (
-          <SectorStep
-            intro={data.intro ?? DEFAULT_INTRO}
-            sectors={sectors}
-            selectedId={groupId}
-            onSelect={chooseSector}
-            error={errors.sector}
-          />
+          <SectorStep intro={data.intro ?? DEFAULT_INTRO} sectors={sectors} selectedId={groupId} onSelect={chooseSector} error={errors.sector} />
         )}
 
         {current.kind === "fields" && (
           <div className="space-y-8">
+            {current.step.optional && (
+              <p className="rounded-lg border border-warning-border bg-warning-soft px-3 py-2 text-sm text-foreground">
+                Esta etapa é opcional — pode seguir sem responder.
+              </p>
+            )}
             {current.step.fields.map((field) => (
               <FieldInput
                 key={field.name}
                 field={field}
-                showLabel={current.step.fields.length > 1}
+                showLabel={current.step.fields.length > 1 || current.step.title !== field.label}
                 value={answers[field.name]}
                 error={errors[field.name]}
                 onChange={(value) => setAnswers((prev) => ({ ...prev, [field.name]: value }))}
@@ -211,9 +209,11 @@ export function TicketWizard({ data, initialGroupId }: { data: WizardData; initi
           </div>
         )}
 
-        {current.kind === "description" && (
-          <DescriptionStep
+        {current.kind === "details" && (
+          <DetailsStep
             hint={sector?.bodyHint ?? null}
+            title={title}
+            onTitle={setTitle}
             description={description}
             onDescription={setDescription}
             files={files}
@@ -223,36 +223,8 @@ export function TicketWizard({ data, initialGroupId }: { data: WizardData; initi
           />
         )}
 
-        {current.kind === "title" && (
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Um bom título diz <strong className="text-foreground">o quê</strong> e <strong className="text-foreground">onde</strong>. Ex.: “Projetor
-              da sala 204 não liga”, “Banner para a Feira de Ciências”.
-            </p>
-            <Input
-              autoFocus
-              value={title}
-              maxLength={TITLE_MAX}
-              onChange={(event) => setTitle(event.target.value)}
-              aria-invalid={Boolean(errors.title)}
-              className="h-11 text-base"
-            />
-            {title.trim() !== suggestTitle(sector, description) && description.trim().length > 0 && (
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                onClick={() => setTitle(suggestTitle(sector, description))}
-              >
-                <Sparkles className="size-3.5" />
-                Usar sugestão: “{suggestTitle(sector, description)}”
-              </button>
-            )}
-            <FieldError message={errors.title} />
-          </div>
-        )}
-
         {current.kind === "review" && sector && (
-          <ReviewStep sector={sector} answers={answers} description={description} title={title} files={files} steps={steps} onEdit={goTo} />
+          <ReviewStep sector={sector} accent={accent} answers={answers} description={description} title={title} files={files} steps={steps} onEdit={goTo} />
         )}
       </section>
 
@@ -267,10 +239,10 @@ export function TicketWizard({ data, initialGroupId }: { data: WizardData; initi
             <Link href="/chamados">Cancelar</Link>
           </Button>
         )}
-        <Button type="submit" size="lg" disabled={pending} className="min-w-36">
+        <Button type="submit" size="lg" disabled={pending} className="min-w-40">
           {current.kind === "review" ? (
             <>
-              <Check className="size-4" />
+              <Send className="size-4" />
               {pending ? "Enviando…" : "Enviar chamado"}
             </>
           ) : (
@@ -282,6 +254,46 @@ export function TicketWizard({ data, initialGroupId }: { data: WizardData; initi
         </Button>
       </div>
     </form>
+  );
+}
+
+// Fases do fluxo: concluída = verde com visto, atual = cor primária com halo, próxima = neutra.
+function PhaseBar({ phases, current }: { phases: string[]; current: number }) {
+  return (
+    <ol className="flex items-start" aria-label="Etapas do chamado">
+      {phases.map((label, position) => {
+        const done = position < current;
+        const active = position === current;
+        return (
+          <li key={label} className="flex flex-1 flex-col items-center gap-1.5 last:flex-none" aria-current={active ? "step" : undefined}>
+            <div className="flex w-full items-center">
+              {position > 0 && <span aria-hidden className={cn("h-0.5 flex-1 rounded-full", position <= current ? "bg-success" : "bg-border")} />}
+              <span
+                className={cn(
+                  "grid size-8 shrink-0 place-items-center rounded-full text-sm font-semibold transition-colors",
+                  done && "bg-success text-success-foreground",
+                  active && "bg-primary text-primary-foreground ring-4 ring-primary/20",
+                  !done && !active && "bg-muted text-muted-foreground",
+                )}
+              >
+                {done ? <Check className="size-4" /> : position + 1}
+              </span>
+              {position < phases.length - 1 && <span aria-hidden className={cn("h-0.5 flex-1 rounded-full", position < current ? "bg-success" : "bg-border")} />}
+            </div>
+            <span className={cn("text-xs", active ? "font-semibold text-foreground" : "text-muted-foreground", !active && "hidden sm:block")}>{label}</span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function SectorTag({ sector, accent }: { sector: SectorForm; accent: Accent }) {
+  return (
+    <span className={cn("inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium text-foreground", accent.soft, accent.border)}>
+      {sectorIcon(sector.label, "size-3.5")}
+      {sector.label}
+    </span>
   );
 }
 
@@ -314,6 +326,7 @@ function SectorStep({
         {topLevel.map((sector) => {
           const active = openParentId === sector.groupId;
           const hasChildren = childrenOf(sector.groupId).length > 0;
+          const accent = accentFor(sector.groupId);
           return (
             <button
               key={sector.groupId}
@@ -321,18 +334,21 @@ function SectorStep({
               onClick={() => onSelect(sector.groupId)}
               aria-pressed={active}
               className={cn(
-                "flex items-start justify-between gap-3 rounded-lg border bg-background p-4 text-left transition-colors hover:border-primary/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                active && "border-primary bg-primary/5 ring-1 ring-primary",
+                "group flex items-center gap-4 rounded-xl border bg-background p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                active ? cn("ring-2", accent.border, accent.ring, accent.soft) : "hover:border-foreground/30",
               )}
             >
-              <span className="space-y-1">
+              <span className={cn("grid size-11 shrink-0 place-items-center rounded-lg text-foreground", accent.soft)}>
+                {sectorIcon(sector.label, "size-5")}
+              </span>
+              <span className="min-w-0 flex-1 space-y-0.5">
                 <span className="block font-medium text-foreground">{sector.label}</span>
                 {sector.description && <span className="block text-xs text-muted-foreground">{sector.description}</span>}
               </span>
               {hasChildren ? (
-                <ChevronRight className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
               ) : (
-                active && <CircleCheck className="mt-0.5 size-4 shrink-0 text-primary" />
+                active && <CircleCheck className="size-5 shrink-0 text-success" />
               )}
             </button>
           );
@@ -340,12 +356,12 @@ function SectorStep({
       </div>
 
       {parent && subOptions.length > 0 && (
-        <div className="space-y-3 rounded-lg border border-dashed p-4">
-          <p className="text-sm font-medium text-foreground">Qual assunto de {parent.label}?</p>
+        <div className={cn("space-y-3 rounded-xl border p-4", accentFor(parent.groupId).soft, accentFor(parent.groupId).border)}>
+          <p className="text-sm font-medium text-foreground">Qual é o assunto em {parent.label}?</p>
           <div className="flex flex-wrap gap-2">
             {[parent, ...subOptions].map((option) => (
               <OptionChip key={option.groupId} selected={selectedId === option.groupId} onClick={() => onSelect(option.groupId)}>
-                {option.groupId === parent.groupId ? "Outro assunto / geral" : option.label}
+                {option.groupId === parent.groupId ? "Outro assunto" : option.label}
               </OptionChip>
             ))}
           </div>
@@ -363,8 +379,8 @@ function OptionChip({ selected, onClick, children }: { selected: boolean; onClic
       onClick={onClick}
       aria-pressed={selected}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition-colors hover:border-primary/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-        selected ? "border-primary bg-primary text-primary-foreground" : "bg-background text-foreground",
+        "inline-flex min-h-10 items-center gap-1.5 rounded-full border px-4 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        selected ? "border-primary bg-primary font-medium text-primary-foreground" : "bg-background text-foreground hover:border-primary/60 hover:bg-primary/5",
       )}
     >
       {selected && <Check className="size-3.5" />}
@@ -393,10 +409,9 @@ function FieldInput({
       {showLabel && (
         <label htmlFor={id} className="block font-medium text-foreground">
           {field.label}
-          {!field.required && <span className="ml-1.5 text-xs font-normal text-muted-foreground">(opcional)</span>}
+          {!field.required && <span className="ms-1.5 text-xs font-normal text-muted-foreground">(opcional)</span>}
         </label>
       )}
-      {!showLabel && !field.required && <p className="text-xs text-muted-foreground">Opcional — pode pular se não se aplicar.</p>}
       {field.help && <p className="text-sm text-muted-foreground">{field.help}</p>}
 
       {field.type === "select" &&
@@ -429,7 +444,7 @@ function FieldInput({
 
       {field.type === "multiselect" && (
         <div className="space-y-2">
-          <p className="text-xs text-muted-foreground">Pode marcar mais de uma.</p>
+          <p className="text-xs text-muted-foreground">Pode marcar mais de uma opção.</p>
           <div className="flex flex-wrap gap-2">
             {field.options.map((option) => {
               const list = Array.isArray(value) ? value : [];
@@ -452,15 +467,16 @@ function FieldInput({
         <div className="flex gap-3">
           {field.options.map((option) => {
             const optionValue = option.value === "true";
+            const selected = value === optionValue;
             return (
               <button
                 key={option.value}
                 type="button"
                 onClick={() => onChange(optionValue)}
-                aria-pressed={value === optionValue}
+                aria-pressed={selected}
                 className={cn(
-                  "min-w-28 rounded-lg border px-5 py-3 text-sm font-medium capitalize transition-colors hover:border-primary/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                  value === optionValue ? "border-primary bg-primary text-primary-foreground" : "bg-background text-foreground",
+                  "min-w-28 rounded-lg border px-5 py-3 text-sm font-medium capitalize transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                  selected ? "border-primary bg-primary text-primary-foreground" : "bg-background text-foreground hover:border-primary/60 hover:bg-primary/5",
                 )}
               >
                 {option.label}
@@ -535,8 +551,11 @@ function FieldInput({
   );
 }
 
-function DescriptionStep({
+// Título + descrição + anexos numa tela só: é o "pedido" em si, e o resto já foi respondido.
+function DetailsStep({
   hint,
+  title,
+  onTitle,
   description,
   onDescription,
   files,
@@ -545,6 +564,8 @@ function DescriptionStep({
   errors,
 }: {
   hint: string | null;
+  title: string;
+  onTitle: (value: string) => void;
   description: string;
   onDescription: (value: string) => void;
   files: File[];
@@ -557,26 +578,46 @@ function DescriptionStep({
   const remaining = Math.max(0, DESCRIPTION_MIN - description.trim().length);
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-lg bg-muted/60 p-4">
-        <p className="mb-2 text-sm font-medium text-foreground">Ajuda a equipe se você contar:</p>
-        <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-          {hints.map((line) => (
-            <li key={line}>{line.replace(/^[-•*]\s*/, "")}</li>
-          ))}
-        </ul>
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <label htmlFor="ticket-title" className="block font-medium text-foreground">
+          Título do chamado
+        </label>
+        <p className="text-sm text-muted-foreground">
+          Em poucas palavras: <strong className="text-foreground">o quê</strong> e <strong className="text-foreground">onde</strong>. Ex.: “Projetor da sala 204 não
+          liga”.
+        </p>
+        <Input id="ticket-title" value={title} maxLength={TITLE_MAX} onChange={(event) => onTitle(event.target.value)} aria-invalid={Boolean(errors.title)} className="h-11 text-base" />
+        <FieldError message={errors.title} />
       </div>
-      <Textarea
-        autoFocus
-        rows={8}
-        value={description}
-        onChange={(event) => onDescription(event.target.value)}
-        placeholder="Escreva aqui com suas palavras…"
-        aria-invalid={Boolean(errors.description)}
-        className="text-base"
-      />
-      {remaining > 0 && description.length > 0 && <p className="text-xs text-muted-foreground">Mais {remaining} caracteres, pelo menos.</p>}
-      <FieldError message={errors.description} />
+
+      <div className="space-y-3">
+        <label htmlFor="ticket-description" className="block font-medium text-foreground">
+          Descrição
+        </label>
+        <div className="flex gap-3 rounded-lg border border-chart-2/30 bg-chart-2/10 p-4">
+          <Lightbulb className="mt-0.5 size-4 shrink-0 text-chart-2" />
+          <div className="space-y-1.5">
+            <p className="text-sm font-medium text-foreground">Ajuda a equipe se você contar:</p>
+            <ul className="list-disc space-y-1 ps-5 text-sm text-foreground/80">
+              {hints.map((line) => (
+                <li key={line}>{line.replace(/^[-•*]\s*/, "")}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <Textarea
+          id="ticket-description"
+          rows={7}
+          value={description}
+          onChange={(event) => onDescription(event.target.value)}
+          placeholder="Escreva aqui com suas palavras…"
+          aria-invalid={Boolean(errors.description)}
+          className="text-base"
+        />
+        {remaining > 0 && description.length > 0 && <p className="text-xs text-muted-foreground">Mais {remaining} caracteres, pelo menos.</p>}
+        <FieldError message={errors.description} />
+      </div>
 
       <div className="space-y-2">
         <input
@@ -592,16 +633,19 @@ function DescriptionStep({
         />
         <Button type="button" variant="outline" onClick={() => inputRef.current?.click()} disabled={files.length >= limits.maxFiles}>
           <Paperclip className="size-4" />
-          Anexar arquivo ou foto
+          Anexar foto ou arquivo
         </Button>
         <p className="text-xs text-muted-foreground">
-          Opcional. Até {limits.maxFiles} arquivos, {formatBytes(limits.maxTotalBytes)} no total — prints, fotos e referências ajudam muito.
+          Opcional. Até {limits.maxFiles} arquivos, {formatBytes(limits.maxTotalBytes)} no total — prints e fotos ajudam muito.
         </p>
         {files.length > 0 && (
           <ul className="space-y-1">
             {files.map((file, position) => (
-              <li key={`${file.name}-${position}`} className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm">
-                <span className="truncate text-foreground">{file.name}</span>
+              <li key={`${file.name}-${position}`} className="flex items-center justify-between gap-3 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                <span className="flex min-w-0 items-center gap-2 text-foreground">
+                  <Paperclip className="size-3.5 shrink-0 text-muted-foreground" />
+                  <span className="truncate">{file.name}</span>
+                </span>
                 <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
                   {formatBytes(file.size)}
                   <button
@@ -625,6 +669,7 @@ function DescriptionStep({
 
 function ReviewStep({
   sector,
+  accent,
   answers,
   description,
   title,
@@ -633,6 +678,7 @@ function ReviewStep({
   onEdit,
 }: {
   sector: SectorForm;
+  accent: Accent;
   answers: Answers;
   description: string;
   title: string;
@@ -641,8 +687,8 @@ function ReviewStep({
   onEdit: (index: number) => void;
 }) {
   const indexOf = (predicate: (step: StepDef) => boolean) => steps.findIndex(predicate);
+  const detailsIndex = indexOf((step) => step.kind === "details");
   const rows: { label: string; value: string; stepIndex: number }[] = [
-    { label: "Título", value: title.trim(), stepIndex: indexOf((step) => step.kind === "title") },
     { label: "Setor", value: sector.label, stepIndex: 0 },
     ...sector.steps.flatMap((step) =>
       step.fields
@@ -654,11 +700,25 @@ function ReviewStep({
         })),
     ),
   ];
-  const descriptionIndex = indexOf((step) => step.kind === "description");
 
   return (
-    <div className="space-y-4">
-      <dl className="divide-y rounded-lg border">
+    <div className="space-y-6">
+      <div className={cn("space-y-2 rounded-xl border p-4", accent.soft, accent.border)}>
+        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Seu pedido</p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-lg font-semibold text-foreground">{title.trim()}</p>
+          <EditButton onClick={() => onEdit(detailsIndex)} />
+        </div>
+        <p className="line-clamp-6 text-sm whitespace-pre-line text-foreground/90">{description.trim()}</p>
+        {files.length > 0 && (
+          <p className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Paperclip className="size-3" />
+            {files.map((file) => file.name).join(", ")}
+          </p>
+        )}
+      </div>
+
+      <dl className="divide-y rounded-xl border">
         {rows.map((row) => (
           <div key={row.label} className="flex items-start justify-between gap-4 p-3">
             <div className="min-w-0 space-y-0.5">
@@ -668,21 +728,24 @@ function ReviewStep({
             <EditButton onClick={() => onEdit(row.stepIndex)} />
           </div>
         ))}
-        <div className="flex items-start justify-between gap-4 p-3">
-          <div className="min-w-0 space-y-0.5">
-            <dt className="text-xs text-muted-foreground">Descrição</dt>
-            <dd className="line-clamp-6 text-sm whitespace-pre-line text-foreground">{description.trim()}</dd>
-            {files.length > 0 && (
-              <dd className="pt-1 text-xs text-muted-foreground">
-                <Paperclip className="mr-1 inline size-3" />
-                {files.map((file) => file.name).join(", ")}
-              </dd>
-            )}
-          </div>
-          <EditButton onClick={() => onEdit(descriptionIndex)} />
-        </div>
       </dl>
-      <p className="text-xs text-muted-foreground">Você vai receber as atualizações do chamado por e-mail e pode acompanhá-lo em “Meus chamados”.</p>
+
+      <div className="rounded-xl border border-success-border bg-success-soft p-4">
+        <p className="mb-3 text-sm font-medium text-foreground">O que acontece depois de enviar</p>
+        <ol className="space-y-2.5 text-sm text-foreground/90">
+          <li className="flex items-start gap-3">
+            <Inbox className="mt-0.5 size-4 shrink-0 text-success" />A equipe de {sector.label} recebe o chamado na hora.
+          </li>
+          <li className="flex items-start gap-3">
+            <MessagesSquare className="mt-0.5 size-4 shrink-0 text-success" />
+            Você acompanha e conversa com a equipe aqui mesmo, em “Meus chamados”.
+          </li>
+          <li className="flex items-start gap-3">
+            <BellRing className="mt-0.5 size-4 shrink-0 text-success" />
+            Cada resposta também chega no seu e-mail.
+          </li>
+        </ol>
+      </div>
     </div>
   );
 }
@@ -699,7 +762,7 @@ function EditButton({ onClick }: { onClick: () => void }) {
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p role="alert" className="text-sm text-destructive">
+    <p role="alert" className="text-sm font-medium text-destructive">
       {message}
     </p>
   );
@@ -707,25 +770,22 @@ function FieldError({ message }: { message?: string }) {
 
 function CreatedScreen({ ticket, onRestart }: { ticket: CreatedTicket; onRestart: () => void }) {
   return (
-    <div className="space-y-6 rounded-xl border bg-card p-8 text-center sm:p-12">
-      <CircleCheck className="mx-auto size-12 text-primary" strokeWidth={1.5} />
+    <div className="space-y-6 rounded-xl border border-t-4 border-success-border border-t-success bg-success-soft p-8 text-center sm:p-12">
+      <span className="mx-auto grid size-16 place-items-center rounded-full bg-success text-success-foreground">
+        <Check className="size-8" strokeWidth={2.5} />
+      </span>
       <div className="space-y-2">
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Chamado #{ticket.number} aberto</h2>
-        <p className="text-sm text-muted-foreground">O setor já recebeu o seu pedido. As respostas da equipe chegam no seu e-mail.</p>
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground">Chamado #{ticket.number} enviado!</h2>
+        <p className="mx-auto max-w-md text-sm text-foreground/80">O setor já recebeu o seu pedido. Quando a equipe responder, avisamos por e-mail e você conversa por aqui.</p>
       </div>
       <div className="flex flex-wrap justify-center gap-3">
-        <Button asChild>
-          <Link href="/chamados">Ver meus chamados</Link>
+        <Button size="lg" asChild>
+          <Link href={`/chamados/${ticket.id}`}>
+            <MessagesSquare className="size-4" />
+            Acompanhar este chamado
+          </Link>
         </Button>
-        {ticket.url && (
-          <Button variant="outline" asChild>
-            <a href={ticket.url} target="_blank" rel="noreferrer">
-              Abrir no Zammad
-              <ExternalLink className="size-4" />
-            </a>
-          </Button>
-        )}
-        <Button variant="ghost" onClick={onRestart}>
+        <Button size="lg" variant="outline" onClick={onRestart}>
           Abrir outro chamado
         </Button>
       </div>

@@ -20,9 +20,6 @@ export function groupConfigFor(config: WizardConfig, groupId: number): GroupWiza
   return { ...DEFAULT_GROUP_CONFIG, ...(config.groups[String(groupId)] ?? {}) };
 }
 
-// Campo sem etapa definida vira uma etapa só dele, depois das etapas configuradas.
-const AUTO_STEP_BASE = 1000;
-
 export type BuildOptions = {
   roleIds?: number[];
   role?: EvaluationContext["role"];
@@ -98,21 +95,58 @@ function buildSectorForm(
   };
 }
 
+const isChoice = (field: WizardField) => field.type === "select" || field.type === "multiselect";
+const isDate = (field: WizardField) => field.type === "date" || field.type === "datetime";
+const QUICK_PER_STEP = 3;
+const OPTIONAL_PER_STEP = 4;
+
+function chunk<T>(list: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+  return out;
+}
+
+function makeStep(key: string, title: string, fields: WizardField[]): WizardStep {
+  return { key, title, fields, optional: fields.every((field) => !field.required) };
+}
+
+// Etapas automáticas (campos sem número de etapa configurado). Pensadas para o menor número de telas
+// sem sobrecarregar nenhuma: cada pergunta de ESCOLHA fica sozinha (opções precisam de espaço), as
+// datas vão juntas, as perguntas rápidas (sim/não, texto curto…) vão em lotes de 3 e TUDO que é
+// opcional fica numa etapa só, no fim — a pessoa nunca trava numa pergunta que pode pular.
+function autoSteps(fields: WizardField[]): WizardStep[] {
+  const required = fields.filter((field) => field.required);
+  const optional = fields.filter((field) => !field.required);
+  const steps: WizardStep[] = [];
+  let counter = 0;
+  const next = () => `auto-${(counter += 1)}`;
+
+  for (const field of required.filter(isChoice)) steps.push(makeStep(next(), field.label, [field]));
+  const dates = required.filter(isDate);
+  if (dates.length > 0) steps.push(makeStep(next(), dates.length === 1 ? dates[0].label : "Para quando?", dates));
+  for (const group of chunk(required.filter((field) => !isChoice(field) && !isDate(field)), QUICK_PER_STEP)) {
+    steps.push(makeStep(next(), group.length === 1 ? group[0].label : "Só mais algumas perguntas", group));
+  }
+  for (const group of chunk(optional, OPTIONAL_PER_STEP)) steps.push(makeStep(next(), "Quer ajustar mais alguma coisa?", group));
+  return steps;
+}
+
+// Campos com número de etapa na configuração do admin vêm primeiro (na ordem dos números); os demais
+// seguem a regra automática.
 function groupIntoSteps(fields: WizardField[], groupConfig: GroupWizardConfig): WizardStep[] {
-  const buckets = new Map<number, WizardField[]>();
-  fields.forEach((field, index) => {
-    const step = groupConfig.fieldSteps[field.name] ?? AUTO_STEP_BASE + index;
-    buckets.set(step, [...(buckets.get(step) ?? []), field]);
-  });
-  return [...buckets.entries()]
+  const configured = new Map<number, WizardField[]>();
+  const rest: WizardField[] = [];
+  for (const field of fields) {
+    const number = groupConfig.fieldSteps[field.name];
+    if (number === undefined) rest.push(field);
+    else configured.set(number, [...(configured.get(number) ?? []), field]);
+  }
+  const manual = [...configured.entries()]
     .sort(([a], [b]) => a - b)
-    .map(([number, stepFields]) => ({
-      key: `step-${number}`,
-      title:
-        groupConfig.stepTitles[String(number)]?.trim() ||
-        (stepFields.length === 1 ? stepFields[0].label : "Mais alguns detalhes"),
-      fields: stepFields,
-    }));
+    .map(([number, stepFields]) =>
+      makeStep(`step-${number}`, groupConfig.stepTitles[String(number)]?.trim() || (stepFields.length === 1 ? stepFields[0].label : "Mais alguns detalhes"), stepFields),
+    );
+  return [...manual, ...autoSteps(rest)];
 }
 
 function fieldType(attribute: ZammadAttribute): FieldType | null {
