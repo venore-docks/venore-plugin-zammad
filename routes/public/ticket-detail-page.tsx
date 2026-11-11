@@ -87,7 +87,7 @@ function Message({ message, first }: { message: TicketMessage; first: boolean })
         aria-hidden
         className={cn(
           "mt-1 grid size-9 shrink-0 place-items-center overflow-hidden rounded-full text-xs font-semibold text-foreground ring-2",
-          mine ? "bg-primary/20 ring-primary/30" : "bg-chart-2/20 ring-chart-2/30",
+          mine ? "bg-primary/20 ring-primary/30" : "bg-chart-6/20 ring-chart-6/40",
         )}
       >
         {message.avatarUrl ? (
@@ -100,13 +100,15 @@ function Message({ message, first }: { message: TicketMessage; first: boolean })
       <div
         className={cn(
           "min-w-0 max-w-[85%] space-y-2 rounded-xl border p-4",
-          mine ? "border-primary/30 bg-primary/10" : "border-chart-2/30 bg-chart-2/10",
+          // Você: tingido na cor primária. Equipe: superfície neutra com faixa lateral azul — a diferença
+          // não depende só do matiz (em temas teal, primário e azul-esverdeado ficam parecidos).
+          mine ? "border-primary/30 bg-primary/10" : "border-s-4 border-border border-s-chart-6 bg-card",
         )}
       >
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">
           <p className="text-sm font-semibold text-foreground">
             {first && mine ? "Seu pedido" : message.authorName}
-            {!mine && <span className="ms-2 text-xs font-normal text-muted-foreground">equipe</span>}
+            {!mine && <span className="ms-2 rounded-full bg-chart-6/15 px-2 py-0.5 text-xs font-medium text-foreground">equipe</span>}
           </p>
           <p className="text-xs text-muted-foreground">{formatDateTime(message.createdAt)}</p>
         </div>
