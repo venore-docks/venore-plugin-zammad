@@ -19,6 +19,7 @@ import {
 } from "@venore/plugin-sdk/ui";
 import { ATTACHMENT_LIMITS, formatBytes, validateAttachments, validateReply } from "../../shared/answers";
 import { changeTicketStateAction, replyTicketAction } from "./actions";
+import { useReplyQuote } from "./reply-context";
 
 // Encerrar (com confirmação — é fácil clicar sem querer) ou reabrir o chamado.
 export function TicketStateButton({ ticketId, closed }: { ticketId: number; closed: boolean }) {
@@ -74,6 +75,7 @@ export function ReplyBox({ ticketId, closed }: { ticketId: number; closed: boole
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
+  const { quote, setQuote } = useReplyQuote();
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -84,6 +86,7 @@ export function ReplyBox({ ticketId, closed }: { ticketId: number; closed: boole
     const formData = new FormData();
     formData.set("ticketId", String(ticketId));
     formData.set("message", message);
+    if (quote) formData.set("quoteArticleId", String(quote.articleId));
     files.forEach((file) => formData.append("attachments", file));
     startTransition(async () => {
       const result = await replyTicketAction(formData);
@@ -94,6 +97,7 @@ export function ReplyBox({ ticketId, closed }: { ticketId: number; closed: boole
       toast.success(result.data.reopened ? "Mensagem enviada e chamado reaberto." : "Mensagem enviada.");
       setMessage("");
       setFiles([]);
+      setQuote(null);
       router.refresh();
     });
   }
@@ -103,6 +107,22 @@ export function ReplyBox({ ticketId, closed }: { ticketId: number; closed: boole
       <label htmlFor="reply-message" className="block font-medium text-foreground">
         {closed ? "Precisa de mais alguma coisa? Escreva aqui" : "Responder à equipe"}
       </label>
+      {quote && (
+        <div className="flex items-start gap-3 rounded-lg border border-s-4 border-border border-s-chart-6 bg-muted/50 p-3">
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <p className="text-xs font-semibold text-foreground">Respondendo a {quote.author}</p>
+            <p className="line-clamp-2 text-sm text-muted-foreground">{quote.preview}</p>
+          </div>
+          <button
+            type="button"
+            aria-label="Cancelar resposta a esta mensagem"
+            className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+            onClick={() => setQuote(null)}
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      )}
       <Textarea
         id="reply-message"
         rows={4}

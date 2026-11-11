@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { articleToText, cleanSenderName, extractFormAnswers, htmlToText } from "./html-text";
+import { composeReplyBody } from "./answers";
+import { articleToText, cleanSenderName, extractFormAnswers, extractReplyQuote, htmlToText, makeExcerpt } from "./html-text";
 
 describe("htmlToText", () => {
   it("e-mail real da equipe: divs e br viram linhas", () => {
@@ -49,6 +50,32 @@ describe("extractFormAnswers", () => {
 
   it("mensagem sem resumo passa intacta", () => {
     expect(extractFormAnswers("<p>Oi</p>")).toEqual({ html: "<p>Oi</p>", answers: [] });
+  });
+});
+
+describe("citação (Responder)", () => {
+  it("makeExcerpt: uma linha, corta com reticências", () => {
+    expect(makeExcerpt("Olá\n\n  tudo   bem?")).toBe("Olá tudo bem?");
+    expect(makeExcerpt("a".repeat(300), 10)).toBe("aaaaaaaaa…");
+  });
+
+  it("extractReplyQuote: só o bloco do início, tolerando atributos que o Zammad acrescente", () => {
+    const html =
+      '<blockquote type="cite"><p dir="auto"><strong>Felipe Cardoso</strong></p><p dir="auto">Nesta semana foi realocado o access point…</p></blockquote><p>Obrigado!</p>';
+    const result = extractReplyQuote(html);
+    expect(result.quote).toEqual({ author: "Felipe Cardoso", excerpt: "Nesta semana foi realocado o access point…" });
+    expect(htmlToText(result.html)).toBe("Obrigado!");
+    // citação no FIM (e-mail) não é cartão: continua sendo descartada
+    expect(extractReplyQuote("<p>Oi</p><blockquote><p><strong>X</strong></p><p>y</p></blockquote>").quote).toBeNull();
+  });
+
+  it("composeReplyBody e extractReplyQuote são inversos (com HTML escapado)", () => {
+    const body = composeReplyBody("Obrigado!\nAbs", { author: "Ana <b>", excerpt: "a & b" });
+    expect(body).toBe("<blockquote><p><strong>Ana &lt;b&gt;</strong></p><p>a &amp; b</p></blockquote><p>Obrigado!<br>Abs</p>");
+    const parsed = extractReplyQuote(body);
+    expect(parsed.quote).toEqual({ author: "Ana <b>", excerpt: "a & b" });
+    expect(htmlToText(parsed.html)).toBe("Obrigado!\nAbs");
+    expect(composeReplyBody("Oi")).toBe("<p>Oi</p>");
   });
 });
 

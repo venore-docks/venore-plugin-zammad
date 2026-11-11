@@ -51,8 +51,10 @@ export async function createTicketAction(formData: FormData): Promise<ZammadActi
 export async function replyTicketAction(formData: FormData): Promise<ZammadActionResult<{ reopened: boolean }>> {
   if (!(await isPluginActive("zammad"))) return { ok: false, error: DISABLED };
   const ticketId = Number(formData.get("ticketId"));
+  const quoteId = Number(formData.get("quoteArticleId"));
   const result = await replyTicket({
     ticketId,
+    quoteArticleId: Number.isInteger(quoteId) && quoteId > 0 ? quoteId : null,
     message: String(formData.get("message") ?? ""),
     attachments: await readAttachments(formData),
   });

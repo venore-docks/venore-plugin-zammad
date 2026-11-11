@@ -90,6 +90,33 @@ export function extractFormAnswers(html: string): { html: string; answers: FormA
   return { html: html.replace(block[0], ""), answers };
 }
 
+export type ReplyQuote = { author: string; excerpt: string };
+
+// Trecho curto de uma mensagem para citar ("Responder", como no WhatsApp): uma linha, sem quebras.
+export function makeExcerpt(text: string, max = 220): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  return flat.length > max ? `${flat.slice(0, max - 1).trimEnd()}…` : flat;
+}
+
+// Mensagem que responde a outra começa com <blockquote><p><strong>autor</strong></p><p>trecho</p>
+// </blockquote> (`composeReplyBody` em answers.ts). O Zammad mostra isso como citação normal para a
+// equipe; o portal tira o bloco do texto e o exibe como cartão de resposta. Só vale no INÍCIO do corpo:
+// citação de e-mail (no fim) continua sendo descartada por htmlToText.
+export function extractReplyQuote(html: string): { html: string; quote: ReplyQuote | null } {
+  const match = /^\s*<blockquote\b[^>]*>\s*<p\b[^>]*>\s*<strong\b[^>]*>([\s\S]*?)<\/strong>\s*<\/p>\s*<p\b[^>]*>([\s\S]*?)<\/p>\s*<\/blockquote>/i.exec(html);
+  if (!match) return { html, quote: null };
+  const author = plain(match[1]);
+  const excerpt = plain(match[2]);
+  if (!author || !excerpt) return { html, quote: null };
+  return { html: html.slice(match[0].length), quote: { author, excerpt } };
+}
+
+// Texto "de conversa" de um artigo: sem resumo do formulário nem bloco de citação.
+export function articleVisibleText(body: string, contentType: string): string {
+  if (!contentType.toLowerCase().includes("html")) return articleToText(body, contentType);
+  return articleToText(extractFormAnswers(extractReplyQuote(body).html).html, contentType);
+}
+
 // Remetente de e-mail do Zammad: "Felipe Cardoso via Zammad Helpdesk Support <suporte@…>" → "Felipe Cardoso".
 export function cleanSenderName(from: string | null | undefined): string {
   if (!from || from.trim() === "-") return "";

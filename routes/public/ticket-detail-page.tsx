@@ -7,8 +7,10 @@ import { cn } from "@venore/plugin-sdk/ui";
 import { getTicket } from "../../index";
 import type { TicketMessage } from "../../index";
 import { formatBytes } from "../../shared/answers";
+import { makeExcerpt } from "../../shared/html-text";
 import { ImageLightbox } from "./image-lightbox";
 import { initials } from "./palette";
+import { ReplyProvider, ReplyToButton } from "./reply-context";
 import { BlockedNotice, StateBadge, formatDateTime } from "./shared";
 import { ReplyBox, TicketStateButton } from "./ticket-actions";
 
@@ -31,6 +33,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ t
   const ticket = result.data;
 
   return (
+    <ReplyProvider>
     <div className="mx-auto max-w-3xl space-y-6 py-10">
       <Link href="/chamados" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="size-4" />
@@ -76,13 +79,15 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ t
 
       <ReplyBox ticketId={ticket.id} closed={ticket.closed} />
     </div>
+    </ReplyProvider>
   );
 }
 
 function Message({ message, first }: { message: TicketMessage; first: boolean }) {
   const mine = message.role === "me";
   return (
-    <li className={cn("flex gap-3", mine && "flex-row-reverse")}>
+    // id + :target — o cartão de citação rola até aqui e a mensagem ganha um anel por um instante.
+    <li id={`msg-${message.id}`} className={cn("flex scroll-mt-24 gap-3 [&:target>div:last-child]:ring-2 [&:target>div:last-child]:ring-chart-6", mine && "flex-row-reverse")}>
       <span
         aria-hidden
         className={cn(
@@ -112,6 +117,7 @@ function Message({ message, first }: { message: TicketMessage; first: boolean })
           </p>
           <p className="text-xs text-muted-foreground">{formatDateTime(message.createdAt)}</p>
         </div>
+        {message.quote && <QuoteCard quote={message.quote} />}
         {message.text && <p className="text-sm leading-relaxed break-words whitespace-pre-wrap text-foreground">{message.text}</p>}
         {message.answers.length > 0 && (
           <div className="space-y-3 rounded-lg border bg-background/70 p-4">
@@ -150,7 +156,31 @@ function Message({ message, first }: { message: TicketMessage; first: boolean })
             )}
           </ul>
         )}
+        {!mine && (
+          <div className="-mb-1 flex justify-end">
+            <ReplyToButton quote={{ articleId: message.id, author: message.authorName, preview: makeExcerpt(message.text, 160) || "(anexo)" }} />
+          </div>
+        )}
       </div>
     </li>
+  );
+}
+
+// Cartão "esta mensagem responde a…" no topo da mensagem. Com o original localizado, vira link que
+// rola até ele. A cor da faixa segue quem foi citado (equipe = azul).
+function QuoteCard({ quote }: { quote: NonNullable<TicketMessage["quote"]> }) {
+  const body = (
+    <>
+      <span className="block text-xs font-semibold text-foreground">{quote.author}</span>
+      <span className="line-clamp-2 block text-sm text-muted-foreground">{quote.excerpt}</span>
+    </>
+  );
+  const classes = "block space-y-0.5 rounded-lg border-s-4 border-s-chart-6 bg-background/70 px-3 py-2";
+  return quote.targetId ? (
+    <a href={`#msg-${quote.targetId}`} className={cn(classes, "transition-colors hover:bg-background")} title="Ir para a mensagem original">
+      {body}
+    </a>
+  ) : (
+    <div className={classes}>{body}</div>
   );
 }

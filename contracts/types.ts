@@ -76,6 +76,9 @@ export type TicketMessage = {
   avatarUrl: string | null;
   text: string;
   createdAt: string;
+  // Resposta a outra mensagem ("Responder"): quem escreveu, um trecho e o id da mensagem original
+  // (null se não deu para localizá-la na conversa).
+  quote: { author: string; excerpt: string; targetId: number | null } | null;
   // Resumo das respostas do formulário (só no 1º artigo de chamados abertos pelo portal).
   answers: { label: string; value: string }[];
   attachments: TicketAttachmentInfo[];

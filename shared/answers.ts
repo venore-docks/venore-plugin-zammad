@@ -148,6 +148,17 @@ export function validateReply(message: string): string | null {
   return null;
 }
 
+// Corpo de uma resposta no chamado. Com `quote`, começa pelo bloco de citação (ver extractReplyQuote).
+export function composeReplyBody(message: string, quote?: { author: string; excerpt: string } | null): string {
+  const paragraphs = message
+    .trim()
+    .split(/\n{2,}/)
+    .map((paragraph) => `<p>${escapeHtml(paragraph).replaceAll("\n", "<br>")}</p>`)
+    .join("");
+  const quoted = quote ? `<blockquote><p><strong>${escapeHtml(quote.author)}</strong></p><p>${escapeHtml(quote.excerpt)}</p></blockquote>` : "";
+  return `${quoted}${paragraphs}`;
+}
+
 export function escapeHtml(text: string): string {
   return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 }

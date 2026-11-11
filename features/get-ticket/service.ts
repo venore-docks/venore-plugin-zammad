@@ -1,7 +1,7 @@
 import type { TicketAttachmentInfo, TicketMessage } from "../../contracts/types";
 import type { ZammadArticle } from "../../contracts/zammad";
 import { resolveAvatars } from "../../shared/avatars";
-import { articleToText, cleanSenderName, extractFormAnswers } from "../../shared/html-text";
+import { articleToText, cleanSenderName, extractFormAnswers, extractReplyQuote, makeExcerpt } from "../../shared/html-text";
 import { canManageTicketState, loadOwnTicket, loadPublicArticles } from "../../shared/own-ticket";
 import type { Requester } from "../../shared/requester";
 import { describeState, isAwaitingYou } from "../../shared/ticket-state";
@@ -17,7 +17,9 @@ function toMessage(article: ZammadArticle, requester: Requester, avatars: Map<nu
   const mine = article.created_by_id === requester.zammadUser.id;
   const system = article.sender === "System";
   const isHtml = (article.content_type ?? "").toLowerCase().includes("html");
-  const split = isHtml ? extractFormAnswers(article.body ?? "") : { html: article.body ?? "", answers: [] };
+  // Citação ("Responder") só vale em mensagem DA PESSOA: é ela quem a envia pelo portal.
+  const quoted = isHtml && mine ? extractReplyQuote(article.body ?? "") : { html: article.body ?? "", quote: null };
+  const split = isHtml ? extractFormAnswers(quoted.html) : { html: quoted.html, answers: [] };
   const attachments: TicketAttachmentInfo[] = (article.attachments ?? []).map((file) => {
     const mime = String(file.preferences?.["Content-Type"] ?? file.preferences?.["Mime-Type"] ?? "");
     return {
@@ -34,10 +36,25 @@ function toMessage(article: ZammadArticle, requester: Requester, avatars: Map<nu
     authorName: mine ? "Você" : cleanSenderName(article.from) || (system ? "Sistema" : "Equipe"),
     avatarUrl: system ? null : (avatars.get(article.created_by_id) ?? null),
     text: articleToText(split.html, article.content_type ?? "text/plain"),
+    quote: quoted.quote ? { ...quoted.quote, targetId: null } : null,
     answers: split.answers,
     createdAt: article.created_at,
     attachments,
   };
+}
+
+// A citação guarda autor + trecho, não o id: acha a mensagem original (anterior, do mesmo autor, cujo
+// texto começa pelo trecho) para o portal poder rolar até ela. Não achou = o cartão fica sem link.
+function linkQuotes(messages: TicketMessage[]): void {
+  for (const message of messages) {
+    if (!message.quote) continue;
+    const quote = message.quote;
+    const needle = quote.excerpt.replace(/…$/, "");
+    const target = [...messages]
+      .reverse()
+      .find((other) => other.id < message.id && other.role !== "me" && other.authorName === quote.author && makeExcerpt(other.text, Number.MAX_SAFE_INTEGER).startsWith(needle));
+    quote.targetId = target?.id ?? null;
+  }
 }
 
 export async function getTicket(requester: Requester, input: GetTicketInput): Promise<GetTicketResult> {
@@ -53,6 +70,7 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
     articles.data.filter((article) => article.sender !== "System").map((article) => article.created_by_id),
   ).catch(() => new Map<number, string>());
   const messages = articles.data.map((article) => toMessage(article, requester, avatars)).filter((message) => message.role !== "system");
+  linkQuotes(messages);
   return {
     success: true,
     data: {

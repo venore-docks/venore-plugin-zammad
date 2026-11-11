@@ -1,6 +1,7 @@
 import { beginOperation, endOperation } from "@venore/plugin-sdk/observability";
-import { escapeHtml, validateAttachments, validateReply } from "../../shared/answers";
-import { loadOwnTicket, resolveStateId } from "../../shared/own-ticket";
+import { composeReplyBody, validateAttachments, validateReply } from "../../shared/answers";
+import { articleVisibleText, cleanSenderName, makeExcerpt } from "../../shared/html-text";
+import { loadOwnTicket, loadPublicArticles, resolveStateId } from "../../shared/own-ticket";
 import type { Requester } from "../../shared/requester";
 import { failure } from "../../shared/results";
 import { describeState } from "../../shared/ticket-state";
@@ -22,11 +23,20 @@ export async function replyTicket(requester: Requester, input: ReplyTicketInput)
   const ticket = await loadOwnTicket(requester, input.ticketId);
   if (!ticket.success) return finish(ticket);
 
-  const body = input.message
-    .trim()
-    .split(/\n{2,}/)
-    .map((paragraph) => `<p>${escapeHtml(paragraph).replaceAll("\n", "<br>")}</p>`)
-    .join("");
+  let quote: { author: string; excerpt: string } | null = null;
+  if (input.quoteArticleId) {
+    const articles = await loadPublicArticles(requester, ticket.data.id);
+    if (!articles.success) return finish(articles);
+    const target = articles.data.find((article) => article.id === input.quoteArticleId && article.sender !== "System");
+    if (!target) return finish(failure("quote_not_found", "A mensagem que você quer responder não foi encontrada."));
+    const mine = target.created_by_id === requester.zammadUser.id;
+    quote = {
+      author: mine ? (requester.name ?? "Você") : cleanSenderName(target.from) || "Equipe",
+      excerpt: makeExcerpt(articleVisibleText(target.body ?? "", target.content_type ?? "text/plain")) || "(anexo)",
+    };
+  }
+
+  const body = composeReplyBody(input.message, quote);
   const created = await zammadRequest<{ id: number }>("ticket_articles", {
     method: "POST",
     onBehalfOf: requester.email,

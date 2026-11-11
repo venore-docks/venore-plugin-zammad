@@ -65,6 +65,12 @@ quando a versão nova chega no `main`. O repo precisa ser **público**, senão o
   Resposta em chamado encerrado tenta reabrir (best-effort).
 - **Resumo das respostas** no 1º artigo (`composeBody`) é extraído por `extractFormAnswers`
   (`shared/html-text.ts`) e exibido como lista; mudar o formato do resumo exige mudar os dois.
+- **"Responder" a uma mensagem da equipe** (como no WhatsApp): o navegador manda só o `quoteArticleId`;
+  o servidor lê a mensagem e monta o bloco `<blockquote><p><strong>autor</strong></p><p>trecho</p>
+  </blockquote>` no INÍCIO do corpo (`composeReplyBody` em `answers.ts`). Para a equipe é uma citação
+  normal no Zammad; o portal a extrai (`extractReplyQuote`, só em mensagens da própria pessoa) e
+  mostra como cartão, linkando (`#msg-<id>`) à mensagem original achada por autor + trecho
+  (`linkQuotes`). Os dois lados dependem desse formato — mude os dois juntos.
 - **Cores**: só tokens do tema (`chart-1/2/6/7`, `success`, `warning`, `primary`) em
   `routes/public/palette.ts` e `shared.tsx`. Classes do Tailwind por extenso (nunca montadas por
   string). Ícone por nome do setor via `sectorIcon()` (função de renderização, não componente).
