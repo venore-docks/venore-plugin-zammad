@@ -56,6 +56,8 @@ const DEFAULT_BODY_HINTS = [
 const MAX_INLINE_OPTIONS = 6;
 // Com mais setores que isto, o passo de setor ganha uma busca.
 const SEARCH_FROM = 8;
+// Espaço do cabeçalho fixo (casca do site ou cabeçalho do app) + respiro, ao rolar até o topo do formulário.
+const HEADER_OFFSET = 88;
 
 function initialAnswers(sector: SectorForm | undefined): Answers {
   const answers: Answers = {};
@@ -83,6 +85,7 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
   const [created, setCreated] = useState<CreatedTicket | null>(null);
   const [pending, startTransition] = useTransition();
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const sector = groupId ? byId.get(groupId) : undefined;
   // Subgrupo (ex.: "Eventos::Som e Projeção") usa a cor do setor-pai.
@@ -100,10 +103,21 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
   const questionSteps = steps.filter((step) => step.kind === "fields");
   const questionNumber = current.kind === "fields" ? questionSteps.indexOf(current) + 1 : 0;
 
+  // Troca de etapa: a nova etapa costuma ser mais curta que a anterior e o navegador ficaria no fim da página.
+  // Depois de pintar a etapa nova, volta ao topo do formulário (descontando o cabeçalho fixo do site) e foca o
+  // título sem deixar o foco mexer na rolagem.
   function goTo(next: number) {
     setErrors({});
     setIndex(next);
-    requestAnimationFrame(() => headingRef.current?.focus());
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        headingRef.current?.focus({ preventScroll: true });
+        const form = formRef.current;
+        if (!form) return;
+        const top = form.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET;
+        if (Math.abs(window.scrollY - top) > 8) window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+      }),
+    );
   }
 
   // `advance`: a escolha é final (setor sem subdivisões, ou um assunto da subdivisão) → segue direto para a
@@ -114,10 +128,7 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
       setAnswers(initialAnswers(byId.get(id)));
       setErrors({});
     }
-    if (advance) {
-      goTo(1);
-      requestAnimationFrame(() => headingRef.current?.scrollIntoView({ block: "start", behavior: "smooth" }));
-    }
+    if (advance) goTo(1);
   }
 
   function validateCurrent(): boolean {
@@ -183,7 +194,7 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
   const phases = ["Setor", ...(!sector || hasQuestions ? ["Detalhes"] : []), "Pedido", "Revisão"];
 
   return (
-    <form onSubmit={handleNext} className="space-y-6" noValidate>
+    <form ref={formRef} onSubmit={handleNext} className="space-y-6" noValidate>
       <PhaseBar phases={phases} current={phase} />
 
       <section className={cn("space-y-6 rounded-xl border border-t-4 bg-card p-6 shadow-sm sm:p-8", sector ? accent.top : "border-t-primary")}>
