@@ -6,10 +6,11 @@ import { BlockedNotice } from "../public/shared";
 import { TicketGroup } from "../public/ticket-list";
 import { enterSurface } from "./context";
 import { ColaboraFrame } from "./frame";
+import type { ViewQuery } from "./query";
 
 // Atribuídos a mim: os chamados que o agente (ou gestor/admin) recebeu para atender. O agente comum só vê o que
 // lhe foi atribuído — nunca a fila.
-export async function AssignedView({ surfaceKey }: { surfaceKey: SurfaceKey }) {
+export async function AssignedView({ surfaceKey }: { surfaceKey: SurfaceKey; query?: ViewQuery }) {
   const surface = surfaceFor(surfaceKey);
   const entered = await enterSurface(surface.assigned);
   if (!entered.ok) {

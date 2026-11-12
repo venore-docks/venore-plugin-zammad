@@ -8,10 +8,11 @@ import { BlockedNotice } from "../public/shared";
 import { TicketGroup } from "../public/ticket-list";
 import { enterSurface } from "./context";
 import { ColaboraFrame } from "./frame";
+import type { ViewQuery } from "./query";
 
 // Meus chamados: os que a pessoa abriu, separados por "o que precisa de você" (a equipe respondeu → em
 // andamento → encerrados). Cada linha abre a conversa na mesma superfície; o Zammad não aparece.
-export async function MyTicketsView({ surfaceKey }: { surfaceKey: SurfaceKey }) {
+export async function MyTicketsView({ surfaceKey }: { surfaceKey: SurfaceKey; query?: ViewQuery }) {
   const surface = surfaceFor(surfaceKey);
   const entered = await enterSurface(surface.mine);
   if (!entered.ok) {

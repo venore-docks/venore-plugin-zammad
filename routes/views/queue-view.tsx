@@ -6,9 +6,10 @@ import { BlockedNotice } from "../public/shared";
 import { TicketGroup } from "../public/ticket-list";
 import { enterSurface } from "./context";
 import { ColaboraFrame } from "./frame";
+import type { ViewQuery } from "./query";
 
 // Fila: chamados sem responsável, nos setores do gestor/admin. É de onde ele aloca. O agente comum NÃO vê a fila.
-export async function QueueView({ surfaceKey }: { surfaceKey: SurfaceKey }) {
+export async function QueueView({ surfaceKey }: { surfaceKey: SurfaceKey; query?: ViewQuery }) {
   const surface = surfaceFor(surfaceKey);
   const entered = await enterSurface(surface.queue);
   if (!entered.ok) {

@@ -6,9 +6,10 @@ import { surfaceFor, type SurfaceKey } from "../../shared/routes";
 import { BlockedNotice } from "../public/shared";
 import { enterSurface } from "./context";
 import { ColaboraFrame } from "./frame";
+import type { ViewQuery } from "./query";
 
 // Equipe: os agentes dos setores do gestor/admin e a carga de cada um. Tocar num agente mostra os chamados dele.
-export async function TeamView({ surfaceKey }: { surfaceKey: SurfaceKey }) {
+export async function TeamView({ surfaceKey }: { surfaceKey: SurfaceKey; query?: ViewQuery }) {
   const surface = surfaceFor(surfaceKey);
   const entered = await enterSurface(surface.team);
   if (!entered.ok) {

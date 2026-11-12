@@ -29,21 +29,50 @@ São as mesmas do core: `AGENTS.md` (camadas handler → service, `OperationResu
 
 ## Verificar contra o core
 
-Sem `npm install`, a rede para o GitHub é instável aqui:
+**Sempre pelo PowerShell** (no Git Bash o vitest do core falha com erros enganosos) e **com o script**, que é
+seguro para uso em paralelo (mutex global; restaura o core ao fim; nunca faz build nem toca banco):
 
 ```powershell
-cd ..\venore-docks
-# backup de package.json e package-lock.json antes (podem ter mudanças de outro trabalho)
-New-Item -ItemType Junction -Path node_modules\@venore\plugin-zammad -Target ..\venore-plugin-zammad
-New-Item -ItemType Junction -Path ..\venore-plugin-zammad\node_modules -Target .\node_modules
-npm pkg set "dependencies.@venore/plugin-colabora=file:../venore-plugin-zammad"
-npm run gen:registries; npx tsc --noEmit
-# lint: o eslint do core ignora arquivos fora dele. Copie o plugin para src/plugins/_lint-zammad,
-# rode `npx eslint src/plugins/_lint-zammad` e apague a cópia.
-# depois: remover os dois junctions, restaurar package.json/lock e rodar npm run gen:registries
+powershell -NoProfile -File scripts\verify.ps1                      # testes + tsc + lint deste repo
+powershell -NoProfile -File scripts\verify.ps1 -Plugin C:\caminho   # de outra cópia/worktree do plugin
+powershell -NoProfile -File scripts\verify.ps1 -Only tsc            # só uma etapa (tests | tsc | lint)
 ```
 
-Testes: `.\scripts\run-tests.ps1` (cria e remove sozinho o junction de node_modules).
+Dura 1–2 min (e pode esperar a vez de outra verificação). Termina com o bloco `VERIFY` e código de saída
+diferente de zero se algo falhou. Não rode `npm install`/`npm run build` e não crie junctions à mão.
+
+## Estrutura do Colabora (v1.0)
+
+Chave do plugin: **`colabora`** (a rota de admin é `/admin/<chave>`). Antes era `zammad`; as permissões
+`zammad.*` e o setting `zammad.wizard` antigos ainda são aceitos/lidos como reserva (`shared/permissions.ts`,
+`shared/wizard-config.ts`).
+
+Uma só base de telas, **duas superfícies**: o **portal** (`/colabora/…`, dentro da casca do Venore Docks) e o **app
+PWA** (`/ext/colabora/app/…`, sem a casca). Mesmos caminhos relativos, mesmas telas, moldura diferente
+(`shared/routes.ts`: `PORTAL_SURFACE`/`APP_SURFACE`; o código recebe só `surfaceKey: "portal" | "app"`).
+
+- `routes/views/*` — as telas (server components) compartilhadas: `dashboard-view`, `my-tickets-view`,
+  `new-ticket-view`, `ticket-view`, `assigned-view`, `queue-view`, `team-view`, `team-agent-view`;
+  `dashboards/{customer,agent,manager}-dashboard`; moldura `frame.tsx` (portal = pílulas, app = `routes/app/shell.tsx`
+  com abas); navegação por papel `nav.ts`; entrada com login+papel `context.ts` (`enterSurface`); consulta
+  `query.ts`.
+- `routes/entries.tsx` liga rota → view; `routes/route-table.ts` declara as rotas; `routes/legacy.tsx` redireciona
+  os endereços antigos (`/chamados…`, `/ext/zammad/app…`).
+- `routes/public/*` — peças de UI compartilhadas (conversa, caixa de resposta, wizard, lista, paleta). O nome da
+  pasta é histórico.
+- **Papéis** (`shared/access-rules.ts`): `customer` | `agent` | `manager` | `admin` (viewer do `getAppViewer`).
+  Todos têm `colabora.tickets` (papel "Colaborador"); agente/gestor/admin vêm dos papéis do **Zammad**.
+- **Dashboards por papel**: colaborador → `CustomerDashboard`; agente → `AgentDashboard` + `CustomerDashboard compact`;
+  gestor/admin → `ManagerDashboard` + `CustomerDashboard compact`.
+- Regras de UI: tokens do tema apenas (nunca hex/rgb), Tailwind com classes literais, mobile-first (base sem prefixo
+  e depois `sm:` `md:` `lg:`), propriedades lógicas (`ms-`/`ps-`/`start-`), acessível (labels, aria, foco visível).
+  As telas servem ao desktop (`max-w-5xl`) E ao celular (`max-w-2xl`, PWA).
+
+## Frentes de trabalho em paralelo (branch `feat/colabora`)
+
+Cada frente trabalha numa worktree própria (`C:\dev\venore\_wt\colabora-<frente>`) e só edita os SEUS arquivos;
+compartilhados (`routes/route-table.ts` fora do `admin:`, `entries.tsx`, `legacy.tsx`, `views/{frame,nav,context,
+query,dashboard-view,ticket-view}`, `routes/app/shell.tsx`, `index.ts`) ficam com o dono da integração.
 
 ## Versão
 
