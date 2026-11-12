@@ -15,6 +15,12 @@ describe("buildSectorForms", () => {
     expect(labels).toEqual([...labels].sort((a, b) => a.localeCompare(b, "pt-BR")));
   });
 
+  it("prioridade nunca é perguntada ao solicitante (quem define é o gestor)", () => {
+    const names = buildSectorForms(FEM_SCHEMA, EMPTY).sectors.flatMap((sector) => sector.steps.flatMap((step) => step.fields.map((field) => field.name)));
+    expect(names).not.toContain("prioridade_cliente");
+    expect(names).not.toContain("priority_id");
+  });
+
   it("Marketing: escolhas sozinhas, datas juntas, perguntas rápidas em lote e o opcional no fim", () => {
     const marketing = buildSectorForms(FEM_SCHEMA, EMPTY).sectors.find((sector) => sector.groupId === 6)!;
     expect(marketing.steps.map((step) => [step.title, step.fields.map((field) => field.name), step.optional])).toEqual([
@@ -22,7 +28,6 @@ describe("buildSectorForms", () => {
       ["Quem é o público alvo?", ["publico_alvo"], false],
       ["Para quando?", ["data_de_uso", "data_material_pronto"], false],
       ["Só mais algumas perguntas", ["orcamento_previo", "material_referencia", "orientacao_especifica_comunicacao"], false],
-      ["Quer ajustar mais alguma coisa?", ["prioridade_cliente"], true],
     ]);
     const fields = marketing.steps.flatMap((step) => step.fields);
     const byName = Object.fromEntries(fields.map((field) => [field.name, field]));
@@ -34,8 +39,6 @@ describe("buildSectorForms", () => {
       { value: "false", label: "não" },
     ]);
     expect(byName.data_de_uso).toMatchObject({ type: "datetime", allowFuture: true, allowPast: false, required: true });
-    // Prioridade inicial tem padrão "2" (Normal) no Zammad.
-    expect(byName.prioridade_cliente).toMatchObject({ type: "select", defaultValue: "2", required: false });
   });
 
   it("Manutenção: local obrigatório sozinho e uma etapa opcional; Ocorrências: só a data", () => {
@@ -43,7 +46,7 @@ describe("buildSectorForms", () => {
     const maintenance = sectors.find((sector) => sector.groupId === 1)!;
     expect(maintenance.steps.map((step) => [step.fields.map((field) => field.name), step.optional])).toEqual([
       [["local_fisico"], false],
-      [["prioridade_cliente", "data_atendimento"], true],
+      [["data_atendimento"], true],
     ]);
     const occurrences = sectors.find((sector) => sector.groupId === 13)!;
     expect(occurrences.steps.map((step) => [step.title, step.fields.map((field) => field.name)])).toEqual([["Data da Ocorrência", ["data_ocorrencia"]]]);
@@ -68,8 +71,8 @@ describe("buildSectorForms", () => {
     expect(marketing.steps[0].fields.map((field) => field.name)).toEqual(["data_de_uso", "data_material_pronto"]);
     expect(marketing.steps[0].fields[1].help).toBe("Conte pelo menos 5 dias úteis.");
     expect(marketing.steps[1].fields.map((field) => field.name)).toEqual(["materiais_desejados"]);
-    // 2 etapas configuradas + restantes automáticos: público, [rápidas ×3], opcional.
-    expect(marketing.steps.map((step) => step.key)).toEqual(["step-1", "step-2", "auto-1", "auto-2", "auto-3"]);
+    // 2 etapas configuradas + restantes automáticos: público e [rápidas ×3] (a prioridade não é perguntada).
+    expect(marketing.steps.map((step) => step.key)).toEqual(["step-1", "step-2", "auto-1", "auto-2"]);
   });
 
   it("setor oculto some para quem abre chamado, mas continua na visão do admin", () => {

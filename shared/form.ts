@@ -31,7 +31,12 @@ export type BuildOptions = {
   viewer?: AudienceViewer;
 };
 
-export type BuiltForms = { sectors: SectorForm[]; unsupported: string[]; skippedFields: string[] };
+// Campos de triagem que o solicitante nunca responde, mesmo que o Zammad os mostre ao cliente: quem define é a
+// equipe (prioridade = gestor). O chamado nasce com o padrão do Zammad e o gestor ajusta no atendimento.
+// `prioridade_cliente` é o atributo "Prioridade inicial" do Zammad da FEM.
+export const NEVER_ASKED: ReadonlySet<string> = new Set(["priority_id", "prioridade_cliente", "state_id", "owner_id", "customer_id", "group_id", "title"]);
+
+export type BuiltForms ={ sectors: SectorForm[]; unsupported: string[]; skippedFields: string[] };
 
 export function buildSectorForms(schema: ZammadSchema, config: WizardConfig, options: BuildOptions = {}): BuiltForms {
   const unsupported = new Set<string>();
@@ -77,6 +82,7 @@ function buildSectorForm(
 
   const fields: { field: WizardField; position: number }[] = [];
   for (const attribute of schema.attributes) {
+    if (NEVER_ASKED.has(attribute.name)) continue;
     const state = evaluation.fields[attribute.name];
     if (!state?.visible) continue;
     const field = toWizardField(attribute, state.mandatory, state.allowed, state.fill, groupConfig);

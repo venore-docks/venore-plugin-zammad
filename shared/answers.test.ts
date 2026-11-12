@@ -35,7 +35,6 @@ describe("validação das respostas", () => {
     expect(validateField(field("materiais_desejados"), ["banner", "flyer"], NOW)).toBeNull();
     expect(validateField(field("orcamento_previo"), null, NOW)).toMatch(/Responda/);
     expect(validateField(field("orcamento_previo"), false, NOW)).toBeNull();
-    expect(validateField(field("prioridade_cliente"), null, NOW)).toBeNull();
   });
 
   it("data/hora só no futuro quando o Zammad exige", () => {
