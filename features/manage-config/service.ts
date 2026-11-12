@@ -1,7 +1,7 @@
 import { beginOperation, endOperation } from "@venore/plugin-sdk/observability";
 import { failure } from "../../shared/results";
 import { clearSchemaCache, loadSchema } from "../../shared/schema";
-import { parseGroupConfig, readWizardConfig, writeWizardConfig } from "../../shared/wizard-config";
+import { parseGroupConfig, readPeopleGroups, readWizardConfig, writeWizardConfig } from "../../shared/wizard-config";
 import type { ReloadSchemaResult, SaveAppNameInput, SaveConfigResult, SaveGroupConfigInput, SaveIntroInput } from "./types";
 
 export async function saveGroupConfig(actorId: string, input: SaveGroupConfigInput): Promise<SaveConfigResult> {
@@ -13,8 +13,12 @@ export async function saveGroupConfig(actorId: string, input: SaveGroupConfigInp
   if (!Number.isInteger(input.groupId) || input.groupId <= 0) return finish(failure("invalid_group", "Setor inválido."));
   const parsed = parseGroupConfig(input.config);
   if (!parsed.success) return finish(parsed);
-  const current = await readWizardConfig();
-  return finish(await writeWizardConfig({ ...current, groups: { ...current.groups, [String(input.groupId)]: parsed.data } }));
+  const [current, people] = await Promise.all([readWizardConfig(), readPeopleGroups()]);
+  // A audiência só pode listar grupos de pessoas que existem.
+  const known = new Set(people.map((group) => group.id));
+  const audience = { ...parsed.data.audience, groupIds: [...new Set(parsed.data.audience.groupIds)].filter((id) => known.has(id)) };
+  const next = { ...parsed.data, audience };
+  return finish(await writeWizardConfig({ ...current, groups: { ...current.groups, [String(input.groupId)]: next } }));
 }
 
 export async function saveIntro(actorId: string, input: SaveIntroInput): Promise<SaveConfigResult> {

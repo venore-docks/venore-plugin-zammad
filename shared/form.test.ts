@@ -77,4 +77,41 @@ describe("buildSectorForms", () => {
     expect(buildSectorForms(FEM_SCHEMA, config).sectors.some((sector) => sector.groupId === 12)).toBe(false);
     expect(buildSectorForms(FEM_SCHEMA, config, { includeDisabled: true }).sectors.some((sector) => sector.groupId === 12)).toBe(true);
   });
+
+  describe("audiência dos setores", () => {
+    const config: WizardConfig = {
+      intro: null,
+      appName: null,
+      groups: {
+        // Marketing: só o grupo de pessoas "ti". Setor 7 (pai) restrito a "rh"; filhos 8 e 9 herdam.
+        "6": { ...DEFAULT_GROUP_CONFIG, audience: { mode: "groups", groupIds: ["ti"] } },
+        "7": { ...DEFAULT_GROUP_CONFIG, audience: { mode: "groups", groupIds: ["rh"] } },
+      },
+    };
+    const ids = (viewer: { isAdmin: boolean; groupIds: string[] }) => buildSectorForms(FEM_SCHEMA, config, { viewer }).sectors.map((sector) => sector.groupId);
+
+    it("sem viewer não filtra (visão de quem monta o admin)", () => {
+      expect(buildSectorForms(FEM_SCHEMA, config).sectors).toHaveLength(13);
+    });
+
+    it("quem não está em nenhum grupo só vê os setores de todos", () => {
+      const seen = ids({ isAdmin: false, groupIds: [] });
+      expect(seen).not.toContain(6);
+      expect(seen).not.toContain(7);
+      expect(seen).not.toContain(8);
+      expect(seen).toContain(1);
+      expect(seen).toHaveLength(13 - 4);
+    });
+
+    it("o grupo libera o setor e os subgrupos que herdam", () => {
+      expect(ids({ isAdmin: false, groupIds: ["ti"] })).toContain(6);
+      const rh = ids({ isAdmin: false, groupIds: ["rh"] });
+      expect(rh).toEqual(expect.arrayContaining([7, 8, 9]));
+      expect(rh).not.toContain(6);
+    });
+
+    it("admin vê todos os setores (prévia)", () => {
+      expect(ids({ isAdmin: true, groupIds: [] })).toHaveLength(13);
+    });
+  });
 });
