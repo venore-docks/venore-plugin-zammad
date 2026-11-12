@@ -15,7 +15,10 @@ param(
   [ValidateSet("all", "tests", "tsc", "lint")][string]$Only = "all",
   [int]$WaitMinutes = 20
 )
-$ErrorActionPreference = "Stop"
+# "Continue" de propósito: no Windows PowerShell 5.1, com "Stop" qualquer linha de aviso que o npx/vitest escreve
+# no stderr (e que redirecionamos com 2>&1) vira erro terminante e derruba o script. As operações que PRECISAM
+# parar (renomear/criar junction) levam -ErrorAction Stop explícito.
+$ErrorActionPreference = "Continue"
 $Plugin = (Resolve-Path $Plugin).Path
 $Core = (Resolve-Path $Core).Path
 
@@ -44,10 +47,10 @@ try {
     $item = Get-Item $path -Force -ErrorAction SilentlyContinue
     if ($item) {
       if ($item.LinkType -eq "Junction") { $item.Delete() }
-      else { Rename-Item $path "$name.__verify_bak"; $renamed += $name }
+      else { Rename-Item $path "$name.__verify_bak" -ErrorAction Stop; $renamed += $name }
     }
   }
-  New-Item -ItemType Junction -Path (Join-Path $scope "plugin-colabora") -Target $Plugin | Out-Null
+  New-Item -ItemType Junction -Path (Join-Path $scope "plugin-colabora") -Target $Plugin -ErrorAction Stop | Out-Null
   if (-not (Test-Path $pluginNm)) {
     New-Item -ItemType Junction -Path $pluginNm -Target (Join-Path $Core "node_modules") | Out-Null
     $createdPluginNm = $true
