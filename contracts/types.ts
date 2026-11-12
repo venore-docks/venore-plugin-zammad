@@ -65,7 +65,7 @@ export type TicketAttachmentInfo = {
   filename: string;
   size: number;
   isImage: boolean;
-  // Rota do próprio portal (o Zammad não é exposto): /api/zammad/tickets/:t/articles/:a/attachments/:id
+  // Rota do próprio portal (o Zammad não é exposto): /api/colabora/tickets/:t/articles/:a/attachments/:id
   href: string;
 };
 
@@ -139,9 +139,28 @@ export type TicketDetail = {
   messages: TicketMessage[];
 };
 
-// Configuração de apresentação guardada no setting `zammad.wizard` (o Zammad continua dono dos campos).
+// Quem enxerga o setor na abertura de chamados.
+//   all      todos os colaboradores
+//   groups   só quem está em algum dos grupos de pessoas de `groupIds` (lista vazia = ninguém, exceto admin)
+//   inherit  usa a audiência do setor pai (setor raiz com "inherit" = todos)
+export type AudienceMode = "all" | "groups" | "inherit";
+export type SectorAudience = { mode: AudienceMode; groupIds: string[] };
+
+// Grupo de pessoas (ex.: "TI", "RH"), guardado no setting `colabora.groups`. Settings são de leitura
+// pública: só ids de usuário do Venore, nunca nome nem e-mail.
+export type PeopleGroup = {
+  id: string;
+  name: string;
+  description: string | null;
+  memberIds: string[];
+  createdAt: string;
+};
+
+// Configuração de apresentação guardada no setting `colabora.wizard` (o Zammad continua dono dos campos).
 export type GroupWizardConfig = {
   enabled: boolean;
+  // Config antiga sem `audience` vale `{ mode: "inherit", groupIds: [] }` (= todos, num setor raiz).
+  audience: SectorAudience;
   label: string | null;
   description: string | null;
   bodyHint: string | null;

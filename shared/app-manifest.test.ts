@@ -7,16 +7,16 @@ describe("appNames", () => {
     expect(appNames("  Colabora FEM  ", null).name).toBe("Colabora FEM");
   });
 
-  it("sem nome configurado: 'Chamados · <site>'", () => {
-    expect(appNames(null, "Colaborador FEM")).toEqual({ name: "Chamados · Colaborador FEM", shortName: "Chamados" });
-    expect(appNames("  ", null)).toEqual({ name: "Chamados", shortName: "Chamados" });
+  it("sem nome configurado: 'Colabora · <site>'", () => {
+    expect(appNames(null, "Colaborador FEM")).toEqual({ name: "Colabora · Colaborador FEM", shortName: "Colabora" });
+    expect(appNames("  ", null)).toEqual({ name: "Colabora", shortName: "Colabora" });
   });
 });
 
 describe("iconUrl", () => {
   it("leva tamanho, versão e a cor de fundo (só hex válido)", () => {
-    expect(iconUrl(192, { version: "abc", background: "#ffffff" })).toBe("/api/zammad/app/icon?size=192&v=abc&bg=%23ffffff");
-    expect(iconUrl(512, { version: "abc", maskable: true })).toBe("/api/zammad/app/icon?size=512&v=abc&maskable=1");
+    expect(iconUrl(192, { version: "abc", background: "#ffffff" })).toBe("/api/colabora/app/icon?size=192&v=abc&bg=%23ffffff");
+    expect(iconUrl(512, { version: "abc", maskable: true })).toBe("/api/colabora/app/icon?size=512&v=abc&maskable=1");
     expect(iconUrl(192, { version: "abc", background: "red; drop" })).not.toContain("bg=");
   });
 });
@@ -29,8 +29,8 @@ describe("buildAppManifest", () => {
     expect(manifest).toMatchObject({
       name: "Colabora FEM",
       short_name: "Colabora FEM",
-      id: "/ext/zammad/app",
-      start_url: "/ext/zammad/app?origem=pwa",
+      id: "/ext/colabora/app",
+      start_url: "/ext/colabora/app?origem=pwa",
       scope: "/",
       display: "standalone",
       background_color: "#ffffff",
@@ -43,7 +43,7 @@ describe("buildAppManifest", () => {
       ["512x512", "maskable"],
     ]);
     // NÃO usa mais os ícones padrão do core (logo do Venore): todos saem da rota do favicon.
-    expect(icons.every((icon) => icon.src.startsWith("/api/zammad/app/icon?"))).toBe(true);
+    expect(icons.every((icon) => icon.src.startsWith("/api/colabora/app/icon?"))).toBe(true);
     expect(JSON.stringify(manifest)).not.toContain("/icons/icon-");
   });
 
@@ -55,9 +55,9 @@ describe("buildAppManifest", () => {
 
   it("sem manifest do site (falha ao buscar) ainda produz um manifest instalável", () => {
     const manifest = buildAppManifest({ base: null, appName: null, siteName: null, iconVersion: "v1" });
-    expect(manifest.name).toBe("Chamados");
-    expect(manifest.start_url).toBe("/ext/zammad/app?origem=pwa");
+    expect(manifest.name).toBe("Colabora");
+    expect(manifest.start_url).toBe("/ext/colabora/app?origem=pwa");
     expect((manifest.icons as unknown[]).length).toBe(3);
-    expect(manifest.shortcuts).toEqual([expect.objectContaining({ url: "/ext/zammad/app/novo" })]);
+    expect(manifest.shortcuts).toEqual([expect.objectContaining({ url: "/ext/colabora/app/novo" })]);
   });
 });

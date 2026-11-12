@@ -45,6 +45,34 @@ export function managedGroupIds(user: DirUser, roles: DirRole[]): number[] {
   return [...access.keys()].filter((groupId) => ownsGroup(access, groupId)).sort((a, b) => a - b);
 }
 
+// Dos grupos informados, os que este agente atende como responsável (para filtrar a equipe por setor).
+export function memberGroupIds(user: DirUser, roles: DirRole[], groupIds: number[]): number[] {
+  const access = effectiveAccess(user, roles);
+  return groupIds.filter((groupId) => ownsGroup(access, groupId));
+}
+
+export type AllocationDecision =
+  | { ok: true; target: number; changed: boolean }
+  | { ok: false; code: "invalid_assignee"; message: string };
+
+// ALOCAR: o destino (agente ou null = devolver à fila) precisa atender o setor do chamado. `queueOwnerId` é o
+// "sem responsável" do Zammad (usuário 1). `changed` = false quando o destino já é o responsável atual.
+export function resolveAllocation(input: {
+  targetOwnerId: number | null;
+  currentOwnerId: number | null | undefined;
+  assignees: { id: number }[];
+  queueOwnerId: number;
+}): AllocationDecision {
+  const { targetOwnerId, currentOwnerId, assignees, queueOwnerId } = input;
+  let target = queueOwnerId;
+  if (targetOwnerId !== null) {
+    if (!assignees.some((person) => person.id === targetOwnerId)) return { ok: false, code: "invalid_assignee", message: "Essa pessoa não atende este setor." };
+    target = targetOwnerId;
+  }
+  const current = !currentOwnerId || currentOwnerId === queueOwnerId ? queueOwnerId : currentOwnerId;
+  return { ok: true, target, changed: target !== current };
+}
+
 // A equipe de quem gerencia estes grupos: agentes que respondem por algum deles.
 export function teamOf(groupIds: number[], users: DirUser[], roles: DirRole[]): DirUser[] {
   return users

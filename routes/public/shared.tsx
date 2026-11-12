@@ -40,7 +40,7 @@ export function BlockedNotice({ title, message, showBack = false }: { title: str
       <p className="text-sm text-foreground/80">{message}</p>
       {showBack && (
         <Button variant="outline" asChild>
-          <Link href="/chamados">Voltar para meus chamados</Link>
+          <Link href="/colabora">Voltar ao Colabora</Link>
         </Button>
       )}
     </div>

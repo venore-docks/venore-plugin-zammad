@@ -1,15 +1,16 @@
 import { beginOperation, endOperation } from "@venore/plugin-sdk/observability";
-import { UNASSIGNED_OWNER_ID, canAllocate, canEditTicket, isUnassigned } from "../../shared/access-rules";
+import { UNASSIGNED_OWNER_ID, canAllocate, canEditTicket } from "../../shared/access-rules";
 import { assigneesFor } from "../../shared/directory";
 import { loadAgentOptions, loadTicketForViewer } from "../../shared/own-ticket";
 import type { Requester } from "../../shared/requester";
+import { resolveAllocation } from "../../shared/team-rules";
 import { failure } from "../../shared/results";
 import { pendingTimeToIso, validatePending } from "../../shared/ticket-options";
 import { zammadRequest } from "../../shared/zammad-client";
 import type { AgentUpdateInput, AgentUpdateResult } from "./types";
 
 export async function agentUpdateTicket(requester: Requester, input: AgentUpdateInput): Promise<AgentUpdateResult> {
-  const handle = beginOperation({ useCase: "zammad.agent-update-ticket", actor: { id: requester.actorId, type: "user" }, kind: "write" });
+  const handle = beginOperation({ useCase: "colabora.agent-update-ticket", actor: { id: requester.actorId, type: "user" }, kind: "write" });
   const finish = (result: AgentUpdateResult) => {
     endOperation(handle, result);
     return result;
@@ -27,15 +28,11 @@ export async function agentUpdateTicket(requester: Requester, input: AgentUpdate
   if (input.ownerId !== undefined) {
     // Alocar chamado é do gestor/admin — o agente comum não atribui nem devolve (nem a si mesmo).
     if (!canAllocate(mode, role)) return finish(failure("forbidden_allocation", "Só o gestor ou o admin pode atribuir chamados."));
-    let target = UNASSIGNED_OWNER_ID;
-    if (input.ownerId !== null) {
-      const assignees = await assigneesFor(ticket.group_id);
-      if (!assignees.some((person) => person.id === input.ownerId)) return finish(failure("invalid_assignee", "Essa pessoa não atende este setor."));
-      target = input.ownerId;
-    }
-    const current = isUnassigned(ticket.owner_id) ? UNASSIGNED_OWNER_ID : (ticket.owner_id as number);
-    if (target !== current) {
-      body.owner_id = target;
+    const assignees = input.ownerId === null ? [] : await assigneesFor(ticket.group_id);
+    const decision = resolveAllocation({ targetOwnerId: input.ownerId, currentOwnerId: ticket.owner_id, assignees, queueOwnerId: UNASSIGNED_OWNER_ID });
+    if (!decision.ok) return finish(failure(decision.code, decision.message));
+    if (decision.changed) {
+      body.owner_id = decision.target;
       changed.push("owner");
     }
   }

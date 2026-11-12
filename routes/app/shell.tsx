@@ -1,31 +1,13 @@
 import Link from "next/link";
-import { ArrowLeft, Inbox, Layers, MessagesSquare, PlusCircle, Users, type LucideIcon } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { cn } from "@venore/plugin-sdk/ui";
-import { APP_BASE } from "../../shared/routes";
+import type { NavItem, NavKey } from "../views/nav";
 
-// Casca do app "Chamados": cabeçalho fixo + navegação inferior, no formato de app de celular. NÃO usa a
-// casca do Venore Docks (a página roda sob /ext, fora do layout da plataforma). Respeita a área segura
-// (notch e barra de gestos) via env(safe-area-inset-*), habilitada pelo viewport-fit=cover do layout raiz.
-export type AppTab = "assigned" | "queue" | "team" | "mine" | "new";
-
-// Quem vê o quê: o agente comum só tem "Atribuídos" (o que lhe foi dado); a fila e a equipe são do
-// gestor/admin, que é quem aloca.
-type Audience = "all" | "staff" | "supervisor";
-type TabDef = { key: AppTab; label: string; href: string; icon: LucideIcon; audience: Audience };
-
-const TABS: TabDef[] = [
-  { key: "queue", label: "Fila", href: `${APP_BASE}?aba=fila`, icon: Layers, audience: "supervisor" },
-  { key: "team", label: "Equipe", href: `${APP_BASE}?aba=equipe`, icon: Users, audience: "supervisor" },
-  { key: "assigned", label: "Atribuídos", href: `${APP_BASE}?aba=atribuidos`, icon: Inbox, audience: "staff" },
-  { key: "mine", label: "Meus", href: `${APP_BASE}?aba=meus`, icon: MessagesSquare, audience: "all" },
-  { key: "new", label: "Novo", href: `${APP_BASE}/novo`, icon: PlusCircle, audience: "all" },
-];
-
-export type AppNav = { active: AppTab; isStaff: boolean; isSupervisor: boolean; counts?: Partial<Record<AppTab, number>> };
-
-function visibleTo(tab: TabDef, nav: AppNav): boolean {
-  return tab.audience === "all" || (tab.audience === "staff" && nav.isStaff) || (tab.audience === "supervisor" && nav.isSupervisor);
-}
+// Casca do app Colabora: cabeçalho fixo + navegação inferior, no formato de app de celular. NÃO usa a casca do
+// Venore Docks (a página roda sob /ext, fora do layout da plataforma). Respeita a área segura (notch e barra de
+// gestos) via env(safe-area-inset-*), habilitada pelo viewport-fit=cover do layout raiz. As abas vêm de
+// views/nav.ts (as mesmas pílulas do portal, por papel).
+export type AppNav = { active: NavKey; items: NavItem[]; counts?: Partial<Record<NavKey, number>> };
 
 export function AppShell({
   title,
@@ -40,7 +22,7 @@ export function AppShell({
   nav?: AppNav;
   children: React.ReactNode;
 }) {
-  const tabs = nav ? TABS.filter((tab) => visibleTo(tab, nav)) : [];
+  const items = nav?.items ?? [];
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground">
       <header className="sticky top-0 z-30 border-b bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur">
@@ -63,16 +45,16 @@ export function AppShell({
 
       <main className={cn("mx-auto w-full max-w-2xl flex-1 px-4 py-4", nav && "pb-28")}>{children}</main>
 
-      {nav && (
+      {nav && items.length > 0 && (
         <nav aria-label="Navegação do app" className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-          <ul className="mx-auto grid max-w-2xl" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
-            {tabs.map((tab) => {
-              const active = nav.active === tab.key;
-              const count = nav.counts?.[tab.key] ?? 0;
+          <ul className="mx-auto grid max-w-2xl" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
+            {items.map((item) => {
+              const active = nav.active === item.key;
+              const count = nav.counts?.[item.key] ?? 0;
               return (
-                <li key={tab.key}>
+                <li key={item.key}>
                   <Link
-                    href={tab.href}
+                    href={item.href}
                     aria-current={active ? "page" : undefined}
                     className={cn(
                       "relative flex min-h-14 flex-col items-center justify-center gap-0.5 border-t-2 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
@@ -80,14 +62,14 @@ export function AppShell({
                     )}
                   >
                     <span className="relative">
-                      <tab.icon className="size-5" />
+                      <item.icon className="size-5" />
                       {count > 0 && (
                         <span className="absolute -end-3 -top-2 grid min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] leading-4 font-semibold text-primary-foreground">
                           {count > 99 ? "99+" : count}
                         </span>
                       )}
                     </span>
-                    {tab.label}
+                    {item.shortLabel}
                   </Link>
                 </li>
               );

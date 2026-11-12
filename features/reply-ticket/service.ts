@@ -11,7 +11,7 @@ import { zammadRequest } from "../../shared/zammad-client";
 import type { ReplyTicketInput, ReplyTicketResult } from "./types";
 
 export async function replyTicket(requester: Requester, input: ReplyTicketInput): Promise<ReplyTicketResult> {
-  const handle = beginOperation({ useCase: "zammad.reply-ticket", actor: { id: requester.actorId, type: "user" }, kind: "write" });
+  const handle = beginOperation({ useCase: "colabora.reply-ticket", actor: { id: requester.actorId, type: "user" }, kind: "write" });
   const finish = (result: ReplyTicketResult) => {
     endOperation(handle, result);
     return result;

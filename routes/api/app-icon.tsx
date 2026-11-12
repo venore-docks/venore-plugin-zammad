@@ -3,7 +3,7 @@ import { asPluginApiHandler, isPluginActive } from "@venore/plugin-sdk";
 import { getBrandConfig } from "@venore/plugin-sdk/brand";
 import { toIconSource, type IconSource } from "../../shared/icon-source";
 
-// GET /api/zammad/app/icon?size=192|512|180&maskable=1&bg=%23rrggbb&v=<versão>
+// GET /api/colabora/app/icon?size=192|512|180&maskable=1&bg=%23rrggbb&v=<versão>
 //
 // Ícone do app = o FAVICON do site (Configurações → Marca), desenhado no centro de um quadrado PNG do
 // tamanho que a PWA exige (192 e 512; 180 para o iOS). Sem isto o navegador usaria os ícones padrão do
@@ -25,7 +25,7 @@ async function readFavicon(url: string): Promise<IconSource | null> {
 }
 
 export const getAppIcon = asPluginApiHandler(async (request) => {
-  if (!(await isPluginActive("zammad"))) return Response.json({ error: "O plugin de chamados está desativado." }, { status: 404 });
+  if (!(await isPluginActive("colabora"))) return Response.json({ error: "O plugin de chamados está desativado." }, { status: 404 });
 
   const params = new URL(request.url).searchParams;
   const size = Number(params.get("size"));

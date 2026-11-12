@@ -43,12 +43,12 @@ function Message({ message, first }: { message: TicketMessage; first: boolean })
     // id + :target — o cartão de citação rola até aqui e a mensagem ganha um anel por um instante.
     <li
       id={`msg-${message.id}`}
-      className={cn("flex scroll-mt-24 gap-3 [&:target>div:last-child]:ring-2 [&:target>div:last-child]:ring-chart-6", mine && "flex-row-reverse")}
+      className={cn("flex scroll-mt-24 gap-2 sm:gap-3 [&:target>div:last-child]:ring-2 [&:target>div:last-child]:ring-chart-6", mine && "flex-row-reverse")}
     >
       <span
         aria-hidden
         className={cn(
-          "mt-1 grid size-9 shrink-0 place-items-center overflow-hidden rounded-full text-xs font-semibold text-foreground ring-2",
+          "mt-1 hidden size-9 shrink-0 place-items-center overflow-hidden sm:grid rounded-full text-xs font-semibold text-foreground ring-2",
           mine ? "bg-primary/20 ring-primary/30" : AVATAR[other],
         )}
       >
@@ -61,9 +61,9 @@ function Message({ message, first }: { message: TicketMessage; first: boolean })
       </span>
       <div
         className={cn(
-          "min-w-0 max-w-[85%] space-y-2 rounded-xl border p-4",
+          "min-w-0 max-w-full space-y-2 rounded-xl border p-3 sm:max-w-[85%] sm:p-4",
           message.internal
-            ? "border-dashed border-warning-border bg-warning-soft"
+            ? "border-dashed border-s-4 border-warning-border border-s-warning bg-warning-soft"
             : // Você: tingido na cor primária. Os outros: superfície neutra com faixa lateral — a diferença não
               // depende só do matiz (em temas teal, primário e azul-esverdeado ficam parecidos).
               mine
@@ -86,7 +86,7 @@ function Message({ message, first }: { message: TicketMessage; first: boolean })
           <p className="text-xs text-muted-foreground">{formatDateTime(message.createdAt)}</p>
         </div>
         {message.quote && <QuoteCard quote={message.quote} />}
-        {message.text && <p className="text-sm leading-relaxed break-words whitespace-pre-wrap text-foreground">{message.text}</p>}
+        {message.text && <p className="text-base leading-relaxed sm:text-sm break-words whitespace-pre-wrap text-foreground">{message.text}</p>}
         {message.answers.length > 0 && (
           <div className="space-y-3 rounded-lg border bg-background/70 p-4">
             <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Respostas do formulário</p>

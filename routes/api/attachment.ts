@@ -1,7 +1,7 @@
 import { asPluginApiHandler, isPluginActive } from "@venore/plugin-sdk";
 import { downloadAttachment } from "../../index";
 
-// GET /api/zammad/tickets/:ticketId/articles/:articleId/attachments/:attachmentId
+// GET /api/colabora/tickets/:ticketId/articles/:articleId/attachments/:attachmentId
 //
 // Anexo de um chamado da pessoa logada, servido pelo próprio portal (o Zammad não é exposto). Exige
 // login + permissão e confere no handler que o chamado é DELA e que o anexo está num artigo público.
@@ -16,14 +16,14 @@ function contentDisposition(kind: "inline" | "attachment", fileName: string): st
 }
 
 export const getTicketAttachment = asPluginApiHandler<{ ticketId: string; articleId: string; attachmentId: string }>(async (_request, { params }) => {
-  if (!(await isPluginActive("zammad"))) return Response.json({ error: "O plugin de chamados está desativado." }, { status: 404 });
+  if (!(await isPluginActive("colabora"))) return Response.json({ error: "O plugin de chamados está desativado." }, { status: 404 });
   const { ticketId, articleId, attachmentId } = await params;
   const ids = [Number(ticketId), Number(articleId), Number(attachmentId)];
   if (ids.some((id) => !Number.isInteger(id) || id <= 0)) return Response.json({ error: "Arquivo inválido." }, { status: 400 });
 
   const result = await downloadAttachment({ ticketId: ids[0], articleId: ids[1], attachmentId: ids[2] });
   if (!result.success) {
-    const status = result.error.code === "zammad.attachment_not_found" || result.error.code === "zammad.ticket_not_found" ? 404 : 403;
+    const status = result.error.code === "colabora.attachment_not_found" || result.error.code === "colabora.ticket_not_found" ? 404 : 403;
     return Response.json({ error: result.error.message }, { status });
   }
 
