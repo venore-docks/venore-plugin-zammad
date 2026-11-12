@@ -14,6 +14,7 @@ import {
   MessagesSquare,
   Paperclip,
   Pencil,
+  Search,
   Send,
   X,
 } from "lucide-react";
@@ -33,6 +34,7 @@ import {
   validateTitle,
   type Answers,
 } from "../../shared/answers";
+import { matchesSearch } from "../../shared/customer-stats";
 import { APP_SURFACE, PORTAL_SURFACE } from "../../shared/routes";
 import { createTicketAction } from "./actions";
 import { accentFor, sectorIcon, type Accent } from "./palette";
@@ -52,6 +54,8 @@ const DEFAULT_BODY_HINTS = [
 ];
 // Selects com poucas opções viram botões (um toque); com muitas, lista suspensa.
 const MAX_INLINE_OPTIONS = 6;
+// Com mais setores que isto, o passo de setor ganha uma busca.
+const SEARCH_FROM = 8;
 
 function initialAnswers(sector: SectorForm | undefined): Answers {
   const answers: Answers = {};
@@ -161,8 +165,9 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
 
   if (sectors.length === 0) {
     return (
-      <div className="rounded-xl border border-warning-border bg-warning-soft p-8 text-center text-sm text-foreground">
-        Nenhum setor está recebendo chamados por aqui no momento.
+      <div className="space-y-2 rounded-xl border border-warning-border bg-warning-soft p-8 text-center text-sm text-foreground">
+        <p className="font-medium">Nenhum setor está liberado para você ainda.</p>
+        <p className="text-foreground/80">Fale com o gestor da sua área para pedir acesso.</p>
       </div>
     );
   }
@@ -314,8 +319,12 @@ function SectorStep({
   onSelect: (id: number) => void;
   error?: string;
 }) {
+  const [search, setSearch] = useState("");
   const ids = new Set(sectors.map((sector) => sector.groupId));
-  const topLevel = sectors.filter((sector) => sector.parentId === null || !ids.has(sector.parentId));
+  const allTopLevel = sectors.filter((sector) => sector.parentId === null || !ids.has(sector.parentId));
+  const searchable = allTopLevel.length > SEARCH_FROM;
+  // O setor já escolhido (ou pai do escolhido) nunca some da lista ao filtrar.
+  const topLevel = searchable && search.trim() ? allTopLevel.filter((sector) => matchesSearch(`${sector.label} ${sector.description ?? ""}`, search)) : allTopLevel;
   const childrenOf = (id: number) => sectors.filter((sector) => sector.parentId === id);
   const selected = sectors.find((sector) => sector.groupId === selectedId);
   // Pai "aberto": o escolhido, ou o pai do subgrupo escolhido.
@@ -326,6 +335,33 @@ function SectorStep({
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">{intro}</p>
+      {searchable && (
+        <div className="space-y-1.5">
+          <label htmlFor="sector-search" className="sr-only">
+            Buscar setor
+          </label>
+          <div className="relative">
+            <Search aria-hidden className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              id="sector-search"
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") event.preventDefault();
+              }}
+              placeholder="Buscar setor pelo nome…"
+              autoComplete="off"
+              className="h-11 ps-9"
+            />
+          </div>
+          {search.trim() && topLevel.length === 0 && (
+            <p role="status" className="text-sm text-muted-foreground">
+              Nenhum setor encontrado para “{search.trim()}”. Tente outra palavra.
+            </p>
+          )}
+        </div>
+      )}
       <div className="grid gap-3 sm:grid-cols-2">
         {topLevel.map((sector) => {
           const active = openParentId === sector.groupId;

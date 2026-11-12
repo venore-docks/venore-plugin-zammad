@@ -27,6 +27,17 @@ export async function NewTicketView({ surfaceKey, setor }: { surfaceKey: Surface
     );
   }
 
+  if (result.data.sectors.length === 0) {
+    return (
+      <ColaboraFrame surfaceKey={surfaceKey} viewer={entered.viewer} active="new" title="Abrir chamado" backHref={surface.home}>
+        <div className="mx-auto max-w-xl space-y-2 rounded-xl border bg-card p-8 text-center">
+          <h2 className="text-lg font-semibold text-foreground">Nenhum setor está liberado para você ainda</h2>
+          <p className="text-sm text-muted-foreground">Fale com o gestor da sua área para pedir acesso.</p>
+        </div>
+      </ColaboraFrame>
+    );
+  }
+
   const requested = Number(setor);
   const initialGroupId = Number.isInteger(requested) && result.data.sectors.some((sector) => sector.groupId === requested) ? requested : null;
 
