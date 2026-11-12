@@ -106,11 +106,18 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
     requestAnimationFrame(() => headingRef.current?.focus());
   }
 
-  function chooseSector(id: number) {
-    if (id === groupId) return;
-    setGroupId(id);
-    setAnswers(initialAnswers(byId.get(id)));
-    setErrors({});
+  // `advance`: a escolha é final (setor sem subdivisões, ou um assunto da subdivisão) → segue direto para a
+  // próxima etapa, sem a pessoa ter de descer até "Continuar". Setor com subdivisões só abre a sub-escolha.
+  function chooseSector(id: number, advance: boolean) {
+    if (id !== groupId) {
+      setGroupId(id);
+      setAnswers(initialAnswers(byId.get(id)));
+      setErrors({});
+    }
+    if (advance) {
+      goTo(1);
+      requestAnimationFrame(() => headingRef.current?.scrollIntoView({ block: "start", behavior: "smooth" }));
+    }
   }
 
   function validateCurrent(): boolean {
@@ -316,10 +323,11 @@ function SectorStep({
   intro: string;
   sectors: SectorForm[];
   selectedId: number | null;
-  onSelect: (id: number) => void;
+  onSelect: (id: number, advance: boolean) => void;
   error?: string;
 }) {
   const [search, setSearch] = useState("");
+  const subRef = useRef<HTMLDivElement>(null);
   const ids = new Set(sectors.map((sector) => sector.groupId));
   const allTopLevel = sectors.filter((sector) => sector.parentId === null || !ids.has(sector.parentId));
   const searchable = allTopLevel.length > SEARCH_FROM;
@@ -371,7 +379,11 @@ function SectorStep({
             <button
               key={sector.groupId}
               type="button"
-              onClick={() => onSelect(sector.groupId)}
+              onClick={() => {
+                onSelect(sector.groupId, !hasChildren);
+                // Com subdivisões, a pergunta "qual assunto" aparece abaixo da grade: rola até ela.
+                if (hasChildren) requestAnimationFrame(() => subRef.current?.scrollIntoView({ block: "center", behavior: "smooth" }));
+              }}
               aria-pressed={active}
               className={cn(
                 "group flex items-center gap-4 rounded-xl border bg-background p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
@@ -396,11 +408,11 @@ function SectorStep({
       </div>
 
       {parent && subOptions.length > 0 && (
-        <div className={cn("space-y-3 rounded-xl border p-4", accentFor(parent.groupId).soft, accentFor(parent.groupId).border)}>
+        <div ref={subRef} className={cn("scroll-mt-24 space-y-3 rounded-xl border p-4", accentFor(parent.groupId).soft, accentFor(parent.groupId).border)}>
           <p className="text-sm font-medium text-foreground">Qual é o assunto em {parent.label}?</p>
           <div className="flex flex-wrap gap-2">
             {[parent, ...subOptions].map((option) => (
-              <OptionChip key={option.groupId} selected={selectedId === option.groupId} onClick={() => onSelect(option.groupId)}>
+              <OptionChip key={option.groupId} selected={selectedId === option.groupId} onClick={() => onSelect(option.groupId, true)}>
                 {option.groupId === parent.groupId ? "Outro assunto" : option.label}
               </OptionChip>
             ))}
