@@ -18,8 +18,7 @@ o motor e a fila da equipe) e toda a experiência do solicitante acontece no por
   responder (com anexos) e, **só para agente/admin do Zammad** (papel com `ticket.agent` ou `admin`),
   **encerrar** (com confirmação) e **reabrir**. Colaborador comum apenas conversa; o botão nem aparece
   e o servidor também recusa.
-- **`/admin/colabora`**: estado da conexão, setores visíveis, agrupamento das perguntas em etapas,
-  textos de ajuda e regras do Zammad que o portal não sabe aplicar.
+- **`/admin/colabora`**: a administração, em seções (veja "Administração" abaixo).
 
 Nenhuma tela leva ao Zammad. Anexos são servidos pelo próprio portal
 (`/api/colabora/tickets/:t/articles/:a/attachments/:id`), só para o dono do chamado. As notificações
@@ -59,13 +58,49 @@ agente comum (quem quiser ver usa o Zammad).
 - **Ainda não tem:** notificação push de "novo chamado atribuído" (a infra de push do core existe; falta
   o webhook do Zammad) e modo offline (o core mostra a página `/offline`).
 
+## Administração (`/admin/colabora`)
+
+Exige `colabora.settings.manage`. Subrotas server-rendered, com a mesma moldura (cabeçalho + abas):
+
+| Rota | O que faz |
+|---|---|
+| `/admin/colabora` | **Visão geral**: saúde da conexão com o Zammad (dono do token, última leitura dos campos, "Recarregar do Zammad"), contagens (setores ativos, grupos de pessoas, agentes/gestores, regras não suportadas) e **próximos passos** acionáveis (`shared/admin-hints.ts`). |
+| `/admin/colabora/setores` | Cartões dos setores: perguntas/etapas, selo de **audiência** ("Todos", "Só: TI, RH", "Oculto"), liga/desliga e "Testar" (`/colabora/novo?setor=ID`). |
+| `/admin/colabora/setores/:groupId` | Edição do setor: nome, ordem, descrição, dicas, etapas e ajudas por campo, e **quem vê o setor**. |
+| `/admin/colabora/grupos` | **Grupos de pessoas** (lista + criar). |
+| `/admin/colabora/grupos/:groupId` | Editor do grupo: dados, membros (busca por nome/e-mail ou colagem de e-mails), **setores liberados** e exclusão. |
+| `/admin/colabora/app` | Nome do app (PWA), de onde vem o ícone (Identidade do site) e como instalar. |
+| `/admin/colabora/textos` | Texto de abertura do assistente. |
+
+### Grupos de pessoas e audiência dos setores
+
+Todos os usuários são "Colaboradores", mas nem todos devem abrir chamados em todos os setores (ex.: só a equipe
+de TI abre chamados para o TI). Por isso:
+
+- **Grupo de pessoas** (`PeopleGroup`): `id`, `name`, `description`, `memberIds` (ids de usuário do Venore) e
+  `createdAt`, no setting `colabora.groups`. O setting é de leitura pública no core, então guarda **só ids**; nome,
+  e-mail e avatar são resolvidos na hora (`searchUsers`/`findUserByEmail` do SDK) e só chegam à tela do admin.
+- **Audiência do setor** (`audience` em `GroupWizardConfig`, no setting `colabora.wizard`): `mode` = `all`
+  (todos), `groups` (só os grupos de `groupIds`) ou `inherit` (usa a do setor pai; setor raiz com `inherit` = todos).
+  Sem `audience` na config antiga, vale `inherit` (= todos): nada muda para quem já usava.
+- **Regra** (`shared/audience.ts`, pura e testada): o setor é visível se o modo é `all`, ou se a pessoa está em algum
+  dos grupos listados. `groups` sem nenhum grupo = ninguém. **Quem tem `colabora.settings.manage` vê todos os
+  setores** (serve de prévia). A herança pai → filho é resolvida na árvore de grupos do Zammad.
+- **Onde vale**: `getWizard` só devolve os setores permitidos, e `createTicket` recusa um setor não permitido
+  ("Este setor não recebe chamados de você."), pois o servidor remonta o formulário.
+- **Excluir um grupo** tira a referência dos setores; um setor que só listava esse grupo fica sem ninguém (aparece
+  como "Oculto" no admin e em "Próximos passos"), nunca vira "todos" sozinho.
+- **Marcar um setor** em "Setores liberados" de um grupo, quando ele era "Todos", passa a restringi-lo aos grupos
+  escolhidos (o editor avisa).
+
 ## Quem manda em quê
 
 | O quê | Onde |
 |---|---|
 | Setores | **Grupos** do Zammad |
 | Perguntas, opções, obrigatoriedade | **Atributos de ticket** + **Core Workflows** do Zammad, lidos pela API |
-| Ordem das etapas, textos de ajuda, nome/descrição do setor, setores ocultos | Plugin (setting `colabora.wizard`) |
+| Ordem das etapas, textos de ajuda, nome/descrição do setor, setores ocultos, audiência dos setores | Plugin (setting `colabora.wizard`) |
+| Grupos de pessoas (quem pertence a quê) | Plugin (setting `colabora.groups`, só ids de usuário) |
 
 Criar ou mudar um campo no Zammad aparece no portal em até 5 minutos, ou na hora com
 "Recarregar do Zammad" no admin. Não é preciso deploy.

@@ -1,5 +1,11 @@
 import { asPluginMetadata, asPluginPage, type PluginRouteTable } from "@venore/plugin-sdk";
 import AdminPage from "./admin/page";
+import AdminAppPage from "./admin/app/page";
+import AdminGroupPage from "./admin/grupos/detalhe-page";
+import AdminGroupsPage from "./admin/grupos/page";
+import AdminSectorEditPage from "./admin/setores/editar-page";
+import AdminSectorsPage from "./admin/setores/page";
+import AdminTextsPage from "./admin/textos/page";
 import { getAppIcon } from "./api/app-icon";
 import { getAppManifest } from "./api/app-manifest";
 import { getTicketAttachment } from "./api/attachment";
@@ -14,7 +20,15 @@ import { legacyApp, legacyPortal } from "./legacy";
 const app = { generateMetadata: asPluginMetadata(appMetadata) };
 
 export const colaboraRouteTable: PluginRouteTable = {
-  admin: [{ pattern: "", Component: asPluginPage(AdminPage) }],
+  admin: [
+    { pattern: "", Component: asPluginPage(AdminPage) },
+    { pattern: "setores", Component: asPluginPage(AdminSectorsPage) },
+    { pattern: "setores/:groupId", Component: asPluginPage(AdminSectorEditPage) },
+    { pattern: "grupos", Component: asPluginPage(AdminGroupsPage) },
+    { pattern: "grupos/:groupId", Component: asPluginPage(AdminGroupPage) },
+    { pattern: "app", Component: asPluginPage(AdminAppPage) },
+    { pattern: "textos", Component: asPluginPage(AdminTextsPage) },
+  ],
   public: [
     { pattern: "colabora", Component: asPluginPage(portalEntries.Home) },
     { pattern: "colabora/meus", Component: asPluginPage(portalEntries.Mine) },
