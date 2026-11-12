@@ -40,6 +40,8 @@ export async function NewTicketView({ surfaceKey, setor }: { surfaceKey: Surface
 
   const requested = Number(setor);
   const initialGroupId = Number.isInteger(requested) && result.data.sectors.some((sector) => sector.groupId === requested) ? requested : null;
+  // Link direto para um setor que não está liberado para a pessoa: avisa e mostra os que estão.
+  const unavailable = setor !== undefined && setor !== "" && initialGroupId === null;
 
   return (
     <ColaboraFrame
@@ -50,7 +52,12 @@ export async function NewTicketView({ surfaceKey, setor }: { surfaceKey: Surface
       subtitle="Vamos guiar você, uma pergunta por vez. Leva poucos minutos."
       backHref={surfaceKey === "app" ? surface.home : undefined}
     >
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-3xl space-y-4">
+        {unavailable && (
+          <p role="status" className="rounded-xl border border-warning-border bg-warning-soft px-4 py-3 text-sm text-foreground">
+            O setor do link não está disponível para você. Escolha abaixo um dos setores liberados.
+          </p>
+        )}
         <TicketWizard data={result.data} initialGroupId={initialGroupId} surface={surfaceKey} />
       </div>
     </ColaboraFrame>

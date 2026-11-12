@@ -6,27 +6,28 @@ o motor e a fila da equipe) e toda a experiência do solicitante acontece no por
 
 ## Telas
 
-- **`/chamados/novo`**: abertura guiada, com fases coloridas (Setor → Detalhes → Pedido → Revisão):
-  1. **Setor**, em cartões coloridos com ícone. Subgrupos (ex.: `Eventos::Som e Projeção`) viram
-     uma sub-escolha. `?setor=<id do grupo>` já começa no setor.
-  2. **Perguntas do setor**, vindas do Zammad e agrupadas em poucas etapas (ver abaixo).
-  3. **Pedido**: título + descrição (com dicas do setor) + anexos, numa tela só.
-  4. **Revisão**, com "Alterar" em cada item e o que acontece depois de enviar.
-- **`/chamados`**: os chamados da pessoa, separados em "A equipe respondeu — sua vez", "Em andamento" e
-  "Encerrados".
-- **`/chamados/:id`**: a conversa. Mensagens da equipe e da pessoa, anexos (imagens em miniatura),
-  responder (com anexos) e, **só para agente/admin do Zammad** (papel com `ticket.agent` ou `admin`),
-  **encerrar** (com confirmação) e **reabrir**. Colaborador comum apenas conversa; o botão nem aparece
-  e o servidor também recusa.
-- **`/admin/colabora`**: a administração, em seções (veja "Administração" abaixo).
+As mesmas telas existem no portal (`/colabora/...`, dentro da casca do site) e no app (`/ext/colabora/app/...`):
+
+| Rota | Quem | O que é |
+|---|---|---|
+| `/colabora` | todos | **Início**: dashboard do papel. Colaborador: "Abrir chamado" em destaque, setores liberados e resumo dos seus chamados. Agente: "Meu atendimento" (KPIs, precisam da sua resposta, em andamento). Gestor/admin: "Gestão da equipe" (fila, carga por agente, mais antigos com alocação rápida). Agente e gestor também veem o resumo de colaborador. |
+| `/colabora/novo` | todos | Abertura guiada (Setor → Detalhes → Pedido → Revisão). `?setor=<id do grupo>` já começa no setor. |
+| `/colabora/meus` | todos | Os chamados da pessoa ("sua vez", "em andamento", "encerrados"). |
+| `/colabora/atribuidos` | agente+ | O que está com ele, com filtros e ações rápidas. |
+| `/colabora/fila` | gestor+ | Sem responsável nos setores que gerencia; filtros `?setor=` e `?ordem=idade\|prioridade`; alocação na linha. |
+| `/colabora/equipe`, `/colabora/equipe/:id` | gestor+ | Cartões por agente (setores, carga) e a lista de cada um. |
+| `/colabora/chamado/:id` | conforme o papel | A conversa (responder, citar, anexos); para quem atende: estado, prioridade e ações rápidas; para gestor: alocação. |
+| `/admin/colabora` | admin do plugin | A administração (veja abaixo). |
+
+Os endereços antigos (`/chamados`, `/chamados/novo`, `/chamados/:id`, `/ext/zammad/app...`) redirecionam para os novos.
 
 Nenhuma tela leva ao Zammad. Anexos são servidos pelo próprio portal
 (`/api/colabora/tickets/:t/articles/:a/attachments/:id`), só para o dono do chamado. As notificações
 por e-mail do Zammad continuam saindo; os links dentro dos e-mails apontam para o Zammad, então
 **desligue o link/`ticket_hook` dos templates de notificação do cliente** ou troque-os por um link
-para `/chamados`.
+para `/colabora`.
 
-## App "Chamados" (PWA, fora da casca do portal)
+## App Colabora (PWA, fora da casca do portal)
 
 Uma superfície própria para celular, instalável como app: **`/ext/colabora/app`**. Ela roda sob o `/ext` do
 core (rotas `standalone`), então **não leva a casca do Venore Docks** (sem menu, cabeçalho nem rodapé do
@@ -93,6 +94,18 @@ de TI abre chamados para o TI). Por isso:
 - **Marcar um setor** em "Setores liberados" de um grupo, quando ele era "Todos", passa a restringi-lo aos grupos
   escolhidos (o editor avisa).
 
+### Ver como (só leitura)
+
+Quem tem `colabora.settings.manage` vê o botão **"Ver como…"** no Início do Colabora. Escolhida uma pessoa do portal,
+todas as telas passam a ser **as dela**: setores liberados (a prévia de admin é desligada), chamados, papel no
+atendimento (agente/gestor), fila e equipe. Uma faixa fixa mostra "Vendo como Fulano · só leitura" com **Sair**.
+
+- **Só leitura:** abrir, responder, encerrar/reabrir e alterar/alocar são recusados no servidor
+  (`resolveRequester({ write: true })`); no detalhe, a caixa de resposta vira um aviso.
+- **Cookie** `colabora_view_as`: httpOnly, assinado (HMAC com `COLABORA_VIEW_AS_SECRET`, ou `AUTH_SECRET`), vale 2 h e
+  só para a sessão do admin que o criou. A permissão de admin é conferida de novo a cada request.
+- A pessoa vista precisa ter conta no Zammad (mesmo e-mail) e `colabora.tickets`; senão a tela explica o motivo.
+
 ## Quem manda em quê
 
 | O quê | Onde |
@@ -148,11 +161,12 @@ uma mensagem para procurar o suporte.
 
 ### Permissões (RBAC do portal)
 
-- `colabora.tickets`: abrir, acompanhar e responder os próprios chamados. Dar ao papel de todos os
-  colaboradores.
-- `colabora.settings.manage`: tela de configuração.
+- `colabora.tickets`: usar o Colabora. Dar ao papel de todos os colaboradores (agentes e gestores inclusive: o
+  papel no atendimento vem do Zammad, não do portal).
+- `colabora.settings.manage`: administração, prévia de todos os setores e "ver como".
+- As chaves antigas `zammad.tickets` / `zammad.settings.manage` continuam aceitas.
 
-Coloque um item de menu apontando para `/chamados` (menus do CMS).
+Coloque um item de menu apontando para `/colabora` (menus do CMS).
 
 ## Anexos
 

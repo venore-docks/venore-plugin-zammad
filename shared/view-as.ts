@@ -24,10 +24,15 @@ export async function canViewAs(): Promise<{ allowed: boolean; actorId: string |
   return authz.authorized ? { allowed: secret() !== null, actorId: authz.actorId } : { allowed: false, actorId: null };
 }
 
-async function hasColaboraAccess(userId: string): Promise<boolean> {
+// Permissões de OUTRA pessoa (authorizeActor só olha a sessão atual).
+export async function userHasAnyPermission(userId: string, keys: readonly string[]): Promise<boolean> {
   const context = await getUserContext({ userId });
   if (!context.success) return false;
-  return context.data.isSuperadmin || COLABORA_PERMISSIONS.tickets.some((key) => context.data.permissions.includes(key));
+  return context.data.isSuperadmin || keys.some((key) => context.data.permissions.includes(key));
+}
+
+function hasColaboraAccess(userId: string): Promise<boolean> {
+  return userHasAnyPermission(userId, COLABORA_PERMISSIONS.tickets);
 }
 
 export async function findViewAsTarget(userId: string): Promise<ViewAsTarget | null> {

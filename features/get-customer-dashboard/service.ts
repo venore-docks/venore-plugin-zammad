@@ -1,5 +1,6 @@
 import { computeCustomerStats, latestTickets } from "../../shared/customer-stats";
 import type { Requester } from "../../shared/requester";
+import type { AudienceViewer } from "../../shared/audience";
 import { getWizard } from "../get-wizard/service";
 import { listMyTickets } from "../list-my-tickets/service";
 import type { GetCustomerDashboardResult } from "./types";
@@ -8,8 +9,8 @@ const LATEST = 5;
 
 // Uma ida ao Zammad para os chamados + a montagem do wizard (setores), em paralelo. Se os chamados falham, o
 // painel ainda mostra os setores (e avisa); se o wizard falha, o painel mostra só o resumo.
-export async function getCustomerDashboard(requester: Requester): Promise<GetCustomerDashboardResult> {
-  const [mine, wizard] = await Promise.all([listMyTickets(requester), getWizard(requester)]);
+export async function getCustomerDashboard(requester: Requester, viewer: AudienceViewer): Promise<GetCustomerDashboardResult> {
+  const [mine, wizard] = await Promise.all([listMyTickets(requester), getWizard(requester, viewer)]);
   if (!mine.success && !wizard.success) return mine;
 
   const tickets = mine.success ? mine.data.tickets : [];

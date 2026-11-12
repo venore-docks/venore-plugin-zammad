@@ -6,7 +6,7 @@ import type { ZammadUser } from "../contracts/zammad";
 import { COLABORA_PERMISSIONS } from "./permissions";
 import { failure } from "./results";
 import { findZammadUserByEmail } from "./schema";
-import { readViewAs } from "./view-as";
+import { readViewAs, userHasAnyPermission } from "./view-as";
 
 // Quem está abrindo/consultando chamados: usuário logado no portal, com `colabora.tickets`, e a conta
 // dele no Zammad (mesmo e-mail).
@@ -24,6 +24,13 @@ export type Requester = {
   /** Preenchido só no "ver como": o admin que está vendo. */
   viewAs: { adminActorId: string } | null;
 };
+
+// Quem pede administra o Colabora? (o admin enxerga todos os setores, como prévia). No "ver como" vale a
+// permissão da PESSOA VISTA — senão o admin veria tudo e o teste não mostraria o que ela vê de verdade.
+export async function requesterIsColaboraAdmin(requester: Requester): Promise<boolean> {
+  if (requester.viewAs) return userHasAnyPermission(requester.actorId, COLABORA_PERMISSIONS.settingsManage);
+  return (await authorizeActor(COLABORA_PERMISSIONS.settingsManage)).authorized;
+}
 
 export const VIEW_AS_READ_ONLY = "Você está no modo “ver como”, que é só leitura. Saia dele para abrir, responder ou alterar chamados.";
 
