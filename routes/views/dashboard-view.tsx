@@ -1,9 +1,11 @@
+import { Suspense } from "react";
 import { surfaceFor, type SurfaceKey } from "../../shared/routes";
 import { BlockedNotice } from "../public/shared";
 import { enterSurface } from "./context";
 import { AgentDashboard } from "./dashboards/agent-dashboard";
 import { CustomerDashboard } from "./dashboards/customer-dashboard";
 import { ManagerDashboard } from "./dashboards/manager-dashboard";
+import { PanelSkeleton } from "./dashboards/panel-skeleton";
 import { ColaboraFrame } from "./frame";
 
 // Início do Colabora: o dashboard do papel de quem entrou.
@@ -32,16 +34,25 @@ export async function DashboardView({ surfaceKey }: { surfaceKey: SurfaceKey }) 
       title={`Olá, ${firstName}`}
       subtitle={viewer.isSupervisor ? "Visão do gestor" : viewer.isStaff ? "Visão do atendimento" : "Como podemos ajudar hoje?"}
     >
+      {/* Cada painel em seu Suspense: o do gestor faz várias buscas no Zammad e não deve segurar o resto. */}
       <div className="space-y-6">
         {viewer.isSupervisor ? (
           <>
-            <ManagerDashboard surfaceKey={surfaceKey} viewer={viewer} />
-            <CustomerDashboard surfaceKey={surfaceKey} viewer={viewer} compact />
+            <Suspense fallback={<PanelSkeleton label="Gestão da equipe" />}>
+              <ManagerDashboard surfaceKey={surfaceKey} viewer={viewer} />
+            </Suspense>
+            <Suspense fallback={<PanelSkeleton label="Meus chamados" kpis={0} rows={2} />}>
+              <CustomerDashboard surfaceKey={surfaceKey} viewer={viewer} compact />
+            </Suspense>
           </>
         ) : viewer.isStaff ? (
           <>
-            <AgentDashboard surfaceKey={surfaceKey} viewer={viewer} />
-            <CustomerDashboard surfaceKey={surfaceKey} viewer={viewer} compact />
+            <Suspense fallback={<PanelSkeleton label="Meu atendimento" />}>
+              <AgentDashboard surfaceKey={surfaceKey} viewer={viewer} />
+            </Suspense>
+            <Suspense fallback={<PanelSkeleton label="Meus chamados" kpis={0} rows={2} />}>
+              <CustomerDashboard surfaceKey={surfaceKey} viewer={viewer} compact />
+            </Suspense>
           </>
         ) : (
           <CustomerDashboard surfaceKey={surfaceKey} viewer={viewer} />

@@ -5,6 +5,7 @@ import type { AppViewer } from "../../index";
 import { surfaceFor, type SurfaceKey } from "../../shared/routes";
 import { AppShell } from "../app/shell";
 import { navItemsFor, type NavKey } from "./nav";
+import { ViewAsBar } from "./view-as-bar";
 
 // Moldura de toda tela do Colabora. Mesma API nas duas superfícies; só o desenho muda:
 //   app    → AppShell (cabeçalho fixo + abas embaixo), SEM a casca do Venore Docks;
@@ -37,7 +38,10 @@ export function ColaboraFrame({ surfaceKey, viewer, active, title, subtitle, bac
         // Telas de detalhe (active=null) ficam sem a barra de abas: a resposta ocupa o rodapé.
         nav={viewer && active ? { active, items: navItemsFor(surface, viewer), counts } : undefined}
       >
-        {children}
+        <div className="space-y-4">
+          <ViewAsBar showPicker={active === "home"} homeHref={surface.home} />
+          {children}
+        </div>
       </AppShell>
     );
   }
@@ -90,6 +94,7 @@ export function ColaboraFrame({ surfaceKey, viewer, active, title, subtitle, bac
           </nav>
         )}
       </header>
+      <ViewAsBar showPicker={active === "home"} homeHref={surface.home} />
       {children}
     </div>
   );

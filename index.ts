@@ -13,6 +13,12 @@ export { getAppViewerHandler as getAppViewer } from "./features/get-app-viewer/h
 export { getTeamOverviewHandler as getTeamOverview } from "./features/get-team-overview/handler";
 export { getAdminOverviewHandler as getAdminOverview } from "./features/admin-overview/handler";
 export {
+  getViewAsStatusHandler as getViewAsStatus,
+  searchViewAsTargetsHandler as searchViewAsTargets,
+  startViewAsHandler as startViewAs,
+  stopViewAsHandler as stopViewAs,
+} from "./features/view-as/handler";
+export {
   saveGroupConfigHandler as saveGroupConfig,
   saveIntroHandler as saveIntro,
   saveAppNameHandler as saveAppName,
@@ -50,6 +56,7 @@ export type { ChangeTicketStateInput, ChangeTicketStateResult } from "./features
 export type { ListAgentTicketsInput, ListAgentTicketsResult } from "./features/list-agent-tickets/types";
 export type { GetTeamOverviewResult, TeamMember, TeamOverview } from "./features/get-team-overview/types";
 export type { AppViewer, GetAppViewerResult } from "./features/get-app-viewer/types";
+export type { ViewAsPerson, ViewAsStatus } from "./features/view-as/types";
 export type { AgentUpdateInput, AgentUpdateResult } from "./features/agent-update-ticket/types";
 export type { AttachmentStream, DownloadAttachmentInput, DownloadAttachmentResult } from "./features/download-attachment/types";
 export type { AdminField, AdminOverview, AdminSector, ConnectionStatus, GetAdminOverviewResult } from "./features/admin-overview/types";

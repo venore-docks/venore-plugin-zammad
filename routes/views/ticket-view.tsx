@@ -113,11 +113,18 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
 
           <Conversation messages={ticket.messages} />
 
-          <ReplyBox
-            ticketId={ticket.id}
-            closed={ticket.closed}
-            agent={agent ? { canWork: agent.canWork, blockedMessage: blockedMessage(ticket.owner?.name ?? null, agent.canAllocate) } : null}
-          />
+          {viewer.viewingAs ? (
+            // "Ver como" é só leitura: no lugar da caixa de resposta, o aviso.
+            <p className="rounded-xl border border-dashed px-4 py-3 text-sm text-muted-foreground">
+              Aqui {viewer.viewingAs.name} responderia ao chamado. No “ver como” nada é enviado em nome de outra pessoa.
+            </p>
+          ) : (
+            <ReplyBox
+              ticketId={ticket.id}
+              closed={ticket.closed}
+              agent={agent ? { canWork: agent.canWork, blockedMessage: blockedMessage(ticket.owner?.name ?? null, agent.canAllocate) } : null}
+            />
+          )}
         </div>
       </ReplyProvider>
     </ColaboraFrame>

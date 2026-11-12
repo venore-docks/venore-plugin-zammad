@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { isPluginActive } from "@venore/plugin-sdk";
-import { agentUpdateTicket, changeTicketState, createTicket, replyTicket } from "../../index";
-import type { AgentUpdateInput, AnswerValue, CreatedTicket, TicketAttachment } from "../../index";
+import { agentUpdateTicket, changeTicketState, createTicket, replyTicket, searchViewAsTargets, startViewAs, stopViewAs } from "../../index";
+import type { AgentUpdateInput, AnswerValue, CreatedTicket, TicketAttachment, ViewAsPerson } from "../../index";
 import { APP_SURFACE, PORTAL_SURFACE } from "../../shared/routes";
 
 // Toda action passa pelo handler do barrel (autorização + conta no Zammad lá dentro). Servem às DUAS
@@ -90,6 +90,27 @@ export async function changeTicketStateAction(ticketId: number, action: "close" 
   if (!result.success) return { ok: false, error: result.error.message };
   revalidateTicket(ticketId);
   return { ok: true, data: result.data };
+}
+
+// "Ver como" (só leitura; só admin do Colabora). Ao ligar/desligar, tudo que depende de quem vê é revalidado.
+export async function searchViewAsAction(query: string): Promise<ZammadActionResult<ViewAsPerson[]>> {
+  if (!(await isPluginActive("colabora"))) return { ok: false, error: DISABLED };
+  const result = await searchViewAsTargets(String(query ?? ""));
+  return result.success ? { ok: true, data: result.data } : { ok: false, error: result.error.message };
+}
+
+export async function startViewAsAction(targetId: string): Promise<ZammadActionResult<ViewAsPerson>> {
+  if (!(await isPluginActive("colabora"))) return { ok: false, error: DISABLED };
+  const result = await startViewAs(String(targetId ?? ""));
+  if (!result.success) return { ok: false, error: result.error.message };
+  revalidateLists();
+  return { ok: true, data: result.data };
+}
+
+export async function stopViewAsAction(): Promise<ZammadActionResult<null>> {
+  await stopViewAs();
+  revalidateLists();
+  return { ok: true, data: null };
 }
 
 // App do agente: estado, prioridade, assumir/devolver (vão juntos num único envio).
