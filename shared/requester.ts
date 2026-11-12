@@ -3,11 +3,11 @@ import type { OperationResult } from "@venore/plugin-sdk";
 import { getCurrentUser } from "@venore/plugin-sdk/auth";
 import { authorizeActor } from "@venore/plugin-sdk/rbac";
 import type { ZammadUser } from "../contracts/zammad";
-import { ZAMMAD_PERMISSIONS } from "./permissions";
+import { COLABORA_PERMISSIONS } from "./permissions";
 import { failure } from "./results";
 import { findZammadUserByEmail } from "./schema";
 
-// Quem está abrindo/consultando chamados: usuário logado no portal, com `zammad.tickets`, e a conta
+// Quem está abrindo/consultando chamados: usuário logado no portal, com `colabora.tickets`, e a conta
 // dele no Zammad (mesmo e-mail).
 export type Requester = {
   actorId: string;
@@ -19,7 +19,7 @@ export type Requester = {
 };
 
 export async function resolveRequester(): Promise<OperationResult<Requester>> {
-  const authz = await authorizeActor(ZAMMAD_PERMISSIONS.tickets);
+  const authz = await authorizeActor(COLABORA_PERMISSIONS.tickets);
   if (!authz.authorized) return { success: false, error: authz.error };
 
   const current = await getCurrentUser();

@@ -10,7 +10,7 @@ function formatDateTime(iso: string): string {
 }
 
 export default async function ZammadAdminPage() {
-  const gate = await getPluginAdminPageData("zammad");
+  const gate = await getPluginAdminPageData("colabora");
   if (!gate.granted) return <AdminAccessDenied message="Você não tem permissão para configurar os chamados." />;
 
   const result = await getAdminOverview();
@@ -26,7 +26,7 @@ export default async function ZammadAdminPage() {
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" asChild>
-              <Link href="/chamados/novo" target="_blank">
+              <Link href="/colabora/novo" target="_blank">
                 <ExternalLink className="size-4" />
                 Ver abertura de chamado
               </Link>

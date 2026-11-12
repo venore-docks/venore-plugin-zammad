@@ -1,6 +1,6 @@
 import type { PluginContributions } from "@venore/plugin-sdk";
-import { zammadBreadcrumbSegments } from "./breadcrumbs";
+import { colaboraBreadcrumbSegments } from "./breadcrumbs";
 
-export const zammadContributions: PluginContributions = {
-  breadcrumbSegments: zammadBreadcrumbSegments,
+export const colaboraContributions: PluginContributions = {
+  breadcrumbSegments: colaboraBreadcrumbSegments,
 };

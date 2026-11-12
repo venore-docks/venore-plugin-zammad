@@ -49,7 +49,7 @@ export function AppNameForm({ appName }: { appName: string | null }) {
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          É o nome que aparece no ícone do celular e na tela de instalação do app em /ext/zammad/app. Em branco, usa “Chamados · nome do site”. O ícone vem de Configurações → Identidade do site → “Ícone do app (PWA)”; sem ele, usa o favicon do
+          É o nome que aparece no ícone do celular e na tela de instalação do app em /ext/colabora/app. Em branco, usa “Chamados · nome do site”. O ícone vem de Configurações → Identidade do site → “Ícone do app (PWA)”; sem ele, usa o favicon do
           site. Quem já instalou o app pode precisar reinstalar para ver a mudança.
         </p>
         <Input value={value} maxLength={30} placeholder="Colabora FEM" onChange={(event) => setValue(event.target.value)} />
@@ -232,7 +232,7 @@ export function GroupConfigCard({ sector }: { sector: AdminSector }) {
             Salvar setor
           </Button>
           <Button variant="ghost" asChild>
-            <a href={`/chamados/novo?setor=${sector.groupId}`} target="_blank" rel="noreferrer">
+            <a href={`/colabora/novo?setor=${sector.groupId}`} target="_blank" rel="noreferrer">
               Testar este setor
               <ExternalLink className="size-4" />
             </a>

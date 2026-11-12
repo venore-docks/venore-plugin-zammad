@@ -1,4 +1,4 @@
-# @venore/plugin-zammad — Chamados
+# @venore/plugin-colabora — Chamados
 
 Plugin do [Venore Docks](https://github.com/venore-docks/venore-docks) que abre e acompanha chamados
 no [Zammad](https://zammad.org) **sem o colaborador nunca ver o Zammad**: o Zammad fica "headless" (só
@@ -18,18 +18,18 @@ o motor e a fila da equipe) e toda a experiência do solicitante acontece no por
   responder (com anexos) e, **só para agente/admin do Zammad** (papel com `ticket.agent` ou `admin`),
   **encerrar** (com confirmação) e **reabrir**. Colaborador comum apenas conversa; o botão nem aparece
   e o servidor também recusa.
-- **`/admin/zammad`**: estado da conexão, setores visíveis, agrupamento das perguntas em etapas,
+- **`/admin/colabora`**: estado da conexão, setores visíveis, agrupamento das perguntas em etapas,
   textos de ajuda e regras do Zammad que o portal não sabe aplicar.
 
 Nenhuma tela leva ao Zammad. Anexos são servidos pelo próprio portal
-(`/api/zammad/tickets/:t/articles/:a/attachments/:id`), só para o dono do chamado. As notificações
+(`/api/colabora/tickets/:t/articles/:a/attachments/:id`), só para o dono do chamado. As notificações
 por e-mail do Zammad continuam saindo; os links dentro dos e-mails apontam para o Zammad, então
 **desligue o link/`ticket_hook` dos templates de notificação do cliente** ou troque-os por um link
 para `/chamados`.
 
 ## App "Chamados" (PWA, fora da casca do portal)
 
-Uma superfície própria para celular, instalável como app: **`/ext/zammad/app`**. Ela roda sob o `/ext` do
+Uma superfície própria para celular, instalável como app: **`/ext/colabora/app`**. Ela roda sob o `/ext` do
 core (rotas `standalone`), então **não leva a casca do Venore Docks** (sem menu, cabeçalho nem rodapé do
 portal) — só o cabeçalho e a barra de abas do app, com respeito à área segura do celular.
 
@@ -45,13 +45,13 @@ Quem é agente, gestor ou admin vem dos **papéis do Zammad** (nada a configurar
 `full`/`change` ao grupo pode receber chamados dele. Chamado atribuído a outro agente não aparece para
 agente comum (quem quiser ver usa o Zammad).
 
-- **Nome e ícone:** o nome vem de **/admin/zammad → Nome do app (PWA)** (ex.: "Colabora FEM"); o ícone é o **"Ícone do app (PWA)"**
+- **Nome e ícone:** o nome vem de **/admin/colabora → Nome do app (PWA)** (ex.: "Colabora FEM"); o ícone é o **"Ícone do app (PWA)"**
   de Configurações → Identidade do site (sem ele, o **favicon**), desenhado em PNG 192/512/180 por
-  `/api/zammad/app/icon` (aceita PNG, JPEG, GIF, SVG e .ico com quadro PNG; outro formato cai no ícone padrão do
+  `/api/colabora/app/icon` (aceita PNG, JPEG, GIF, SVG e .ico com quadro PNG; outro formato cai no ícone padrão do
   core). Imagem sem transparência preenche o ícone inteiro. Requer o core com `brand.pwaIconMediaId`.
-- **Instalar:** abrir `/ext/zammad/app` no celular e usar "Instalar" (Android/Chrome) ou "Compartilhar →
+- **Instalar:** abrir `/ext/colabora/app` no celular e usar "Instalar" (Android/Chrome) ou "Compartilhar →
   Adicionar à Tela de Início" (iOS). A página aponta para o manifest próprio
-  (`/api/zammad/app/manifest`), montado a partir do manifest do site (cores, ícones e idioma do tema) com
+  (`/api/colabora/app/manifest`), montado a partir do manifest do site (cores, ícones e idioma do tema) com
   nome, id e página inicial do app. O service worker é o do core (escopo `/`).
 - **Login:** a página de login é a do portal (mesma conta). O manifest usa `scope: "/"` para o login não
   abrir uma barra de endereço por cima do app.
@@ -65,7 +65,7 @@ agente comum (quem quiser ver usa o Zammad).
 |---|---|
 | Setores | **Grupos** do Zammad |
 | Perguntas, opções, obrigatoriedade | **Atributos de ticket** + **Core Workflows** do Zammad, lidos pela API |
-| Ordem das etapas, textos de ajuda, nome/descrição do setor, setores ocultos | Plugin (setting `zammad.wizard`) |
+| Ordem das etapas, textos de ajuda, nome/descrição do setor, setores ocultos | Plugin (setting `colabora.wizard`) |
 
 Criar ou mudar um campo no Zammad aparece no portal em até 5 minutos, ou na hora com
 "Recarregar do Zammad" no admin. Não é preciso deploy.
@@ -113,9 +113,9 @@ uma mensagem para procurar o suporte.
 
 ### Permissões (RBAC do portal)
 
-- `zammad.tickets`: abrir, acompanhar e responder os próprios chamados. Dar ao papel de todos os
+- `colabora.tickets`: abrir, acompanhar e responder os próprios chamados. Dar ao papel de todos os
   colaboradores.
-- `zammad.settings.manage`: tela de configuração.
+- `colabora.settings.manage`: tela de configuração.
 
 Coloque um item de menu apontando para `/chamados` (menus do CMS).
 

@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { OperationResult } from "@venore/plugin-sdk";
 import { getSetting, setSetting } from "@venore/plugin-sdk/settings";
 import type { GroupWizardConfig, WizardConfig } from "../contracts/types";
-import { WIZARD_SETTING_KEY } from "./permissions";
+import { LEGACY_WIZARD_SETTING_KEY, WIZARD_SETTING_KEY } from "./permissions";
 import { failure } from "./results";
 
 const nullableText = (max: number) =>
@@ -34,7 +34,10 @@ const wizardConfigSchema = z.object({
 export const EMPTY_CONFIG: WizardConfig = { intro: null, appName: null, groups: {} };
 
 export async function readWizardConfig(): Promise<WizardConfig> {
-  const result = await getSetting({ key: WIZARD_SETTING_KEY });
+  let result = await getSetting({ key: WIZARD_SETTING_KEY });
+  // Reserva da troca de chave (zammad → colabora): enquanto o admin não salvar de novo, vale a configuração
+  // que já estava gravada no setting antigo (só leitura; o próximo "Salvar" grava no novo).
+  if (result.success && !result.data) result = await getSetting({ key: LEGACY_WIZARD_SETTING_KEY });
   if (!result.success || !result.data) return EMPTY_CONFIG;
   const parsed = wizardConfigSchema.safeParse(result.data.value);
   // Setting corrompido não derruba a abertura de chamados: cai no padrão (tudo automático).

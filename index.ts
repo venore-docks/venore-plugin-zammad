@@ -1,4 +1,4 @@
-export { zammadBreadcrumbSegments } from "./breadcrumbs";
+export { colaboraBreadcrumbSegments } from "./breadcrumbs";
 
 export { getWizardHandler as getWizard } from "./features/get-wizard/handler";
 export { createTicketHandler as createTicket } from "./features/create-ticket/handler";

@@ -5,7 +5,7 @@ import { parseGroupConfig, readWizardConfig, writeWizardConfig } from "../../sha
 import type { ReloadSchemaResult, SaveAppNameInput, SaveConfigResult, SaveGroupConfigInput, SaveIntroInput } from "./types";
 
 export async function saveGroupConfig(actorId: string, input: SaveGroupConfigInput): Promise<SaveConfigResult> {
-  const handle = beginOperation({ useCase: "zammad.save-group-config", actor: { id: actorId, type: "user" }, kind: "write" });
+  const handle = beginOperation({ useCase: "colabora.save-group-config", actor: { id: actorId, type: "user" }, kind: "write" });
   const finish = (result: SaveConfigResult) => {
     endOperation(handle, result);
     return result;
@@ -18,7 +18,7 @@ export async function saveGroupConfig(actorId: string, input: SaveGroupConfigInp
 }
 
 export async function saveIntro(actorId: string, input: SaveIntroInput): Promise<SaveConfigResult> {
-  const handle = beginOperation({ useCase: "zammad.save-intro", actor: { id: actorId, type: "user" }, kind: "write" });
+  const handle = beginOperation({ useCase: "colabora.save-intro", actor: { id: actorId, type: "user" }, kind: "write" });
   const current = await readWizardConfig();
   const result = await writeWizardConfig({ ...current, intro: input.intro?.trim() || null });
   endOperation(handle, result);
@@ -26,7 +26,7 @@ export async function saveIntro(actorId: string, input: SaveIntroInput): Promise
 }
 
 export async function saveAppName(actorId: string, input: SaveAppNameInput): Promise<SaveConfigResult> {
-  const handle = beginOperation({ useCase: "zammad.save-app-name", actor: { id: actorId, type: "user" }, kind: "write" });
+  const handle = beginOperation({ useCase: "colabora.save-app-name", actor: { id: actorId, type: "user" }, kind: "write" });
   const current = await readWizardConfig();
   const result = await writeWizardConfig({ ...current, appName: input.appName?.trim() || null });
   endOperation(handle, result);

@@ -6,29 +6,29 @@ import { reloadSchema, saveAppName, saveGroupConfig, saveIntro } from "../../ind
 
 export type AdminActionResult = { ok: true } | { ok: false; error: string };
 
-const BASE_PATH = "/admin/zammad";
+const BASE_PATH = "/admin/colabora";
 const DISABLED = "O plugin de chamados está desativado.";
 
 export async function saveGroupConfigAction(groupId: number, config: unknown): Promise<AdminActionResult> {
-  if (!(await isPluginActive("zammad"))) return { ok: false, error: DISABLED };
+  if (!(await isPluginActive("colabora"))) return { ok: false, error: DISABLED };
   const result = await saveGroupConfig({ groupId, config });
   if (!result.success) return { ok: false, error: result.error.message };
   revalidatePath(BASE_PATH);
-  revalidatePath("/chamados/novo");
+  revalidatePath("/colabora/novo");
   return { ok: true };
 }
 
 export async function saveIntroAction(intro: string): Promise<AdminActionResult> {
-  if (!(await isPluginActive("zammad"))) return { ok: false, error: DISABLED };
+  if (!(await isPluginActive("colabora"))) return { ok: false, error: DISABLED };
   const result = await saveIntro({ intro });
   if (!result.success) return { ok: false, error: result.error.message };
   revalidatePath(BASE_PATH);
-  revalidatePath("/chamados/novo");
+  revalidatePath("/colabora/novo");
   return { ok: true };
 }
 
 export async function saveAppNameAction(appName: string): Promise<AdminActionResult> {
-  if (!(await isPluginActive("zammad"))) return { ok: false, error: DISABLED };
+  if (!(await isPluginActive("colabora"))) return { ok: false, error: DISABLED };
   const result = await saveAppName({ appName });
   if (!result.success) return { ok: false, error: result.error.message };
   revalidatePath(BASE_PATH);
@@ -36,7 +36,7 @@ export async function saveAppNameAction(appName: string): Promise<AdminActionRes
 }
 
 export async function reloadSchemaAction(): Promise<AdminActionResult> {
-  if (!(await isPluginActive("zammad"))) return { ok: false, error: DISABLED };
+  if (!(await isPluginActive("colabora"))) return { ok: false, error: DISABLED };
   const result = await reloadSchema();
   if (!result.success) return { ok: false, error: result.error.message };
   revalidatePath(BASE_PATH);

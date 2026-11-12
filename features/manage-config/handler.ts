@@ -1,11 +1,11 @@
 import type { OperationResult } from "@venore/plugin-sdk";
 import { authorizeActor } from "@venore/plugin-sdk/rbac";
-import { ZAMMAD_PERMISSIONS } from "../../shared/permissions";
+import { COLABORA_PERMISSIONS } from "../../shared/permissions";
 import { reloadSchema, saveAppName, saveGroupConfig, saveIntro } from "./service";
 import type { ReloadSchemaResult, SaveAppNameInput, SaveConfigResult, SaveGroupConfigInput, SaveIntroInput } from "./types";
 
 async function authorizeManager(): Promise<OperationResult<string>> {
-  const authz = await authorizeActor(ZAMMAD_PERMISSIONS.settingsManage);
+  const authz = await authorizeActor(COLABORA_PERMISSIONS.settingsManage);
   if (!authz.authorized) return { success: false, error: authz.error };
   return { success: true, data: authz.actorId };
 }

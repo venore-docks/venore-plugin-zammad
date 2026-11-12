@@ -9,7 +9,7 @@ import { zammadRequest } from "../../shared/zammad-client";
 import type { AgentUpdateInput, AgentUpdateResult } from "./types";
 
 export async function agentUpdateTicket(requester: Requester, input: AgentUpdateInput): Promise<AgentUpdateResult> {
-  const handle = beginOperation({ useCase: "zammad.agent-update-ticket", actor: { id: requester.actorId, type: "user" }, kind: "write" });
+  const handle = beginOperation({ useCase: "colabora.agent-update-ticket", actor: { id: requester.actorId, type: "user" }, kind: "write" });
   const finish = (result: AgentUpdateResult) => {
     endOperation(handle, result);
     return result;

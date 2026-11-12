@@ -2,10 +2,10 @@ import { APP_BASE } from "./routes";
 
 // Manifest da PWA. Parte do manifest do próprio site (cores de chrome e idioma, que o core monta a partir
 // do tema) e define a identidade do app: nome, id, página inicial, atalhos e ÍCONES (o favicon do site,
-// servido por /api/zammad/app/icon). Pura: testada em app-manifest.test.ts.
+// servido por /api/colabora/app/icon). Pura: testada em app-manifest.test.ts.
 //
 // `scope: "/"` de propósito: o login e o resto do portal ficam no mesmo domínio, e fora do escopo o
-// navegador abriria uma barra de endereço por cima do app. O app em si só navega dentro de /ext/zammad/app.
+// navegador abriria uma barra de endereço por cima do app. O app em si só navega dentro de /ext/colabora/app.
 export type BaseManifest = {
   name?: string;
   lang?: string;
@@ -15,7 +15,7 @@ export type BaseManifest = {
   [key: string]: unknown;
 };
 
-export const ICON_ROUTE = "/api/zammad/app/icon";
+export const ICON_ROUTE = "/api/colabora/app/icon";
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
 export function iconUrl(size: number, options: { version: string; background?: string | null; maskable?: boolean }): string {
@@ -25,12 +25,12 @@ export function iconUrl(size: number, options: { version: string; background?: s
   return `${ICON_ROUTE}?${params.toString()}`;
 }
 
-// Nome do app: o configurado no admin ("Colabora FEM"); sem ele, "Chamados · <nome do site>".
+// Nome do app: o configurado no admin ("Colabora FEM"); sem ele, "Colabora · <nome do site>".
 export function appNames(appName: string | null | undefined, siteName: string | null | undefined): { name: string; shortName: string } {
   const configured = (appName ?? "").trim();
   if (configured) return { name: configured, shortName: configured };
   const site = (siteName ?? "").trim();
-  return { name: site ? `Chamados · ${site}` : "Chamados", shortName: "Chamados" };
+  return { name: site ? `Colabora · ${site}` : "Colabora", shortName: "Colabora" };
 }
 
 export function buildAppManifest(input: {

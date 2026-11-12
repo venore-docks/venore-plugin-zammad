@@ -1,54 +1,61 @@
-import { notFound, redirect } from "next/navigation";
 import { BellRing, CircleCheck, UserRound } from "lucide-react";
-import { isPluginActive } from "@venore/plugin-sdk";
-import { getCurrentUser } from "@venore/plugin-sdk/auth";
 import { getTicket } from "../../index";
-import { APP_SURFACE } from "../../shared/routes";
+import { surfaceFor, type SurfaceKey } from "../../shared/routes";
 import { Conversation } from "../public/conversation";
 import { ReplyProvider } from "../public/reply-context";
 import { BlockedNotice, StateBadge, formatDateTime } from "../public/shared";
-import { ReplyBox } from "../public/ticket-actions";
-import { AgentControls } from "./agent-controls";
-import { AppShell } from "./shell";
+import { ReplyBox, TicketStateButton } from "../public/ticket-actions";
+import { AllocationControls } from "./allocation-controls";
+import { AttendanceControls } from "./attendance-controls";
+import { enterSurface } from "./context";
+import { ColaboraFrame } from "./frame";
 
-// /ext/zammad/app/chamado/:ticketId — a conversa no app. Solicitante: como no portal. Agente (chamado com ele
-// ou na fila): vê notas internas e o solicitante, e tem os controles de atendimento.
-// Por que a pessoa não pode responder este chamado (ele não está com ela).
-function blockedMessage(ownerName: string | null, canAllocate: boolean): string {
-  if (ownerName === null) {
-    return canAllocate ? "Este chamado está na fila. Atribua a um agente (acima) para ele atender e responder." : "Este chamado não está atribuído a você.";
+// A conversa de um chamado, nas duas superfícies. Solicitante: vê as mensagens e responde. Agente (chamado
+// atribuído a ele): vê também as notas internas e o solicitante, e atende (responde, nota, estado, prioridade).
+// Gestor/admin: vê chamados da equipe e da fila e ALOCA (atribui/realoca/devolve à fila).
+// (Dono dos controles: allocation-controls.tsx = gestor; attendance-controls.tsx = agente.)
+export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: SurfaceKey; ticketId: number }) {
+  const surface = surfaceFor(surfaceKey);
+  const entered = await enterSurface(surface.detail(ticketId));
+  if (!entered.ok) {
+    return (
+      <ColaboraFrame surfaceKey={surfaceKey} viewer={null} active={null} title="Chamado" backHref={surface.mine}>
+        <BlockedNotice title="Chamado" message={entered.message} />
+      </ColaboraFrame>
+    );
   }
-  return `Este chamado está com ${ownerName}. Só quem atende responde ao solicitante.`;
-}
+  const { viewer } = entered;
 
-export default async function AppTicketPage({ params }: { params: Promise<{ ticketId: string }> }) {
-  if (!(await isPluginActive("zammad"))) notFound();
-  const { ticketId } = await params;
-  const user = await getCurrentUser();
-  if (!user.success || !user.data) redirect(`/login?callbackUrl=${encodeURIComponent(APP_SURFACE.detail(Number(ticketId)))}`);
-
-  const result = await getTicket({ ticketId: Number(ticketId), asAgent: true });
+  const result = await getTicket({ ticketId, asAgent: true });
   if (!result.success) {
     return (
-      <AppShell title="Chamado" backHref={APP_SURFACE.list}>
+      <ColaboraFrame surfaceKey={surfaceKey} viewer={viewer} active={null} title="Chamado" backHref={surface.mine}>
         <BlockedNotice title="Chamado" message={result.error.message} />
-      </AppShell>
+      </ColaboraFrame>
     );
   }
   const ticket = result.data;
   const agent = ticket.agent;
+  const backHref = agent ? (ticket.owner === null ? surface.queue : surface.assigned) : surface.mine;
 
   return (
-    <AppShell title={`#${ticket.number}`} subtitle={ticket.group} backHref={APP_SURFACE.list}>
+    <ColaboraFrame
+      surfaceKey={surfaceKey}
+      viewer={viewer}
+      active={null}
+      title={surfaceKey === "app" ? `#${ticket.number}` : ticket.title}
+      subtitle={surfaceKey === "app" ? ticket.group : `#${ticket.number} · ${ticket.group} · aberto em ${formatDateTime(ticket.createdAt)}`}
+      backHref={backHref}
+    >
       <ReplyProvider>
-        <div className="space-y-4 pb-6">
-          <header className="space-y-3 rounded-xl border border-t-4 border-t-primary bg-card p-4">
-            <h2 className="text-lg leading-snug font-semibold break-words text-foreground">{ticket.title}</h2>
+        <div className="mx-auto max-w-3xl space-y-4 pb-6">
+          <header className="space-y-3 rounded-xl border border-t-4 border-t-primary bg-card p-4 sm:p-5">
+            {surfaceKey === "app" && <h2 className="text-lg leading-snug font-semibold break-words text-foreground">{ticket.title}</h2>}
             <div className="flex flex-wrap items-center gap-2">
               <StateBadge label={ticket.stateLabel} tone={ticket.stateTone} />
               {agent && <span className="rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground">Prioridade: {ticket.priorityLabel}</span>}
             </div>
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
               {agent && (
                 <div className="min-w-0">
                   <dt className="text-muted-foreground">Solicitante</dt>
@@ -67,14 +74,15 @@ export default async function AppTicketPage({ params }: { params: Promise<{ tick
                 <dd className="font-medium text-foreground">{formatDateTime(ticket.createdAt)}</dd>
               </div>
             </dl>
+            {/* Colaborador da equipe vendo o PRÓPRIO pedido: encerrar/reabrir como antes. */}
+            {!agent && ticket.canClose && <TicketStateButton ticketId={ticket.id} closed={ticket.closed} />}
           </header>
 
           {agent && (
-            <AgentControls
-              key={`${ticket.id}-${agent.stateId}-${agent.priorityId}-${agent.ownerId}`}
-              ticketId={ticket.id}
-              controls={agent}
-            />
+            <>
+              <AllocationControls key={`alloc-${ticket.id}-${agent.ownerId}`} ticketId={ticket.id} controls={agent} />
+              <AttendanceControls key={`att-${ticket.id}-${agent.stateId}-${agent.priorityId}`} ticketId={ticket.id} controls={agent} />
+            </>
           )}
 
           {agent && ticket.customerWaiting && (
@@ -112,6 +120,14 @@ export default async function AppTicketPage({ params }: { params: Promise<{ tick
           />
         </div>
       </ReplyProvider>
-    </AppShell>
+    </ColaboraFrame>
   );
+}
+
+// Por que a pessoa não pode responder este chamado (ele não está com ela).
+function blockedMessage(ownerName: string | null, canAllocate: boolean): string {
+  if (ownerName === null) {
+    return canAllocate ? "Este chamado está na fila. Atribua a um agente (acima) para ele atender e responder." : "Este chamado não está atribuído a você.";
+  }
+  return `Este chamado está com ${ownerName}. Só quem atende responde ao solicitante.`;
 }

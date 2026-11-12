@@ -2,29 +2,29 @@ import type { PluginManifest } from "@venore/plugin-sdk";
 
 // Faixa escrita à mão, não importada do CORE_VERSION corrente (mesmo motivo dos outros plugins:
 // importar a versão corrente tornaria a checagem sempre trivial).
-export const zammadManifest: PluginManifest = {
+export const colaboraManifest: PluginManifest = {
   manifestVersion: "1.0.0",
-  key: "zammad",
-  name: "Chamados (Zammad)",
-  version: "0.5.2",
+  key: "colabora",
+  name: "Colabora",
+  version: "1.0.0",
   description:
-    "Abertura e acompanhamento de chamados no Zammad (headless) em passos guiados: a pessoa escolhe o setor, responde uma pergunta por vez e depois conversa com a equipe pelo portal. Os campos de cada setor vêm do próprio Zammad (atributos e Core Workflows); aqui só se ajusta a apresentação.",
+    "Colabora: central de chamados do colaborador, do agente e do gestor, sobre o Zammad (headless). O colaborador abre chamados em passos guiados e conversa com a equipe; o agente atende os chamados atribuídos a ele; o gestor acompanha a equipe e atribui chamados. Os campos de cada setor vêm do próprio Zammad (atributos e Core Workflows); aqui se ajusta a apresentação e quem pode abrir cada fluxo.",
   compatibility: { coreVersion: ">=2.0.0 <3.0.0" },
   permissions: [
-    { key: "zammad.tickets", label: "Abrir chamados e acompanhar os próprios chamados" },
-    { key: "zammad.settings.manage", label: "Configurar a abertura de chamados (setores visíveis, etapas e textos de ajuda)" },
+    { key: "colabora.tickets", label: "Usar o Colabora: abrir e acompanhar chamados (colaboradores, agentes e gestores)" },
+    { key: "colabora.settings.manage", label: "Administrar o Colabora (setores, grupos de pessoas, app e textos)" },
   ],
   navigation: [
     {
-      key: "zammad.admin",
-      label: "Chamados",
-      href: "/admin/zammad",
+      key: "colabora.admin",
+      label: "Colabora",
+      href: "/admin/colabora",
       icon: "life-buoy",
       groupKey: "plugins",
       groupLabel: "Plugins",
       groupOrder: 30,
       order: 50,
-      requiredPermission: "zammad.settings.manage",
+      requiredPermission: "colabora.settings.manage",
     },
   ],
 };

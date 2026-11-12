@@ -19,7 +19,7 @@ import type { CreateTicketInput, CreateTicketResult } from "./types";
 type CreatedTicketResponse = { id: number; number: string };
 
 export async function createTicket(requester: Requester, input: CreateTicketInput): Promise<CreateTicketResult> {
-  const handle = beginOperation({ useCase: "zammad.create-ticket", actor: { id: requester.actorId, type: "user" }, kind: "write" });
+  const handle = beginOperation({ useCase: "colabora.create-ticket", actor: { id: requester.actorId, type: "user" }, kind: "write" });
   const finish = (result: CreateTicketResult) => {
     endOperation(handle, result);
     return result;

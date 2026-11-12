@@ -13,7 +13,7 @@ export async function appMetadata(): Promise<Metadata> {
   return {
     title: name,
     applicationName: name,
-    manifest: "/api/zammad/app/manifest",
+    manifest: "/api/colabora/app/manifest",
     // `icons` da página SUBSTITUI o do layout raiz: sem repetir icon/shortcut, a aba perdia o favicon do site.
     icons: {
       icon: brand.faviconUrl,

@@ -22,9 +22,15 @@ async function readAttachments(formData: FormData): Promise<TicketAttachment[]> 
   return attachments;
 }
 
+// Tudo que mostra listas ou contagens de chamados, nas DUAS superfícies (portal e app).
 function revalidateLists(): void {
-  revalidatePath(PORTAL_SURFACE.list);
-  revalidatePath(APP_SURFACE.list);
+  for (const surface of [PORTAL_SURFACE, APP_SURFACE]) {
+    revalidatePath(surface.home);
+    revalidatePath(surface.mine);
+    revalidatePath(surface.assigned);
+    revalidatePath(surface.queue);
+    revalidatePath(surface.team);
+  }
 }
 
 function revalidateTicket(ticketId: number): void {
@@ -35,7 +41,7 @@ function revalidateTicket(ticketId: number): void {
 
 // FormData: `payload` (JSON com groupId, title, description, answers) + `attachments` (arquivos).
 export async function createTicketAction(formData: FormData): Promise<ZammadActionResult<CreatedTicket>> {
-  if (!(await isPluginActive("zammad"))) return { ok: false, error: DISABLED };
+  if (!(await isPluginActive("colabora"))) return { ok: false, error: DISABLED };
 
   let payload: { groupId?: unknown; title?: unknown; description?: unknown; answers?: unknown };
   try {
@@ -62,7 +68,7 @@ export async function createTicketAction(formData: FormData): Promise<ZammadActi
 
 // FormData: `ticketId`, `message`, `quoteArticleId?`, `asAgent?` ("1"), `internal?` ("1") + `attachments`.
 export async function replyTicketAction(formData: FormData): Promise<ZammadActionResult<{ reopened: boolean }>> {
-  if (!(await isPluginActive("zammad"))) return { ok: false, error: DISABLED };
+  if (!(await isPluginActive("colabora"))) return { ok: false, error: DISABLED };
   const ticketId = Number(formData.get("ticketId"));
   const quoteId = Number(formData.get("quoteArticleId"));
   const result = await replyTicket({
@@ -79,7 +85,7 @@ export async function replyTicketAction(formData: FormData): Promise<ZammadActio
 }
 
 export async function changeTicketStateAction(ticketId: number, action: "close" | "reopen"): Promise<ZammadActionResult<{ closed: boolean }>> {
-  if (!(await isPluginActive("zammad"))) return { ok: false, error: DISABLED };
+  if (!(await isPluginActive("colabora"))) return { ok: false, error: DISABLED };
   const result = await changeTicketState({ ticketId, action });
   if (!result.success) return { ok: false, error: result.error.message };
   revalidateTicket(ticketId);
@@ -88,7 +94,7 @@ export async function changeTicketStateAction(ticketId: number, action: "close" 
 
 // App do agente: estado, prioridade, assumir/devolver (vão juntos num único envio).
 export async function agentUpdateTicketAction(input: AgentUpdateInput): Promise<ZammadActionResult<{ changed: string[] }>> {
-  if (!(await isPluginActive("zammad"))) return { ok: false, error: DISABLED };
+  if (!(await isPluginActive("colabora"))) return { ok: false, error: DISABLED };
   const result = await agentUpdateTicket(input);
   if (!result.success) return { ok: false, error: result.error.message };
   revalidateTicket(input.ticketId);

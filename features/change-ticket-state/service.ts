@@ -7,7 +7,7 @@ import { zammadRequest } from "../../shared/zammad-client";
 import type { ChangeTicketStateInput, ChangeTicketStateResult } from "./types";
 
 export async function changeTicketState(requester: Requester, input: ChangeTicketStateInput): Promise<ChangeTicketStateResult> {
-  const handle = beginOperation({ useCase: `zammad.${input.action}-ticket`, actor: { id: requester.actorId, type: "user" }, kind: "write" });
+  const handle = beginOperation({ useCase: `colabora.${input.action}-ticket`, actor: { id: requester.actorId, type: "user" }, kind: "write" });
   const finish = (result: ChangeTicketStateResult) => {
     endOperation(handle, result);
     return result;

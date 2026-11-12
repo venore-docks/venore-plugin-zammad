@@ -240,7 +240,7 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
           </Button>
         ) : (
           <Button type="button" variant="ghost" asChild>
-            <Link href={paths.list}>Cancelar</Link>
+            <Link href={paths.home}>Cancelar</Link>
           </Button>
         )}
         <Button type="submit" size="lg" disabled={pending} className="min-w-40">

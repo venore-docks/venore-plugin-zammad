@@ -1,6 +1,6 @@
-# @venore/plugin-zammad — instruções para o Claude
+# @venore/plugin-colabora — instruções para o Claude
 
-Plugin do Venore Docks, instalado no core como dependência git (`@venore/plugin-zammad`). Este repo
+Plugin do Venore Docks, instalado no core como dependência git (`@venore/plugin-colabora`). Este repo
 não roda sozinho: typecheck, lint e build rodam **a partir do core**. Visão geral: `README.md`.
 
 ## Regras de arquitetura
@@ -12,7 +12,7 @@ São as mesmas do core: `AGENTS.md` (camadas handler → service, `OperationResu
 ## Pontos que importam
 
 - **O Zammad é a fonte da verdade dos campos.** O plugin não duplica formulário. O setting
-  `zammad.wizard` guarda só a apresentação: etapas, ajudas, nomes e setores ocultos. A chave de um
+  `colabora.wizard` guarda só a apresentação: etapas, ajudas, nomes e setores ocultos. A chave de um
   campo que sumiu do Zammad é ignorada sem erro.
 - **Toda ação da pessoa vai com `X-On-Behalf-Of`** (`shared/zammad-client.ts`). O dono do token pode
   não ter acesso a nenhum grupo: no Zammad da FEM, o admin tem `group_ids: {}` e por isso enxerga
@@ -36,7 +36,7 @@ cd ..\venore-docks
 # backup de package.json e package-lock.json antes (podem ter mudanças de outro trabalho)
 New-Item -ItemType Junction -Path node_modules\@venore\plugin-zammad -Target ..\venore-plugin-zammad
 New-Item -ItemType Junction -Path ..\venore-plugin-zammad\node_modules -Target .\node_modules
-npm pkg set "dependencies.@venore/plugin-zammad=file:../venore-plugin-zammad"
+npm pkg set "dependencies.@venore/plugin-colabora=file:../venore-plugin-zammad"
 npm run gen:registries; npx tsc --noEmit
 # lint: o eslint do core ignora arquivos fora dele. Copie o plugin para src/plugins/_lint-zammad,
 # rode `npx eslint src/plugins/_lint-zammad` e apague a cópia.
@@ -84,8 +84,8 @@ quando a versão nova chega no `main`. O repo precisa ser **público**, senão o
   `users/search?query=role_ids:N` (lista completa de usuários passa de 500 e leva ~10 s/página — não usar).
   Acesso a grupo = usuário ∪ papéis; "dono" do grupo = `full`/`change`. Cache de 5 min.
 - **Ícone/nome do app**: ícone = `brand.pwaIconUrl` (Identidade do site; senão o favicon) renderizado por
-  `next/og` em `/api/zammad/app/icon`
-  (`shared/icon-source.ts`: formato pelos bytes; .ico → quadro PNG); nome = setting `zammad.wizard.appName`
+  `next/og` em `/api/colabora/app/icon`
+  (`shared/icon-source.ts`: formato pelos bytes; .ico → quadro PNG); nome = setting `colabora.wizard.appName`
   (admin), senão "Chamados · <site>". Ambos públicos (o navegador busca manifest/ícone sem cookies).
 - **PWA**: a página é servida por `/ext` (área `standalone`) e declara `generateMetadata` → `manifest`
   próprio (precisa do core com `generateMetadata` em standalone). O manifest é PÚBLICO (o navegador o busca

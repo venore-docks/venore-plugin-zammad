@@ -65,7 +65,7 @@ export type TicketAttachmentInfo = {
   filename: string;
   size: number;
   isImage: boolean;
-  // Rota do próprio portal (o Zammad não é exposto): /api/zammad/tickets/:t/articles/:a/attachments/:id
+  // Rota do próprio portal (o Zammad não é exposto): /api/colabora/tickets/:t/articles/:a/attachments/:id
   href: string;
 };
 
@@ -139,7 +139,7 @@ export type TicketDetail = {
   messages: TicketMessage[];
 };
 
-// Configuração de apresentação guardada no setting `zammad.wizard` (o Zammad continua dono dos campos).
+// Configuração de apresentação guardada no setting `colabora.wizard` (o Zammad continua dono dos campos).
 export type GroupWizardConfig = {
   enabled: boolean;
   label: string | null;

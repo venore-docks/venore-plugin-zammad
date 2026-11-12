@@ -18,7 +18,7 @@ export async function loadOwnTicket(requester: Requester, ticketId: number): Pro
   if (!Number.isInteger(ticketId) || ticketId <= 0) return failure("ticket_not_found", NOT_FOUND);
   const result = await zammadRequest<ZammadExpandedTicket>(`tickets/${ticketId}?expand=true`, { onBehalfOf: requester.email });
   if (!result.success) {
-    return result.error.code === "zammad.request_failed" || result.error.code === "zammad.forbidden"
+    return result.error.code === "colabora.request_failed" || result.error.code === "colabora.forbidden"
       ? failure("ticket_not_found", NOT_FOUND)
       : result;
   }
@@ -37,7 +37,7 @@ export async function loadTicketForViewer(requester: Requester, ticketId: number
   if (!Number.isInteger(ticketId) || ticketId <= 0) return failure("ticket_not_found", NOT_FOUND);
   const result = await zammadRequest<ZammadExpandedTicket>(`tickets/${ticketId}?expand=true`, { onBehalfOf: requester.email });
   if (!result.success) {
-    return result.error.code === "zammad.request_failed" || result.error.code === "zammad.forbidden"
+    return result.error.code === "colabora.request_failed" || result.error.code === "colabora.forbidden"
       ? failure("ticket_not_found", NOT_FOUND)
       : result;
   }

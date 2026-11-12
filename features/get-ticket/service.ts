@@ -12,7 +12,7 @@ import { priorityLabel } from "../../shared/ticket-options";
 import type { GetTicketInput, GetTicketResult } from "./types";
 
 export function attachmentHref(ticketId: number, articleId: number, attachmentId: number): string {
-  return `/api/zammad/tickets/${ticketId}/articles/${articleId}/attachments/${attachmentId}`;
+  return `/api/colabora/tickets/${ticketId}/articles/${articleId}/attachments/${attachmentId}`;
 }
 
 const SAFE_IMAGE = /^image\/(png|jpe?g|gif|webp|bmp)$/i;
