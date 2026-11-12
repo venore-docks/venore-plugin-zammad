@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assigneesForGroup, effectiveAccess, managedGroupIds, ownsGroup, teamOf, type DirRole, type DirUser } from "./team-rules";
+import { assigneesForGroup, effectiveAccess, managedGroupIds, memberGroupIds, ownsGroup, resolveAllocation, teamOf, type DirRole, type DirUser } from "./team-rules";
 
 // Papéis e usuários reais do Zammad da FEM (2026-11-10).
 const ROLES: DirRole[] = [
@@ -54,6 +54,37 @@ describe("quem recebe chamados de cada grupo", () => {
 
   it("grupo sem agentes (Zeladoria, 5) não tem ninguém para receber", () => {
     expect(assigneesForGroup(5, USERS, ROLES)).toEqual([]);
+  });
+});
+
+describe("setores de cada agente", () => {
+  it("só os grupos informados que o agente atende como responsável", () => {
+    expect(memberGroupIds(USERS[3], ROLES, [1, 2, 6])).toEqual([1, 2]);
+    expect(memberGroupIds(USERS[1], ROLES, [1, 2, 6])).toEqual([6]);
+    expect(memberGroupIds(USERS[4], ROLES, [1, 2, 6])).toEqual([]);
+  });
+});
+
+describe("regra de alocação", () => {
+  const assignees = [{ id: 97 }, { id: 96 }];
+
+  it("atribuir a quem atende o setor muda o responsável", () => {
+    expect(resolveAllocation({ targetOwnerId: 96, currentOwnerId: 1, assignees, queueOwnerId: 1 })).toEqual({ ok: true, target: 96, changed: true });
+  });
+
+  it("recusa quem não atende o setor", () => {
+    const result = resolveAllocation({ targetOwnerId: 98, currentOwnerId: 1, assignees, queueOwnerId: 1 });
+    expect(result.ok).toBe(false);
+  });
+
+  it("devolver à fila de um chamado já na fila não muda nada", () => {
+    expect(resolveAllocation({ targetOwnerId: null, currentOwnerId: null, assignees, queueOwnerId: 1 })).toEqual({ ok: true, target: 1, changed: false });
+    expect(resolveAllocation({ targetOwnerId: null, currentOwnerId: 1, assignees, queueOwnerId: 1 })).toEqual({ ok: true, target: 1, changed: false });
+  });
+
+  it("devolver à fila de um chamado atribuído muda, e realocar ao mesmo agente não", () => {
+    expect(resolveAllocation({ targetOwnerId: null, currentOwnerId: 97, assignees, queueOwnerId: 1 })).toEqual({ ok: true, target: 1, changed: true });
+    expect(resolveAllocation({ targetOwnerId: 97, currentOwnerId: 97, assignees, queueOwnerId: 1 })).toEqual({ ok: true, target: 97, changed: false });
   });
 });
 

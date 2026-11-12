@@ -1,7 +1,7 @@
 import "server-only";
 import { staffRoleOf, type StaffRole } from "./access-rules";
 import type { Requester } from "./requester";
-import { assigneesForGroup, managedGroupIds, teamOf, type DirRole, type DirUser } from "./team-rules";
+import { assigneesForGroup, managedGroupIds, memberGroupIds, teamOf, type DirRole, type DirUser } from "./team-rules";
 import { zammadRequest } from "./zammad-client";
 
 // Papéis, usuários e grupos do Zammad (quem atende o quê), lidos com o token da integração e guardados
@@ -79,10 +79,16 @@ export async function assigneesFor(groupId: number): Promise<DirUser[]> {
 }
 
 // Os grupos que a pessoa gerencia e a equipe que responde por eles.
-export async function teamFor(requester: Requester): Promise<{ groupIds: number[]; members: DirUser[] }> {
+// `memberGroups`: para cada agente, quais dos grupos gerenciados ele atende (filtro da equipe por setor).
+export type TeamForResult = { groupIds: number[]; members: DirUser[]; memberGroups: Record<number, number[]> };
+
+export async function teamFor(requester: Requester): Promise<TeamForResult> {
   const [users, roles] = await Promise.all([loadDirUsers(), loadDirRoles()]);
-  if (!users || !roles) return { groupIds: [], members: [] };
+  if (!users || !roles) return { groupIds: [], members: [], memberGroups: {} };
   const me = users.find((user) => user.id === requester.zammadUser.id);
   const groupIds = me ? managedGroupIds(me, roles) : [];
-  return { groupIds, members: teamOf(groupIds, users, roles) };
+  const members = teamOf(groupIds, users, roles);
+  const memberGroups: Record<number, number[]> = {};
+  for (const member of members) memberGroups[member.id] = memberGroupIds(member, roles, groupIds);
+  return { groupIds, members, memberGroups };
 }
