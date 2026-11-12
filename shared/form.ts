@@ -1,5 +1,6 @@
 import type { AnswerValue, FieldType, GroupWizardConfig, SectorForm, WizardConfig, WizardField, WizardStep } from "../contracts/types";
 import type { ZammadAttribute, ZammadGroup, ZammadSchema } from "../contracts/zammad";
+import { DEFAULT_AUDIENCE, isSectorVisible, type AudienceViewer } from "./audience";
 import { evaluateWorkflows, flattenOptions, type EvaluationContext } from "./workflow";
 
 // Monta o formulário em etapas de cada setor (= grupo do Zammad) a partir do schema do Zammad e da
@@ -7,6 +8,7 @@ import { evaluateWorkflows, flattenOptions, type EvaluationContext } from "./wor
 
 export const DEFAULT_GROUP_CONFIG: GroupWizardConfig = {
   enabled: true,
+  audience: DEFAULT_AUDIENCE,
   label: null,
   description: null,
   bodyHint: null,
@@ -25,6 +27,8 @@ export type BuildOptions = {
   role?: EvaluationContext["role"];
   // Admin vê também os setores ocultos (para poder reativar).
   includeDisabled?: boolean;
+  // Quem está pedindo: só os setores da audiência dele entram (admin vê todos). Sem `viewer`, não filtra.
+  viewer?: AudienceViewer;
 };
 
 export type BuiltForms = { sectors: SectorForm[]; unsupported: string[]; skippedFields: string[] };
@@ -33,11 +37,14 @@ export function buildSectorForms(schema: ZammadSchema, config: WizardConfig, opt
   const unsupported = new Set<string>();
   const skipped = new Set<string>();
   const sectors: SectorForm[] = [];
+  // A herança de audiência anda pela árvore inteira (inclusive setores ocultos), por isso usa todos os grupos.
+  const tree = schema.groups.map((group) => ({ groupId: group.id, parentId: group.parent_id }));
 
   for (const group of schema.groups) {
     if (!group.active) continue;
     const groupConfig = groupConfigFor(config, group.id);
     if (!groupConfig.enabled && !options.includeDisabled) continue;
+    if (options.viewer && !isSectorVisible(group.id, tree, config, options.viewer)) continue;
     const form = buildSectorForm(schema, group, groupConfig, options, unsupported, skipped);
     sectors.push(form);
   }

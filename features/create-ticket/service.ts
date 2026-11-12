@@ -8,6 +8,7 @@ import {
   validateFields,
   validateTitle,
 } from "../../shared/answers";
+import { isSectorVisible, type AudienceViewer } from "../../shared/audience";
 import { buildSectorForms } from "../../shared/form";
 import type { Requester } from "../../shared/requester";
 import { failure } from "../../shared/results";
@@ -18,7 +19,7 @@ import type { CreateTicketInput, CreateTicketResult } from "./types";
 
 type CreatedTicketResponse = { id: number; number: string };
 
-export async function createTicket(requester: Requester, input: CreateTicketInput): Promise<CreateTicketResult> {
+export async function createTicket(requester: Requester, input: CreateTicketInput, viewer: AudienceViewer): Promise<CreateTicketResult> {
   const handle = beginOperation({ useCase: "colabora.create-ticket", actor: { id: requester.actorId, type: "user" }, kind: "write" });
   const finish = (result: CreateTicketResult) => {
     endOperation(handle, result);
@@ -30,7 +31,12 @@ export async function createTicket(requester: Requester, input: CreateTicketInpu
   const config = await readWizardConfig();
   // O formulário é remontado aqui (nunca confiamos na lista de campos do navegador): mesmo setor,
   // mesmas regras, mesmos papéis da pessoa no Zammad.
-  const { sectors } = buildSectorForms(schema.data, config, { roleIds: requester.zammadUser.role_ids });
+  // A audiência (grupos de pessoas) vale aqui também: o navegador não decide quais setores pode usar.
+  const tree = schema.data.groups.map((group) => ({ groupId: group.id, parentId: group.parent_id }));
+  if (!isSectorVisible(input.groupId, tree, config, viewer)) {
+    return finish(failure("sector_not_allowed", "Este setor não recebe chamados de você."));
+  }
+  const { sectors } = buildSectorForms(schema.data, config, { roleIds: requester.zammadUser.role_ids, viewer });
   const sector = sectors.find((candidate) => candidate.groupId === input.groupId);
   if (!sector) return finish(failure("sector_unavailable", "Este setor não recebe chamados por aqui. Escolha outro."));
 

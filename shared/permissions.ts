@@ -12,5 +12,7 @@ export const COLABORA_PERMISSIONS: { tickets: string[]; settingsManage: string[]
 };
 
 export const WIZARD_SETTING_KEY = "colabora.wizard";
+// Grupos de pessoas (ids de usuário do Venore por grupo). Leitura pública no core: nunca nome/e-mail.
+export const GROUPS_SETTING_KEY = "colabora.groups";
 // Setting onde a configuração ficava antes da troca de chave: lida só como reserva (ver wizard-config.ts).
 export const LEGACY_WIZARD_SETTING_KEY = "zammad.wizard";
