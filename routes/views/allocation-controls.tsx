@@ -1,70 +1,38 @@
-"use client";
-
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { UserCheck } from "lucide-react";
-import { toast } from "sonner";
-import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@venore/plugin-sdk/ui";
+import { Suspense } from "react";
 import type { AgentControls } from "../../contracts/types";
-import { agentUpdateTicketAction } from "../public/actions";
+import { getTeamLoadsHandler } from "../../features/get-manager-dashboard/handler";
+import { pickLeastLoaded } from "../../shared/manager-stats";
+import { AllocationForm } from "./dashboards/manager/allocation-form";
 
 // ALOCAÇÃO (gestor/admin): atribuir o chamado a um agente do setor, realocar ou devolver à fila. O agente comum
 // NUNCA vê isto — quem aloca é o gestor (a regra também é aplicada no servidor, em agent-update-ticket).
-const NO_OWNER = "0";
-
+// Componente de servidor: o formulário é cliente (allocation-form) e a dica do menos carregado chega em Suspense.
 export function AllocationControls({ ticketId, controls }: { ticketId: number; controls: AgentControls }) {
-  const router = useRouter();
-  const [ownerValue, setOwnerValue] = useState(controls.ownerId === null ? NO_OWNER : String(controls.ownerId));
-  const [busy, startTransition] = useTransition();
-
   if (!controls.canAllocate) return null;
-
-  const currentOwner = controls.ownerId === null ? NO_OWNER : String(controls.ownerId);
-  const unassigned = controls.ownerId === null;
-
-  function allocate() {
-    startTransition(async () => {
-      const ownerId = ownerValue === NO_OWNER ? null : Number(ownerValue);
-      const result = await agentUpdateTicketAction({ ticketId, ownerId });
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success(ownerId === null ? "Chamado devolvido à fila." : "Chamado atribuído.");
-      router.refresh();
-    });
-  }
-
   return (
-    <section
-      className={unassigned ? "space-y-3 rounded-xl border border-warning-border bg-warning-soft p-4" : "space-y-3 rounded-xl border bg-card p-4"}
-      aria-label="Responsável"
-    >
-      <h3 className="text-sm font-semibold text-foreground">Responsável</h3>
-      {unassigned && <p className="text-sm text-foreground">Este chamado está na fila. Escolha quem vai atendê-lo.</p>}
-      {controls.assignees.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhum agente do Zammad atende o setor deste chamado.</p>
-      ) : (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Select value={ownerValue} onValueChange={setOwnerValue}>
-            <SelectTrigger className="h-11 w-full sm:flex-1" aria-label="Responsável pelo chamado">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NO_OWNER}>Ninguém (na fila)</SelectItem>
-              {controls.assignees.map((person) => (
-                <SelectItem key={person.id} value={String(person.id)}>
-                  {person.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button size="lg" disabled={busy || ownerValue === currentOwner} onClick={allocate}>
-            <UserCheck className="size-4" />
-            {busy ? "Salvando…" : ownerValue === NO_OWNER ? "Devolver à fila" : unassigned ? "Atribuir" : "Realocar"}
-          </Button>
-        </div>
-      )}
-    </section>
+    <AllocationForm ticketId={ticketId} controls={controls}>
+      <Suspense fallback={null}>
+        <LeastLoadedHint controls={controls} />
+      </Suspense>
+    </AllocationForm>
+  );
+}
+
+// "Menos carregado": só informa (a escolha é do gestor) e só quando há dado; qualquer falha some em silêncio.
+async function LeastLoadedHint({ controls }: { controls: AgentControls }) {
+  const loads = await getTeamLoadsHandler();
+  if (!loads.success) return null;
+  const candidates = controls.assignees
+    .filter((person) => person.id !== controls.ownerId)
+    .flatMap((person) => {
+      const load = loads.data[person.id];
+      return load ? [{ id: person.id, name: person.name, open: load.open, waiting: load.waiting }] : [];
+    });
+  const best = pickLeastLoaded(candidates);
+  if (!best) return null;
+  return (
+    <p className="text-xs text-muted-foreground">
+      Menos carregado neste setor: <strong className="font-medium text-foreground">{best.name}</strong> ({best.open} {best.open === 1 ? "aberto" : "abertos"})
+    </p>
   );
 }
