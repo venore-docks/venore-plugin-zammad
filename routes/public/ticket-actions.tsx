@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CircleCheck, Lock, Paperclip, RotateCcw, Send, X } from "lucide-react";
+import { CircleCheck, Lock, Mail, Paperclip, RotateCcw, Send, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -18,7 +18,7 @@ import {
   Textarea,
   cn,
 } from "@venore/plugin-sdk/ui";
-import { ATTACHMENT_LIMITS, formatBytes, validateAttachments, validateReply } from "../../shared/answers";
+import { ATTACHMENT_LIMITS, DESCRIPTION_MAX, formatBytes, validateAttachments, validateReply } from "../../shared/answers";
 import { changeTicketStateAction, replyTicketAction } from "./actions";
 import { useReplyQuote } from "./reply-context";
 
@@ -72,17 +72,58 @@ export function TicketStateButton({ ticketId, closed }: { ticketId: number; clos
 // `agent` = visão do agente (app): responde ao solicitante (e-mail) ou escreve nota interna. Sem `agent`,
 // é o solicitante conversando. `canWork` falso = o chamado não está com a pessoa (fila ou de outro agente):
 // só quem atende responde; `blockedMessage` explica.
+type DraftKind = "reply" | "note";
+
+function noopSubscribe(): () => void {
+  return () => {};
+}
+
+function draftKey(ticketId: number, kind: DraftKind): string {
+  return `colabora:draft:${ticketId}:${kind}`;
+}
+
+function readDraft(ticketId: number, kind: DraftKind): string {
+  try {
+    return window.sessionStorage.getItem(draftKey(ticketId, kind)) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function writeDraft(ticketId: number, kind: DraftKind, text: string) {
+  try {
+    if (text) window.sessionStorage.setItem(draftKey(ticketId, kind), text);
+    else window.sessionStorage.removeItem(draftKey(ticketId, kind));
+  } catch {
+    // sessionStorage indisponível (modo privado, bloqueado): o rascunho só vive na tela.
+  }
+}
+
 export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number; closed: boolean; agent?: { canWork: boolean; blockedMessage?: string } | null }) {
   const router = useRouter();
-  const [message, setMessage] = useState("");
+  // Um rascunho por aba (resposta ao solicitante × nota interna): trocar de aba não perde o que foi escrito.
+  // `edited` guarda o que foi digitado nesta visita; enquanto a aba não foi editada, vale o que estava no sessionStorage
+  // (lido por useSyncExternalStore: "" no servidor e na hidratação, sem divergência).
+  const [edited, setDrafts] = useState<Partial<Record<DraftKind, string>>>({});
+  const savedReply = useSyncExternalStore(noopSubscribe, () => readDraft(ticketId, "reply"), () => "");
+  const savedNote = useSyncExternalStore(noopSubscribe, () => readDraft(ticketId, "note"), () => "");
+  const drafts: Record<DraftKind, string> = { reply: edited.reply ?? savedReply, note: edited.note ?? savedNote };
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [chosenInternal, setChosenInternal] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const { quote, setQuote } = useReplyQuote();
   // Citar uma nota interna só é permitido em outra nota interna: força o modo.
   const internal = Boolean(agent) && (chosenInternal || Boolean(quote?.internal));
+  const kind: DraftKind = internal ? "note" : "reply";
+  const message = drafts[kind];
+
+  function setMessage(text: string) {
+    setDrafts((current) => ({ ...current, [kind]: text }));
+    writeDraft(ticketId, kind, text);
+  }
 
   if (agent && !agent.canWork) {
     return (
@@ -120,27 +161,42 @@ export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number;
   }
 
   return (
-    <form id="responder" onSubmit={submit} className="scroll-mt-24 space-y-3 rounded-xl border border-t-4 border-t-chart-2 bg-card p-5" noValidate>
+    <form
+      ref={formRef}
+      id="responder"
+      onSubmit={submit}
+      className={cn("scroll-mt-24 space-y-3 rounded-xl border border-t-4 bg-card p-4 sm:p-5", internal ? "border-t-warning" : "border-t-chart-2")}
+      noValidate
+    >
       {agent ? (
         <div className="space-y-2">
-          <div role="group" aria-label="Tipo de mensagem" className="inline-flex rounded-lg border bg-muted/50 p-0.5 text-sm">
+          <div role="group" aria-label="Tipo de mensagem" className="grid grid-cols-2 gap-1 rounded-lg border bg-muted/50 p-1 text-sm sm:inline-grid">
             <button
               type="button"
               aria-pressed={!internal}
               disabled={Boolean(quote?.internal)}
               onClick={() => setChosenInternal(false)}
-              className={cn("rounded-md px-3 py-1.5 transition-colors disabled:opacity-50", !internal ? "bg-background font-medium shadow-sm" : "text-muted-foreground")}
+              className={cn(
+                "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50",
+                !internal ? "bg-background font-medium shadow-sm" : "text-muted-foreground",
+              )}
             >
-              Ao solicitante
+              <Mail className="size-3.5" />
+              Ao solicitante (e-mail)
+              {drafts.reply.trim() && internal && <span aria-label="rascunho guardado" className="size-1.5 rounded-full bg-primary" />}
             </button>
             <button
               type="button"
               aria-pressed={internal}
               onClick={() => setChosenInternal(true)}
-              className={cn("inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors", internal ? "bg-warning-soft font-medium shadow-sm" : "text-muted-foreground")}
+              className={cn(
+                "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                internal ? "bg-warning-soft font-medium shadow-sm" : "text-muted-foreground",
+              )}
             >
               <Lock className="size-3.5" />
               Nota interna
+              {drafts.note.trim() && !internal && <span aria-label="rascunho guardado" className="size-1.5 rounded-full bg-warning" />}
             </button>
           </div>
           <p className="text-xs text-muted-foreground">
@@ -173,10 +229,25 @@ export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number;
         rows={4}
         value={message}
         onChange={(event) => setMessage(event.target.value)}
+        onKeyDown={(event) => {
+          // Ctrl/Cmd+Enter envia (só no modo agente, onde a caixa é de trabalho).
+          if (agent && event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+            event.preventDefault();
+            formRef.current?.requestSubmit();
+          }
+        }}
         placeholder={internal ? "Escreva a nota interna…" : "Escreva a sua mensagem…"}
         aria-invalid={Boolean(error)}
         className={cn("text-base", internal && "border-dashed border-warning-border bg-warning-soft")}
       />
+      {agent && (
+        <p className="flex flex-wrap items-center justify-between gap-x-3 text-xs text-muted-foreground">
+          <span className="hidden sm:inline">Ctrl+Enter (⌘+Enter) envia.</span>
+          <span className={cn("ms-auto tabular-nums", message.length > DESCRIPTION_MAX && "font-medium text-destructive")}>
+            {message.length.toLocaleString("pt-BR")} / {DESCRIPTION_MAX.toLocaleString("pt-BR")}
+          </span>
+        </p>
+      )}
       {error && (
         <p role="alert" className="text-sm font-medium text-destructive">
           {error}
