@@ -229,9 +229,9 @@ function MembersCard({ group }: { group: PeopleGroupDetail }) {
         <AddMembers group={group} />
 
         {group.members.length === 0 ? (
-          <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">Ninguém por aqui ainda. Busque pelo nome ou cole uma lista de e-mails.</p>
+          <p className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">Ninguém por aqui ainda. Busque pelo nome ou cole uma lista de e-mails.</p>
         ) : (
-          <ul className="divide-y rounded-lg border">
+          <ul className="divide-y rounded-md border">
             {group.members.map((person) => (
               <PersonLine
                 key={person.id}
@@ -254,7 +254,7 @@ function MembersCard({ group }: { group: PeopleGroupDetail }) {
         )}
 
         {group.missingMemberIds.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-dashed p-3">
             <p className="flex items-start gap-2 text-sm text-muted-foreground">
               <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
               {group.missingMemberIds.length} {group.missingMemberIds.length === 1 ? "conta que não existe mais continua" : "contas que não existem mais continuam"} no grupo.
@@ -357,7 +357,7 @@ function SearchAdd({ group }: { group: PeopleGroupDetail }) {
         (results.length === 0 ? (
           <p className="text-sm text-muted-foreground">Ninguém encontrado com esse nome ou e-mail. Só contas aprovadas aparecem.</p>
         ) : (
-          <ul className="divide-y rounded-lg border">
+          <ul className="divide-y rounded-md border">
             {results.map((person) => (
               <PersonLine
                 key={person.id}
@@ -420,7 +420,7 @@ function PasteAdd({ group }: { group: PeopleGroupDetail }) {
       </Button>
 
       {outcome && (
-        <div className="space-y-2 rounded-lg border p-3 text-sm" aria-live="polite">
+        <div className="space-y-2 rounded-md border p-3 text-sm" aria-live="polite">
           <p className="font-medium text-foreground">
             {outcome.added.length} {outcome.added.length === 1 ? "adicionada" : "adicionadas"}
             {outcome.alreadyMembers.length > 0 && ` · ${outcome.alreadyMembers.length} já estavam no grupo`}
@@ -473,9 +473,9 @@ function SectorsCard({ group, sectors }: { group: PeopleGroupDetail; sectors: Se
       </CardHeader>
       <CardContent className="space-y-4">
         {sectors.length === 0 ? (
-          <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">Nenhum setor disponível. Confira a conexão com o Zammad na visão geral.</p>
+          <p className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">Nenhum setor disponível. Confira a conexão com o Zammad na visão geral.</p>
         ) : (
-          <ul className="divide-y rounded-lg border">
+          <ul className="divide-y rounded-md border">
             {sectors.map((sector) => {
               const on = selected.includes(sector.groupId);
               return (

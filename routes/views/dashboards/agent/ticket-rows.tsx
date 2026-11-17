@@ -16,7 +16,7 @@ export function AgentTicketRow({ ticket, href, now }: { ticket: TicketSummary; h
       <Link
         href={href}
         className={cn(
-          "group flex min-h-16 items-center gap-3 overflow-hidden rounded-xl border bg-card pe-3 transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+          "group flex min-h-16 items-center gap-3 overflow-hidden rounded-lg border bg-card pe-3 transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
           ticket.awaitingYou && "border-warning-border",
         )}
       >

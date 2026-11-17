@@ -14,7 +14,7 @@ export async function AgentDashboard({ surfaceKey }: DashboardProps) {
 
   if (!result.success) {
     return (
-      <section className="space-y-2 rounded-xl border bg-card p-5" aria-label="Meu atendimento">
+      <section className="space-y-2 rounded-lg border bg-card p-5" aria-label="Meu atendimento">
         <h2 className="text-lg font-semibold text-foreground">Meu atendimento</h2>
         <p className="text-sm text-muted-foreground">{result.error.message}</p>
       </section>
@@ -25,7 +25,7 @@ export async function AgentDashboard({ surfaceKey }: DashboardProps) {
   const allDone = stats.open === 0;
 
   return (
-    <section className="space-y-6 rounded-xl border bg-card p-4 sm:p-6" aria-label="Meu atendimento">
+    <section className="space-y-6 rounded-lg border bg-card p-4 sm:p-6" aria-label="Meu atendimento">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-lg font-semibold text-foreground">Meu atendimento</h2>
@@ -47,7 +47,7 @@ export async function AgentDashboard({ surfaceKey }: DashboardProps) {
       </dl>
 
       {allDone ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed px-4 py-10 text-center">
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed px-4 py-10 text-center">
           <CircleCheck className="size-8 text-success" aria-hidden />
           <p className="font-medium text-foreground">Tudo em dia</p>
           <p className="max-w-sm text-sm text-muted-foreground">Nenhum chamado atribuído a você no momento. Quando chegar um, ele aparece aqui.</p>
@@ -60,7 +60,7 @@ export async function AgentDashboard({ surfaceKey }: DashboardProps) {
               <AgentTicketList tickets={needsReply} hrefFor={surface.detail} now={now} label="Precisam da sua resposta" />
             </div>
           ) : (
-            <p className="flex items-center gap-2 rounded-xl border border-dashed px-4 py-3 text-sm text-muted-foreground">
+            <p className="flex items-center gap-2 rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
               <CircleCheck className="size-4 shrink-0 text-success" aria-hidden />
               Ninguém esperando resposta sua. Bom trabalho!
             </p>
@@ -82,7 +82,7 @@ function Kpi({ label, value, tone }: { label: string; value: number; tone?: "war
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-col-reverse justify-end gap-1 rounded-xl border p-4",
+        "flex min-w-0 flex-col-reverse justify-end gap-1 rounded-lg border p-4",
         hot && tone === "warning" && "border-warning-border bg-warning-soft",
         hot && tone === "destructive" && "border-destructive/40 bg-destructive/5",
       )}

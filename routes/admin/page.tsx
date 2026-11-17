@@ -159,9 +159,9 @@ export default async function ColaboraAdminOverviewPage() {
             <Link
               key={shortcut.href}
               href={shortcut.href}
-              className="group flex flex-col gap-3 rounded-xl bg-card p-4 text-card-foreground ring-1 ring-foreground/10 transition-colors outline-none hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="group flex flex-col gap-3 rounded-lg bg-card p-4 text-card-foreground ring-1 ring-foreground/10 transition-colors outline-none hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50"
             >
-              <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">{shortcut.icon}</span>
+              <span className="flex size-9 items-center justify-center rounded-md bg-primary/10 text-primary">{shortcut.icon}</span>
               <span className="space-y-1">
                 <span className="flex items-center gap-1 text-sm font-medium text-foreground">
                   {shortcut.title}

@@ -57,7 +57,7 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
           </div>
 
           {agent && ticket.customerWaiting && (
-            <div className="flex items-center gap-3 rounded-xl border border-warning-border bg-warning-soft p-3 text-sm text-foreground">
+            <div className="flex items-center gap-3 rounded-lg border border-warning-border bg-warning-soft p-3 text-sm text-foreground">
               <BellRing className="size-5 shrink-0 text-warning" />
               <span>
                 <strong>O solicitante respondeu.</strong> Veja a última mensagem e responda.
@@ -65,7 +65,7 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
             </div>
           )}
           {!agent && ticket.awaitingYou && ticket.customerActions.length === 0 && ticket.customerCanReply && (
-            <a href="#responder" className="flex items-center gap-3 rounded-xl border border-warning-border bg-warning-soft p-3 text-sm text-foreground">
+            <a href="#responder" className="flex items-center gap-3 rounded-lg border border-warning-border bg-warning-soft p-3 text-sm text-foreground">
               <BellRing className="size-5 shrink-0 text-warning" />
               <span>
                 <strong>A equipe respondeu.</strong> Veja a mensagem abaixo e responda se precisar.
@@ -73,7 +73,7 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
             </a>
           )}
           {ticket.flowStep === "finalizado" && (
-            <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted p-3 text-sm text-foreground sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted p-3 text-sm text-foreground sm:flex-row sm:items-center">
               <CircleCheck className="size-5 shrink-0 text-success" />
               <span className="flex-1">
                 <strong>Este chamado foi finalizado.</strong> Precisa de algo mais? Abra um novo chamado.
@@ -89,7 +89,7 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
             </div>
           )}
           {ticket.closed && !ticket.flowStep && (
-            <div className="flex items-start gap-3 rounded-xl border border-success-border bg-success-soft p-3 text-sm text-foreground">
+            <div className="flex items-start gap-3 rounded-lg border border-success-border bg-success-soft p-3 text-sm text-foreground">
               <CircleCheck className="mt-0.5 size-5 shrink-0 text-success" />
               <span>
                 <strong>Este chamado está encerrado.</strong>
@@ -102,13 +102,13 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
 
           {viewer.viewingAs ? (
             // "Ver como" é só leitura: no lugar da caixa de resposta, o aviso.
-            <p className="rounded-xl border border-dashed px-4 py-3 text-sm text-muted-foreground">
+            <p className="rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
               Aqui {viewer.viewingAs.name} responderia ao chamado. No “ver como” nada é enviado em nome de outra pessoa.
             </p>
           ) : !agent && !ticket.customerCanReply ? (
             // Fluxo da FEM: em Concluído/Não autorizado a resposta é pelos botões; em Finalizado, novo chamado.
             ticket.flowStep === "finalizado" ? null : (
-              <p className="rounded-xl border border-dashed px-4 py-3 text-sm text-muted-foreground">{ticket.customerReplyBlocked}</p>
+              <p className="rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">{ticket.customerReplyBlocked}</p>
             )
           ) : (
             <ReplyBox

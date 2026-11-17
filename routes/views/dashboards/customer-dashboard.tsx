@@ -15,7 +15,7 @@ export async function CustomerDashboard({ surfaceKey, compact = false }: Dashboa
 
   if (!result.success) {
     return (
-      <section className="rounded-xl border border-warning-border bg-warning-soft p-5 text-sm text-foreground" aria-label="Meus chamados">
+      <section className="rounded-lg border border-warning-border bg-warning-soft p-5 text-sm text-foreground" aria-label="Meus chamados">
         {result.error.message}
       </section>
     );
@@ -26,7 +26,7 @@ export async function CustomerDashboard({ surfaceKey, compact = false }: Dashboa
     <div className="space-y-8">
       <section
         aria-label="Abrir chamado"
-        className={compact ? "flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4" : "flex flex-col gap-5 rounded-xl border border-primary/30 bg-primary/5 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8"}
+        className={compact ? "flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-4" : "flex flex-col gap-5 rounded-lg border border-primary/30 bg-primary/5 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8"}
       >
         <div className="min-w-0 space-y-1">
           <p className={compact ? "font-semibold text-foreground" : "text-xl font-semibold tracking-tight text-foreground sm:text-2xl"}>Precisa de ajuda de um setor?</p>

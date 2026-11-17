@@ -30,7 +30,7 @@ export async function NewTicketView({ surfaceKey, setor }: { surfaceKey: Surface
   if (result.data.sectors.length === 0) {
     return (
       <ColaboraFrame surfaceKey={surfaceKey} viewer={entered.viewer} active="new" title="Abrir chamado" backHref={surface.home}>
-        <div className="mx-auto max-w-xl space-y-2 rounded-xl border bg-card p-8 text-center">
+        <div className="mx-auto max-w-xl space-y-2 rounded-lg border bg-card p-8 text-center">
           <h2 className="text-lg font-semibold text-foreground">Nenhum setor está liberado para você ainda</h2>
           <p className="text-sm text-muted-foreground">Fale com o gestor da sua área para pedir acesso.</p>
         </div>
@@ -54,7 +54,7 @@ export async function NewTicketView({ surfaceKey, setor }: { surfaceKey: Surface
     >
       <div className="max-w-3xl space-y-4">
         {unavailable && (
-          <p role="status" className="rounded-xl border border-warning-border bg-warning-soft px-4 py-3 text-sm text-foreground">
+          <p role="status" className="rounded-lg border border-warning-border bg-warning-soft px-4 py-3 text-sm text-foreground">
             O setor do link não está disponível para você. Escolha abaixo um dos setores liberados.
           </p>
         )}

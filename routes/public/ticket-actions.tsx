@@ -127,7 +127,7 @@ export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number;
 
   if (agent && !agent.canWork) {
     return (
-      <div id="responder" className="rounded-xl border border-warning-border bg-warning-soft p-4 text-sm text-foreground">
+      <div id="responder" className="rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-foreground">
         {agent.blockedMessage ?? "Este chamado não está com você."}
       </div>
     );
@@ -165,12 +165,12 @@ export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number;
       ref={formRef}
       id="responder"
       onSubmit={submit}
-      className={cn("scroll-mt-24 space-y-3 rounded-xl border border-t-4 bg-card p-4 sm:p-5", internal ? "border-t-warning" : "border-t-chart-2")}
+      className={cn("scroll-mt-24 space-y-3 rounded-lg border border-t-4 bg-card p-4 sm:p-5", internal ? "border-t-warning" : "border-t-chart-2")}
       noValidate
     >
       {agent ? (
         <div className="space-y-2">
-          <div role="group" aria-label="Tipo de mensagem" className="grid grid-cols-2 gap-1 rounded-lg border bg-muted/50 p-1 text-sm sm:inline-grid">
+          <div role="group" aria-label="Tipo de mensagem" className="grid grid-cols-2 gap-1 rounded-md border bg-muted/50 p-1 text-sm sm:inline-grid">
             <button
               type="button"
               aria-pressed={!internal}
@@ -209,7 +209,7 @@ export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number;
         </label>
       )}
       {quote && (
-        <div className="flex items-start gap-3 rounded-lg border border-s-4 border-border border-s-chart-6 bg-muted/50 p-3">
+        <div className="flex items-start gap-3 rounded-md border border-s-4 border-border border-s-chart-6 bg-muted/50 p-3">
           <div className="min-w-0 flex-1 space-y-0.5">
             <p className="text-xs font-semibold text-foreground">Respondendo a {quote.author}</p>
             <p className="line-clamp-2 text-sm text-muted-foreground">{quote.preview}</p>

@@ -80,7 +80,7 @@ export async function AssignedView({ surfaceKey, query }: { surfaceKey: SurfaceK
           </nav>
 
           {shown.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed px-4 py-10 text-center">
+            <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed px-4 py-10 text-center">
               <CircleCheck className="size-8 text-success" aria-hidden />
               <p className="font-medium text-foreground">{EMPTY_FILTER[filter]}</p>
               <p className="text-sm text-muted-foreground">Nada por aqui neste filtro.</p>

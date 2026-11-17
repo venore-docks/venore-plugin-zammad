@@ -11,7 +11,7 @@ function Tile({ label, value, icon, href, highlight = false }: { label: string; 
     <Link
       href={href}
       className={cn(
-        "flex min-w-0 flex-col gap-2 rounded-xl border bg-card p-4 transition-colors hover:border-foreground/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        "flex min-w-0 flex-col gap-2 rounded-lg border bg-card p-4 transition-colors hover:border-foreground/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
         highlight && "border-warning-border bg-warning-soft",
       )}
     >
@@ -44,12 +44,12 @@ export function MineSummary({ data, surface, compact }: { data: CustomerDashboar
       </div>
 
       {!data.ticketsOk ? (
-        <p className="rounded-xl border border-warning-border bg-warning-soft p-4 text-sm text-foreground">
+        <p className="rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-foreground">
           Não conseguimos carregar os seus chamados agora. Tente de novo em instantes.
         </p>
       ) : stats.total === 0 ? (
         compact ? (
-          <p className="rounded-xl border bg-card p-4 text-sm text-muted-foreground">Você ainda não abriu nenhum chamado.</p>
+          <p className="rounded-lg border bg-card p-4 text-sm text-muted-foreground">Você ainda não abriu nenhum chamado.</p>
         ) : (
           <FirstTimeGuide />
         )
@@ -72,7 +72,7 @@ export function MineSummary({ data, surface, compact }: { data: CustomerDashboar
               <li key={ticket.id}>
                 <Link
                   href={surface.detail(ticket.id)}
-                  className="group flex items-center gap-3 overflow-hidden rounded-xl border bg-card pe-3 transition-colors hover:border-foreground/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  className="group flex items-center gap-3 overflow-hidden rounded-lg border bg-card pe-3 transition-colors hover:border-foreground/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 >
                   <span aria-hidden className={cn("w-1.5 self-stretch", ticket.awaitingYou && !ticket.closed ? "bg-warning" : toneBar(ticket.stateTone, ticket.stateColor))} />
                   <span className="min-w-0 flex-1 space-y-1 py-3">
@@ -102,14 +102,14 @@ const GUIDE_STEPS = [
 
 function FirstTimeGuide() {
   return (
-    <div className="space-y-4 rounded-xl border bg-card p-5">
+    <div className="space-y-4 rounded-lg border bg-card p-5">
       <div className="space-y-1">
         <p className="font-medium text-foreground">Você ainda não abriu nenhum chamado</p>
         <p className="text-sm text-muted-foreground">É simples e leva poucos minutos:</p>
       </div>
       <ol className="grid gap-3">
         {GUIDE_STEPS.map((step, position) => (
-          <li key={step.title} className="flex min-w-0 items-start gap-3 rounded-lg bg-muted/40 p-3">
+          <li key={step.title} className="flex min-w-0 items-start gap-3 rounded-md bg-muted/40 p-3">
             <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">{step.icon}</span>
             <span className="min-w-0 space-y-0.5">
               <span className="block text-sm font-medium text-foreground">

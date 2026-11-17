@@ -26,7 +26,7 @@ export function ViewAsControls({ target, canPick, homeHref }: { target: ViewAsPe
     return (
       <div
         role="status"
-        className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning-border bg-warning-soft px-4 py-3 text-sm text-foreground"
+        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning-border bg-warning-soft px-4 py-3 text-sm text-foreground"
       >
         <p className="flex min-w-0 items-center gap-2">
           <Eye className="size-4 shrink-0" aria-hidden />
@@ -129,7 +129,7 @@ function ViewAsPicker({ label, homeHref }: { label: string; homeHref: string }) 
                     disabled={starting}
                     onClick={() => pick(person)}
                     className={cn(
-                      "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-start transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-60",
+                      "flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-start transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-60",
                     )}
                   >
                     <span className="grid size-9 shrink-0 place-items-center rounded-full bg-muted" aria-hidden>

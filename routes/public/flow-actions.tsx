@@ -20,7 +20,7 @@ import {
 import type { CustomerActionKey, CustomerActionOption, StaffFlowAction, TicketStateColor } from "../../contracts/types";
 import { REASON_MAX, validateReason } from "../../shared/flow";
 import { agentUpdateTicketAction, customerRespondAction } from "./actions";
-import { FLOW_BADGE, FLOW_BUTTON } from "./palette";
+import { FLOW_BADGE, FLOW_BUTTON, FLOW_BUTTON_SUBTLE } from "./palette";
 
 type ActionResult = { ok: true; message: string } | { ok: false; error: string };
 
@@ -80,9 +80,10 @@ export function FlowButton({ label, color, icon, prompt, reason, confirmTitle, c
           type="button"
           disabled={disabled || busy}
           className={cn(
-            "justify-center font-semibold",
-            size === "sm" ? "h-8 gap-1.5 px-3 text-xs [&_svg]:size-3.5" : "h-11 w-full gap-2 shadow-sm @md:w-auto",
-            FLOW_BUTTON[color],
+            "justify-center",
+            size === "sm"
+              ? cn("h-7 gap-1 px-2.5 text-xs font-medium shadow-none [&_svg]:size-3.5", FLOW_BUTTON_SUBTLE[color])
+              : cn("h-11 w-full gap-2 font-semibold shadow-sm @md:w-auto", FLOW_BUTTON[color]),
           )}
         >
           {icon}
@@ -160,7 +161,7 @@ export function CustomerDecisionPanel({
   if (actions.length === 0) return null;
   const tone = FLOW_BADGE[color];
   return (
-    <section aria-label="Sua decisão" className={cn("space-y-3 rounded-xl border-2 p-4 @md:p-5", tone.soft)}>
+    <section aria-label="Sua decisão" className={cn("space-y-3 rounded-lg border-2 p-4 @md:p-5", tone.soft)}>
       <div className="space-y-1">
         <h3 className="flex items-center gap-2 text-base font-semibold text-foreground">
           <CircleCheck className={cn("size-5 shrink-0", tone.icon)} />

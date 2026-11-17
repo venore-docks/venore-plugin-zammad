@@ -159,7 +159,7 @@ export function SectorEditor({ sector, parentName, peopleGroups }: Props) {
                   aria-checked={active}
                   onClick={() => setMode(option.mode)}
                   className={cn(
-                    "flex min-w-0 flex-col gap-1 rounded-lg border p-3 text-start transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                    "flex min-w-0 flex-col gap-1 rounded-md border p-3 text-start transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                     active ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40",
                   )}
                 >
@@ -173,7 +173,7 @@ export function SectorEditor({ sector, parentName, peopleGroups }: Props) {
           {config.audience.mode === "groups" && (
             <div className="space-y-3">
               {peopleGroups.length === 0 ? (
-                <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+                <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
                   Você ainda não criou grupos de pessoas.{" "}
                   <Link href="/admin/colabora/grupos" className="font-medium text-primary underline-offset-4 hover:underline">
                     Criar o primeiro grupo
@@ -230,7 +230,7 @@ export function SectorEditor({ sector, parentName, peopleGroups }: Props) {
             </p>
           </CardHeader>
           <CardContent>
-            <ul className="divide-y rounded-lg border">
+            <ul className="divide-y rounded-md border">
               {sector.fields.map((field) => (
                 <li key={field.name} className="grid gap-3 p-3 sm:grid-cols-[1fr_6rem]">
                   <div className="min-w-0 space-y-2">
@@ -289,7 +289,7 @@ export function SectorEditor({ sector, parentName, peopleGroups }: Props) {
         </Card>
       )}
 
-      <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background/95 px-4 py-3 backdrop-blur">
+      <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background/95 px-4 py-3 backdrop-blur">
         <p className={cn("text-sm", dirty ? "font-medium text-warning" : "text-muted-foreground")} aria-live="polite">
           {dirty ? "Há alterações não salvas." : "Tudo salvo."}
         </p>

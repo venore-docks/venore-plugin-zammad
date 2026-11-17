@@ -68,7 +68,7 @@ export async function TeamView({ surfaceKey, query }: { surfaceKey: SurfaceKey; 
               <Link
                 href={surface.queue}
                 className={cn(
-                  "flex items-center justify-between gap-3 rounded-xl border p-4 transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                  "flex items-center justify-between gap-3 rounded-lg border p-4 transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                   queue > 0 ? "border-warning-border bg-warning-soft" : "bg-card",
                 )}
               >
@@ -124,7 +124,7 @@ export async function TeamView({ surfaceKey, query }: { surfaceKey: SurfaceKey; 
                         <li key={agent.id}>
                           <Link
                             href={surface.teamAgent(agent.id)}
-                            className="block space-y-3 rounded-xl border bg-card p-4 transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                            className="block space-y-3 rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                           >
                             <span className="flex items-center gap-3">
                               <span className="grid size-10 shrink-0 place-items-center rounded-full bg-chart-6/20 text-xs font-semibold text-foreground">{initialsOf(agent.name)}</span>

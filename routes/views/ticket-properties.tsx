@@ -17,7 +17,7 @@ export function TicketProperties({ ticket, surfaceKey, readOnly }: { ticket: Tic
   const agent = ticket.agent;
   return (
     <div className="@container space-y-4">
-      <section aria-label="Dados do chamado" className="space-y-3 rounded-xl border border-t-4 border-t-primary bg-card p-4">
+      <section aria-label="Dados do chamado" className="space-y-3 rounded-lg border border-t-4 border-t-primary bg-card p-4">
         {surfaceKey === "app" && <h2 className="text-lg leading-snug font-semibold break-words text-foreground">{ticket.title}</h2>}
         <div className="flex flex-wrap items-center gap-2">
           <StateBadge label={ticket.stateLabel} tone={ticket.stateTone} color={ticket.stateColor} />

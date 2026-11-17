@@ -61,7 +61,7 @@ function Message({ message, first }: { message: TicketMessage; first: boolean })
       </span>
       <div
         className={cn(
-          "min-w-0 max-w-full space-y-2 rounded-xl border p-3 sm:max-w-[85%] sm:p-4",
+          "min-w-0 max-w-full space-y-2 rounded-lg border p-3 sm:max-w-[85%] sm:p-4",
           message.internal
             ? "border-dashed border-s-4 border-warning-border border-s-warning bg-warning-soft"
             : // Você: tingido na cor primária. Os outros: superfície neutra com faixa lateral — a diferença não
@@ -88,7 +88,7 @@ function Message({ message, first }: { message: TicketMessage; first: boolean })
         {message.quote && <QuoteCard quote={message.quote} />}
         {message.text && <p className="text-base leading-relaxed sm:text-sm break-words whitespace-pre-wrap text-foreground">{message.text}</p>}
         {message.answers.length > 0 && (
-          <div className="space-y-3 rounded-lg border bg-background/70 p-4">
+          <div className="space-y-3 rounded-md border bg-background/70 p-4">
             <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Respostas do formulário</p>
             <dl className="grid gap-y-3.5">
               {message.answers.map((answer) => (
@@ -112,7 +112,7 @@ function Message({ message, first }: { message: TicketMessage; first: boolean })
                   <a
                     href={file.href}
                     download
-                    className="inline-flex items-center gap-2 rounded-lg border bg-background px-3 py-2 text-xs text-foreground hover:border-primary/50"
+                    className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-xs text-foreground hover:border-primary/50"
                   >
                     <FileText className="size-4 text-muted-foreground" />
                     <span className="max-w-48 truncate">{file.filename}</span>
@@ -143,7 +143,7 @@ function QuoteCard({ quote }: { quote: NonNullable<TicketMessage["quote"]> }) {
       <span className="line-clamp-2 block text-sm text-muted-foreground">{quote.excerpt}</span>
     </>
   );
-  const classes = "block space-y-0.5 rounded-lg border-s-4 border-s-chart-6 bg-background/70 px-3 py-2";
+  const classes = "block space-y-0.5 rounded-md border-s-4 border-s-chart-6 bg-background/70 px-3 py-2";
   return quote.targetId ? (
     <a href={`#msg-${quote.targetId}`} className={cn(classes, "transition-colors hover:bg-background")} title="Ir para a mensagem original">
       {body}

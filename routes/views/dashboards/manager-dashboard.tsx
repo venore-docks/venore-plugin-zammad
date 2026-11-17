@@ -29,7 +29,7 @@ function Kpi({
   href?: string;
 }) {
   const classes = cn(
-    "block min-w-0 space-y-1 rounded-xl border p-4 transition-colors",
+    "block min-w-0 space-y-1 rounded-lg border p-4 transition-colors",
     tone === "warning" && "border-warning-border bg-warning-soft",
     tone === "danger" && "border-destructive/30 bg-destructive/5",
     tone === "neutral" && "bg-background",
@@ -60,7 +60,7 @@ export async function ManagerDashboard({ surfaceKey }: DashboardProps) {
   const result = await getManagerDashboardHandler();
 
   return (
-    <section className="space-y-5 rounded-xl border bg-card p-4 sm:p-6" aria-label="Gestão da equipe">
+    <section className="space-y-5 rounded-lg border bg-card p-4 sm:p-6" aria-label="Gestão da equipe">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-lg font-semibold text-foreground">Gestão da equipe</h2>
@@ -83,7 +83,7 @@ export async function ManagerDashboard({ surfaceKey }: DashboardProps) {
       </div>
 
       {!result.success ? (
-        <p className="rounded-xl border border-warning-border bg-warning-soft p-4 text-sm text-foreground">
+        <p className="rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-foreground">
           Não foi possível carregar a gestão da equipe agora. {result.error.message}
         </p>
       ) : (
@@ -131,14 +131,14 @@ function ManagerBody({ surfaceKey, data }: { surfaceKey: DashboardProps["surface
         <div className="min-w-0 space-y-3">
           <h3 className="text-sm font-semibold text-foreground">Carga por agente</h3>
           {shown.length === 0 ? (
-            <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">Nenhum agente responde pelos setores que você gerencia.</p>
+            <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Nenhum agente responde pelos setores que você gerencia.</p>
           ) : (
             <ul className="space-y-1">
               {shown.map((agent) => (
                 <li key={agent.id}>
                   <Link
                     href={surface.teamAgent(agent.id)}
-                    className="block space-y-1.5 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    className="block space-y-1.5 rounded-md px-3 py-2.5 transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   >
                     <span className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                       <span className="flex min-w-0 items-center gap-2">
@@ -175,7 +175,7 @@ function ManagerBody({ surfaceKey, data }: { surfaceKey: DashboardProps["surface
             )}
           </div>
           {queueTop.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed p-8 text-center">
+            <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed p-8 text-center">
               <span className="grid size-10 place-items-center rounded-full bg-success/15 text-success">
                 <Check className="size-5" aria-hidden />
               </span>

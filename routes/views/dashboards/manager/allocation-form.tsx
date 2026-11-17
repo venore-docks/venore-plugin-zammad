@@ -55,7 +55,7 @@ export function AllocationForm({ ticketId, controls, children }: { ticketId: num
 
   return (
     <section
-      className={cn("space-y-4 rounded-xl border p-4 @md:p-5", unassigned ? "border-warning-border bg-warning-soft" : "bg-card")}
+      className={cn("space-y-4 rounded-lg border p-4 @md:p-5", unassigned ? "border-warning-border bg-warning-soft" : "bg-card")}
       aria-label="Responsável"
     >
       <div className="flex items-center gap-3">
@@ -98,7 +98,7 @@ export function AllocationForm({ ticketId, controls, children }: { ticketId: num
           </div>
 
           {confirmingReturn && (
-            <div className="space-y-3 rounded-lg border border-warning-border bg-warning-soft p-3" role="alertdialog" aria-label="Confirmar devolução à fila">
+            <div className="space-y-3 rounded-md border border-warning-border bg-warning-soft p-3" role="alertdialog" aria-label="Confirmar devolução à fila">
               <p className="text-sm text-foreground">
                 Devolver à fila? {ownerName} deixa de ser responsável e o chamado fica sem ninguém até você alocá-lo de novo.
               </p>

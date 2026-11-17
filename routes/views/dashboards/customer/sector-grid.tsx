@@ -19,9 +19,9 @@ export function SectorGrid({ sectors, newTicketHref }: { sectors: SectorForm[]; 
             <li key={sector.groupId} className="min-w-0">
               <Link
                 href={`${newTicketHref}?setor=${sector.groupId}`}
-                className="group flex h-full items-center gap-4 rounded-xl border bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                className="group flex h-full items-center gap-4 rounded-lg border bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
-                <span className={cn("grid size-11 shrink-0 place-items-center rounded-lg text-foreground", accent.soft)}>{sectorIcon(sector.label, "size-5")}</span>
+                <span className={cn("grid size-11 shrink-0 place-items-center rounded-md text-foreground", accent.soft)}>{sectorIcon(sector.label, "size-5")}</span>
                 <span className="min-w-0 flex-1 space-y-0.5">
                   <span className="block truncate font-medium text-foreground">{sector.label}</span>
                   {sector.description && <span className="line-clamp-2 block text-xs text-muted-foreground">{sector.description}</span>}

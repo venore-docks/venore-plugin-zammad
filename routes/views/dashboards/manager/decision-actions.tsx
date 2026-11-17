@@ -27,11 +27,11 @@ import { REASON_MAX, validateReason } from "../../../../shared/flow";
 import type { QueueBucket } from "../../../../shared/queue-buckets";
 import { agentUpdateTicketAction, ticketPreviewAction, type TicketPreview } from "../../../public/actions";
 import { FlowButton } from "../../../public/flow-actions";
-import { FLOW_BUTTON } from "../../../public/palette";
+import { FLOW_BUTTON, FLOW_BUTTON_SUBTLE } from "../../../public/palette";
 import { formatDateTime } from "../../../public/shared";
 
 // Botão compacto dos cards da fila.
-const SMALL = "h-8 gap-1.5 px-3 text-xs font-semibold [&_svg]:size-3.5";
+const SMALL = "h-7 gap-1 px-2.5 text-xs font-medium shadow-none [&_svg]:size-3.5";
 
 type DecisionProps = {
   ticketId: number;
@@ -164,7 +164,7 @@ function AnalyzeDialog({ props, label, icon, variant }: { props: DecisionProps; 
       <Button
         type="button"
         onClick={() => openDialog(true)}
-        className={cn(SMALL, variant === "primary" ? FLOW_BUTTON.primary : FLOW_BUTTON.neutral)}
+        className={cn(SMALL, variant === "primary" ? FLOW_BUTTON_SUBTLE.primary : FLOW_BUTTON_SUBTLE.neutral)}
       >
         {icon}
         {label}
@@ -182,7 +182,7 @@ function AnalyzeDialog({ props, label, icon, variant }: { props: DecisionProps; 
             {loadError}
           </p>
         )}
-        {loading && !preview && <div className="h-28 animate-pulse rounded-lg bg-muted" aria-hidden />}
+        {loading && !preview && <div className="h-28 animate-pulse rounded-md bg-muted" aria-hidden />}
         {preview && (
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2 text-xs">
@@ -196,7 +196,7 @@ function AnalyzeDialog({ props, label, icon, variant }: { props: DecisionProps; 
               )}
             </div>
             {preview.answers.length > 0 && (
-              <dl className="grid gap-2.5 rounded-lg border bg-muted/40 p-3 text-sm">
+              <dl className="grid gap-2.5 rounded-md border bg-muted/40 p-3 text-sm">
                 {preview.answers.map((answer) => (
                   <div key={answer.label} className="min-w-0">
                     <dt className="text-xs text-muted-foreground">{answer.label}</dt>
@@ -214,7 +214,7 @@ function AnalyzeDialog({ props, label, icon, variant }: { props: DecisionProps; 
         )}
 
         {denying ? (
-          <div className="space-y-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3">
+          <div className="space-y-2 rounded-md border border-destructive/40 bg-destructive/10 p-3">
             <label htmlFor={`deny-${ticketId}`} className="block text-sm font-medium text-foreground">
               Motivo da não autorização <span className="text-destructive">*</span>
               <span className="block text-xs font-normal text-muted-foreground">O solicitante recebe este texto por e-mail e pode reenviar o pedido.</span>
@@ -305,7 +305,7 @@ function AssignDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !busy && setOpen(next)}>
-      <Button type="button" disabled={options.length === 0} onClick={() => setOpen(true)} className={cn(SMALL, FLOW_BUTTON.primary)}>
+      <Button type="button" disabled={options.length === 0} onClick={() => setOpen(true)} className={cn(SMALL, FLOW_BUTTON_SUBTLE.primary)}>
         <UserCheck className="size-3.5" />
         Atribuir
       </Button>
@@ -345,7 +345,7 @@ function AssignDialog({
 
 // Ações do card da fila do gestor, por etapa (botões compactos, todos com confirmação):
 //   Novo                     Analisar (diálogo com resumo e decisões)
-//   Em análise / Reavaliação Continuar análise · Autorizar · Atribuir (autoriza e atribui) · Não autorizar
+//   Em análise / Reavaliação Atribuir (autoriza e atribui) · Autorizar · Não autorizar (o título abre o chamado)
 //   Autorizado               Atribuir
 //   Não autorizado           aguardando o solicitante
 //   Atribuídos               Ver atendimento
@@ -365,7 +365,7 @@ export function DecisionActions(props: DecisionProps) {
     const deniedId = flowStateIds.nao_autorizado;
     return (
       <div className={row}>
-        <AnalyzeDialog props={props} label="Continuar análise" icon={<FileSearch className="size-3.5" />} variant="outline" />
+        {authorizedId && <AssignDialog ticketId={ticketId} authorizedId={authorizedId} options={options} suggestedId={suggestedId} />}
         {authorizedId && (
           <FlowButton
             size="sm"
@@ -382,7 +382,6 @@ export function DecisionActions(props: DecisionProps) {
             }}
           />
         )}
-        {authorizedId && <AssignDialog ticketId={ticketId} authorizedId={authorizedId} options={options} suggestedId={suggestedId} />}
         {deniedId && (
           <FlowButton
             size="sm"
@@ -415,7 +414,7 @@ export function DecisionActions(props: DecisionProps) {
     return <p className="text-xs text-muted-foreground">Aguardando o solicitante reenviar.</p>;
   }
   return (
-    <Button asChild variant="outline" className={SMALL}>
+    <Button asChild variant="outline" className={cn(SMALL, FLOW_BUTTON_SUBTLE.neutral)}>
       <Link href={detailHref}>
         <ExternalLink className="size-3.5" aria-hidden />
         Ver atendimento

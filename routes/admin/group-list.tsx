@@ -86,7 +86,7 @@ export function GroupList({ groups, sectorNames }: { groups: PeopleGroupSummary[
           <li key={group.id} className="min-w-0">
             <Link
               href={`/admin/colabora/grupos/${group.id}`}
-              className="group block h-full rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="group block h-full rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
             >
               <Card className="h-full transition-colors group-hover:bg-muted/40">
                 <CardContent className="flex h-full flex-col gap-3">

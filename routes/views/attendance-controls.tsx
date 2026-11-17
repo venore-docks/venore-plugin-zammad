@@ -104,11 +104,11 @@ export function AttendanceControls({ ticketId, controls }: { ticketId: number; c
   const canChangeState = controls.states.some((option) => option.id !== controls.stateId);
 
   return (
-    <section className="space-y-4 rounded-xl border bg-card p-4 @md:p-5" aria-label="Atendimento">
+    <section className="space-y-4 rounded-lg border bg-card p-4 @md:p-5" aria-label="Atendimento">
       <h3 className="text-sm font-semibold text-foreground">Atendimento</h3>
 
       {controls.flowHint && (
-        <p className="flex items-start gap-2 rounded-lg border border-chart-2/40 bg-chart-2/10 px-3 py-2 text-sm text-foreground">
+        <p className="flex items-start gap-2 rounded-md border border-chart-2/40 bg-chart-2/10 px-3 py-2 text-sm text-foreground">
           <Info className="mt-0.5 size-4 shrink-0 text-chart-2" />
           {controls.flowHint}
         </p>

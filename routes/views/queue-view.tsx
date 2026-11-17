@@ -89,7 +89,7 @@ export async function QueueView({ surfaceKey, query }: { surfaceKey: SurfaceKey;
       {!result.success ? (
         <BlockedNotice title="Fila" message={result.error.message} />
       ) : result.data.items.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed p-10 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center">
           <span className="grid size-12 place-items-center rounded-full bg-success/15 text-success">
             <Check className="size-6" aria-hidden />
           </span>

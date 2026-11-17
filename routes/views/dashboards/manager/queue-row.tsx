@@ -48,13 +48,13 @@ export function QueueRow({
   // A aba da fila já diz a etapa: o selo de estado só aparece em "Atribuídos", onde os estados variam.
   const showState = inFlow && ticket.bucket === "atribuidos";
   return (
-    <li className={cn("rounded-xl border border-s-4 bg-card px-4 py-3", FLOW_BADGE[ticket.stateColor].border)}>
+    <li className={cn("rounded-lg border border-s-4 bg-card px-4 py-3", FLOW_BADGE[ticket.stateColor].border)}>
       <div className="flex flex-col gap-2.5 md:flex-row md:items-center md:gap-4">
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex items-center gap-2">
             <Link
               href={href}
-              className="min-w-0 truncate rounded-sm text-sm font-semibold text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              className="min-w-0 truncate rounded-sm text-sm font-semibold text-foreground hover:underline md:text-base focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               title={ticket.title}
             >
               {ticket.title}

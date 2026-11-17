@@ -183,7 +183,7 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
 
   if (sectors.length === 0) {
     return (
-      <div className="space-y-2 rounded-xl border border-warning-border bg-warning-soft p-8 text-center text-sm text-foreground">
+      <div className="space-y-2 rounded-lg border border-warning-border bg-warning-soft p-8 text-center text-sm text-foreground">
         <p className="font-medium">Nenhum setor está liberado para você ainda.</p>
         <p className="text-foreground/80">Fale com o gestor da sua área para pedir acesso.</p>
       </div>
@@ -197,7 +197,7 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
     <form ref={formRef} onSubmit={handleNext} className="space-y-6" noValidate>
       <PhaseBar phases={phases} current={phase} />
 
-      <section className={cn("space-y-6 rounded-xl border border-t-4 bg-card p-6 shadow-sm sm:p-8", sector ? accent.top : "border-t-primary")}>
+      <section className={cn("space-y-6 rounded-lg border border-t-4 bg-card p-6 shadow-sm sm:p-8", sector ? accent.top : "border-t-primary")}>
         {sector && current.kind !== "sector" && <SectorTag sector={sector} accent={accent} />}
 
         <div className="space-y-1.5">
@@ -219,7 +219,7 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
         {current.kind === "fields" && (
           <div className="space-y-8">
             {current.step.optional && (
-              <p className="rounded-lg border border-warning-border bg-warning-soft px-3 py-2 text-sm text-foreground">
+              <p className="rounded-md border border-warning-border bg-warning-soft px-3 py-2 text-sm text-foreground">
                 Esta etapa é opcional — pode seguir sem responder.
               </p>
             )}
@@ -397,11 +397,11 @@ function SectorStep({
               }}
               aria-pressed={active}
               className={cn(
-                "group flex items-center gap-4 rounded-xl border bg-background p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                "group flex items-center gap-4 rounded-lg border bg-background p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                 active ? cn("ring-2", accent.border, accent.ring, accent.soft) : "hover:border-foreground/30",
               )}
             >
-              <span className={cn("grid size-11 shrink-0 place-items-center rounded-lg text-foreground", accent.soft)}>
+              <span className={cn("grid size-11 shrink-0 place-items-center rounded-md text-foreground", accent.soft)}>
                 {sectorIcon(sector.label, "size-5")}
               </span>
               <span className="min-w-0 flex-1 space-y-0.5">
@@ -419,7 +419,7 @@ function SectorStep({
       </div>
 
       {parent && subOptions.length > 0 && (
-        <div ref={subRef} className={cn("scroll-mt-24 space-y-3 rounded-xl border p-4", accentFor(parent.groupId).soft, accentFor(parent.groupId).border)}>
+        <div ref={subRef} className={cn("scroll-mt-24 space-y-3 rounded-lg border p-4", accentFor(parent.groupId).soft, accentFor(parent.groupId).border)}>
           <p className="text-sm font-medium text-foreground">Qual é o assunto em {parent.label}?</p>
           <div className="flex flex-wrap gap-2">
             {[parent, ...subOptions].map((option) => (
@@ -538,7 +538,7 @@ function FieldInput({
                 onClick={() => onChange(optionValue)}
                 aria-pressed={selected}
                 className={cn(
-                  "min-w-28 rounded-lg border px-5 py-3 text-sm font-medium capitalize transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                  "min-w-28 rounded-md border px-5 py-3 text-sm font-medium capitalize transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                   selected ? "border-primary bg-primary text-primary-foreground" : "bg-background text-foreground hover:border-primary/60 hover:bg-primary/5",
                 )}
               >
@@ -658,7 +658,7 @@ function DetailsStep({
         <label htmlFor="ticket-description" className="block font-medium text-foreground">
           Descrição
         </label>
-        <div className="flex gap-3 rounded-lg border border-chart-2/30 bg-chart-2/10 p-4">
+        <div className="flex gap-3 rounded-md border border-chart-2/30 bg-chart-2/10 p-4">
           <Lightbulb className="mt-0.5 size-4 shrink-0 text-chart-2" />
           <div className="space-y-1.5">
             <p className="text-sm font-medium text-foreground">Ajuda a equipe se você contar:</p>
@@ -766,7 +766,7 @@ function ReviewStep({
 
   return (
     <div className="space-y-6">
-      <div className={cn("space-y-2 rounded-xl border p-4", accent.soft, accent.border)}>
+      <div className={cn("space-y-2 rounded-lg border p-4", accent.soft, accent.border)}>
         <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Seu pedido</p>
         <div className="flex items-start justify-between gap-3">
           <p className="text-lg font-semibold text-foreground">{title.trim()}</p>
@@ -781,7 +781,7 @@ function ReviewStep({
         )}
       </div>
 
-      <dl className="divide-y rounded-xl border">
+      <dl className="divide-y rounded-lg border">
         {rows.map((row) => (
           <div key={row.label} className="flex items-start justify-between gap-4 p-3">
             <div className="min-w-0 space-y-0.5">
@@ -793,7 +793,7 @@ function ReviewStep({
         ))}
       </dl>
 
-      <div className="rounded-xl border border-success-border bg-success-soft p-4">
+      <div className="rounded-lg border border-success-border bg-success-soft p-4">
         <p className="mb-3 text-sm font-medium text-foreground">O que acontece depois de enviar</p>
         <ol className="space-y-2.5 text-sm text-foreground/90">
           <li className="flex items-start gap-3">
@@ -833,7 +833,7 @@ function FieldError({ message }: { message?: string }) {
 
 function CreatedScreen({ ticket, onRestart, detailHref }: { ticket: CreatedTicket; onRestart: () => void; detailHref: string }) {
   return (
-    <div className="space-y-6 rounded-xl border border-t-4 border-success-border border-t-success bg-success-soft p-8 text-center sm:p-12">
+    <div className="space-y-6 rounded-lg border border-t-4 border-success-border border-t-success bg-success-soft p-8 text-center sm:p-12">
       <span className="mx-auto grid size-16 place-items-center rounded-full bg-success text-success-foreground">
         <Check className="size-8" strokeWidth={2.5} />
       </span>

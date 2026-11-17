@@ -37,7 +37,7 @@ export function formatDateTime(iso: string): string {
 // Mensagem de bloqueio (sem permissão, conta inexistente no Zammad, integração desligada).
 export function BlockedNotice({ title, message, showBack = false }: { title: string; message: string; showBack?: boolean }) {
   return (
-    <div className="mx-auto max-w-xl space-y-4 rounded-xl border border-warning-border bg-warning-soft p-8 text-center">
+    <div className="mx-auto max-w-xl space-y-4 rounded-lg border border-warning-border bg-warning-soft p-8 text-center">
       <h1 className="text-xl font-semibold text-foreground">{title}</h1>
       <p className="text-sm text-foreground/80">{message}</p>
       {showBack && (

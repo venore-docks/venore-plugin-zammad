@@ -66,6 +66,17 @@ export const FLOW_BUTTON: Record<FlowTone, string> = {
   danger: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
 };
 
+// Versão DISCRETA (cards de lista): contorno fino e texto/ícone na cor semântica, sem fundo — o peso visual fica
+// no título e nos dados do chamado, não nos botões. O fundo suave só aparece no hover.
+export const FLOW_BUTTON_SUBTLE: Record<FlowTone, string> = {
+  neutral: "border border-border bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
+  info: "border border-primary/35 bg-transparent text-primary hover:bg-primary/10",
+  primary: "border border-primary/35 bg-transparent text-primary hover:bg-primary/10",
+  warning: "border border-warning-border bg-transparent text-warning hover:bg-warning-soft",
+  success: "border border-success-border bg-transparent text-success hover:bg-success-soft",
+  danger: "border border-destructive/35 bg-transparent text-destructive hover:bg-destructive/10",
+};
+
 // Cor estável por setor (não muda se a ordem da lista mudar). Subgrupos herdam a cor do pai.
 export function accentFor(rootGroupId: number): Accent {
   return ACCENTS[Math.abs(rootGroupId) % ACCENTS.length];

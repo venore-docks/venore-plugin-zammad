@@ -35,7 +35,7 @@ export function TicketGroup({
             <Link
               href={hrefFor(ticket.id)}
               className={cn(
-                "group flex items-center gap-3 overflow-hidden rounded-xl border bg-card pe-3 transition-all hover:-translate-y-0.5 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                "group flex items-center gap-3 overflow-hidden rounded-lg border bg-card pe-3 transition-all hover:-translate-y-0.5 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                 waiting && "border-warning-border bg-warning-soft",
                 muted && "opacity-80",
               )}
