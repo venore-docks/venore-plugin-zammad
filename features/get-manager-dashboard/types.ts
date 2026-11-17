@@ -27,6 +27,8 @@ export type QueueRow = {
   // Responsável (null = sem responsável).
   ownerId: number | null;
   ownerName: string | null;
+  // Tags do chamado no Zammad (ex.: ajustes, rejeitado, nao-autorizado, reenviado).
+  tags: string[];
 };
 
 // Opções de alocação por setor (grupo do Zammad), sem repetir por chamado.

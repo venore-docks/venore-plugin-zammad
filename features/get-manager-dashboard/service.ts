@@ -11,6 +11,7 @@ import { getPeople } from "../../shared/people";
 import type { Requester } from "../../shared/requester";
 import { priorityLabel } from "../../shared/ticket-options";
 import { searchOpenTicketsByOwner, searchTicketsByOwner } from "../../shared/ticket-search";
+import { loadTicketTags } from "../../shared/ticket-tags";
 import { isCustomerWaiting } from "../../shared/ticket-state";
 import type {
   AllocationOptions,
@@ -63,8 +64,8 @@ function loadsOf(snapshot: Snapshot): Map<number, { open: number; waiting: numbe
   return loads;
 }
 
-async function toRows(tickets: ZammadExpandedTicket[], now: number, ownerNames: Map<number, string> = new Map()): Promise<QueueRow[]> {
-  const people = await getPeople(tickets.map((ticket) => ticket.customer_id));
+async function toRows(requester: Requester, tickets: ZammadExpandedTicket[], now: number, ownerNames: Map<number, string> = new Map()): Promise<QueueRow[]> {
+  const [people, tags] = await Promise.all([getPeople(tickets.map((ticket) => ticket.customer_id)), loadTicketTags(requester, tickets)]);
   return tickets.flatMap((ticket) => {
     const state = describeState(ticket.state ?? "");
     const ownerId = isUnassigned(ticket.owner_id) ? null : ticket.owner_id;
@@ -88,6 +89,7 @@ async function toRows(tickets: ZammadExpandedTicket[], now: number, ownerNames: 
         bucket,
         ownerId,
         ownerName: ownerId === null ? null : (ownerNames.get(ownerId) ?? null),
+        tags: tags.get(ticket.id) ?? [],
       },
     ];
   });
@@ -124,7 +126,7 @@ export async function getManagerDashboard(requester: Requester): Promise<GetMana
 
   // Os mais antigos da fila: só deles buscamos solicitante e opções de alocação.
   const oldest = [...queue].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()).slice(0, QUEUE_TOP);
-  const queueTop = await toRows(oldest, now);
+  const queueTop = await toRows(requester, oldest, now);
   const allocation = await allocationFor(queueTop, loads);
   return { success: true, data: { kpis, agents, queueTop, allocation, flowStateIds: flowStateIdsOf(options) } };
 }
@@ -144,7 +146,7 @@ export async function getQueueBoard(requester: Requester): Promise<GetQueueBoard
   const byId = new Map<number, ZammadExpandedTicket>();
   for (const ticket of [...queue, ...denied, ...perMember.flat()]) byId.set(ticket.id, ticket);
   const ownerNames = new Map(members.map((member) => [member.id, member.name]));
-  const items = sortQueue(await toRows([...byId.values()], now, ownerNames), "idade");
+  const items = sortQueue(await toRows(requester, [...byId.values()], now, ownerNames), "idade");
 
   const allocation = await allocationFor(items, loadsOf(snapshot.data));
   return { success: true, data: { items, sectors: sectorChips(items), allocation, counts: countBuckets(items), flowStateIds: flowStateIdsOf(options) } };
