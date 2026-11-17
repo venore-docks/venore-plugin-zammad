@@ -20,7 +20,7 @@ import {
 import type { CustomerActionKey, CustomerActionOption, StaffFlowAction, TicketStateColor } from "../../contracts/types";
 import { REASON_MAX, validateReason } from "../../shared/flow";
 import { agentUpdateTicketAction, customerRespondAction } from "./actions";
-import { FLOW_BADGE, FLOW_BUTTON, FLOW_BUTTON_SUBTLE } from "./palette";
+import { FLOW_BADGE, FLOW_BUTTON, FLOW_BUTTON_SMALL, FLOW_BUTTON_SUBTLE } from "./palette";
 
 type ActionResult = { ok: true; message: string } | { ok: false; error: string };
 
@@ -82,7 +82,7 @@ export function FlowButton({ label, color, icon, prompt, reason, confirmTitle, c
           className={cn(
             "justify-center",
             size === "sm"
-              ? cn("h-7 gap-1 px-2.5 text-xs font-medium shadow-none [&_svg]:size-3.5", FLOW_BUTTON_SUBTLE[color])
+              ? cn(FLOW_BUTTON_SMALL, FLOW_BUTTON_SUBTLE[color])
               : cn("h-11 w-full gap-2 font-semibold shadow-sm @md:w-auto", FLOW_BUTTON[color]),
           )}
         >

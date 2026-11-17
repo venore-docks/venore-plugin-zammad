@@ -66,16 +66,19 @@ export const FLOW_BUTTON: Record<FlowTone, string> = {
   danger: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
 };
 
-// Versão DISCRETA (cards de lista): contorno fino e texto/ícone na cor semântica, sem fundo — o peso visual fica
-// no título e nos dados do chamado, não nos botões. O fundo suave só aparece no hover.
+// Versão COMPACTA (cards de lista): o fundo na cor semântica com um pouco de transparência (cheio no hover) —
+// pequeno e menos pesado que o botão de painel, para o título e os dados do chamado continuarem em destaque.
 export const FLOW_BUTTON_SUBTLE: Record<FlowTone, string> = {
-  neutral: "border border-border bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
-  info: "border border-primary/35 bg-transparent text-primary hover:bg-primary/10",
-  primary: "border border-primary/35 bg-transparent text-primary hover:bg-primary/10",
-  warning: "border border-warning-border bg-transparent text-warning hover:bg-warning-soft",
-  success: "border border-success-border bg-transparent text-success hover:bg-success-soft",
-  danger: "border border-destructive/35 bg-transparent text-destructive hover:bg-destructive/10",
+  neutral: "bg-muted/80 text-foreground hover:bg-muted",
+  info: "bg-primary/75 text-primary-foreground hover:bg-primary",
+  primary: "bg-primary/75 text-primary-foreground hover:bg-primary",
+  warning: "bg-warning/75 text-warning-foreground hover:bg-warning",
+  success: "bg-success/75 text-success-foreground hover:bg-success",
+  danger: "bg-destructive/75 text-destructive-foreground hover:bg-destructive",
 };
+
+// Tamanho do botão compacto: baixo e com cantos quase retos.
+export const FLOW_BUTTON_SMALL = "h-6 gap-1 rounded-sm px-2 py-0 text-xs font-medium shadow-none has-[>svg]:px-2 [&_svg]:size-3";
 
 // Cor estável por setor (não muda se a ordem da lista mudar). Subgrupos herdam a cor do pai.
 export function accentFor(rootGroupId: number): Accent {

@@ -27,11 +27,11 @@ import { REASON_MAX, validateReason } from "../../../../shared/flow";
 import type { QueueBucket } from "../../../../shared/queue-buckets";
 import { agentUpdateTicketAction, ticketPreviewAction, type TicketPreview } from "../../../public/actions";
 import { FlowButton } from "../../../public/flow-actions";
-import { FLOW_BUTTON, FLOW_BUTTON_SUBTLE } from "../../../public/palette";
+import { FLOW_BUTTON, FLOW_BUTTON_SMALL, FLOW_BUTTON_SUBTLE } from "../../../public/palette";
 import { formatDateTime } from "../../../public/shared";
 
 // Botão compacto dos cards da fila.
-const SMALL = "h-7 gap-1 px-2.5 text-xs font-medium shadow-none [&_svg]:size-3.5";
+const SMALL = FLOW_BUTTON_SMALL;
 
 type DecisionProps = {
   ticketId: number;
@@ -414,7 +414,7 @@ export function DecisionActions(props: DecisionProps) {
     return <p className="text-xs text-muted-foreground">Aguardando o solicitante reenviar.</p>;
   }
   return (
-    <Button asChild variant="outline" className={cn(SMALL, FLOW_BUTTON_SUBTLE.neutral)}>
+    <Button asChild variant="ghost" className={cn(SMALL, FLOW_BUTTON_SUBTLE.neutral)}>
       <Link href={detailHref}>
         <ExternalLink className="size-3.5" aria-hidden />
         Ver atendimento
