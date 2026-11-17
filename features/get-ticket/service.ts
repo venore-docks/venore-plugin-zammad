@@ -155,8 +155,9 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
     mode === "agent" ? loadTicketTags(requester, [ticket]).then((found) => found.get(ticket.id) ?? []) : Promise.resolve([] as string[]),
   ]);
   const unassigned = !ticket.owner_id || ticket.owner_id === 1;
-  // Decisões do solicitante: só para quem abriu o chamado e o está vendo como solicitante.
-  const isRequesterView = mode === "customer" && ticket.customer_id === meId;
+  // Quem ABRIU o chamado decide sobre a entrega, mesmo sendo da equipe (gestor/agente que abriu o próprio
+  // chamado vê o chamado na visão de equipe, mas continua sendo o solicitante).
+  const isRequesterView = ticket.customer_id === meId;
   const customerActions: CustomerActionOption[] = isRequesterView
     ? customerActionsFor(state.step).map((key) => {
         const info = CUSTOMER_ACTIONS[key];

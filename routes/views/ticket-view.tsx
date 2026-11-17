@@ -85,7 +85,7 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
             {!agent && !ticket.flowStep && ticket.canClose && <TicketStateButton ticketId={ticket.id} closed={ticket.closed} />}
           </header>
 
-          {!agent && ticket.customerActions.length > 0 && (
+          {ticket.customerActions.length > 0 && (
             <CustomerDecisionPanel
               ticketId={ticket.id}
               title={ticket.flowStep === "nao_autorizado" ? "Seu pedido não foi autorizado" : "Seu pedido foi concluído. Está tudo certo?"}
