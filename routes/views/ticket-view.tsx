@@ -6,6 +6,7 @@ import { surfaceFor, type SurfaceKey } from "../../shared/routes";
 import { Conversation } from "../public/conversation";
 import { CustomerDecisionPanel } from "../public/flow-actions";
 import { FlowProgress } from "../public/flow-progress";
+import { TagChips } from "../public/tag-chips";
 import { ReplyProvider } from "../public/reply-context";
 import { BlockedNotice, StateBadge, formatDateTime } from "../public/shared";
 import { ReplyBox, TicketStateButton } from "../public/ticket-actions";
@@ -58,6 +59,7 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
             <div className="flex flex-wrap items-center gap-2">
               <StateBadge label={ticket.stateLabel} tone={ticket.stateTone} color={ticket.stateColor} />
               {agent && <span className="rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground">Prioridade: {ticket.priorityLabel}</span>}
+              {agent && <TagChips tags={ticket.tags} className="contents" />}
             </div>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
               {agent && (

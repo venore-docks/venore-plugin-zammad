@@ -82,6 +82,8 @@ export type TicketSummary = {
   priorityLabel: string;
   // Nome do solicitante (só nas listas do agente; nas do próprio solicitante é null).
   requesterName: string | null;
+  // Tags do Zammad (só nas listas da equipe; ausente nas do solicitante).
+  tags?: string[];
   createdAt: string;
   updatedAt: string;
 };
@@ -180,6 +182,8 @@ export type TicketDetail = {
   assignedToMe: boolean;
   // Só na visão do agente.
   agent: AgentControls | null;
+  // Tags do Zammad — só na visão da equipe (vazio para o solicitante).
+  tags: string[];
   messages: TicketMessage[];
 };
 

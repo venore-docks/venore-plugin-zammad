@@ -7,6 +7,7 @@ import type { Requester } from "../../shared/requester";
 import { failure } from "../../shared/results";
 import { priorityLabel } from "../../shared/ticket-options";
 import { searchOpenTicketsByOwner } from "../../shared/ticket-search";
+import { loadTicketTags } from "../../shared/ticket-tags";
 import { describeState, isCustomerWaiting } from "../../shared/ticket-state";
 import type { ListAgentTicketsInput, ListAgentTicketsResult } from "./types";
 
@@ -30,11 +31,11 @@ export async function listAgentTickets(requester: Requester, input: ListAgentTic
 
   const found = await searchOpenTicketsByOwner(requester, ownerId);
   if (!found.success) return found;
-  return { success: true, data: { tickets: await toSummaries(found.data) } };
+  return { success: true, data: { tickets: await toSummaries(requester, found.data) } };
 }
 
-async function toSummaries(tickets: ZammadExpandedTicket[]): Promise<TicketSummary[]> {
-  const people = await getPeople(tickets.map((ticket) => ticket.customer_id));
+async function toSummaries(requester: Requester, tickets: ZammadExpandedTicket[]): Promise<TicketSummary[]> {
+  const [people, tags] = await Promise.all([getPeople(tickets.map((ticket) => ticket.customer_id)), loadTicketTags(requester, tickets)]);
   return tickets.map((ticket) => {
     const state = describeState(ticket.state ?? "");
     return {
@@ -50,6 +51,7 @@ async function toSummaries(tickets: ZammadExpandedTicket[]): Promise<TicketSumma
       awaitingYou: isCustomerWaiting(ticket),
       priorityLabel: priorityLabel(ticket.priority ?? ""),
       requesterName: people.get(ticket.customer_id)?.name ?? null,
+      tags: tags.get(ticket.id) ?? [],
       createdAt: ticket.created_at,
       updatedAt: ticket.updated_at,
     };

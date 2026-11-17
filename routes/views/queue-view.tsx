@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { Check, Layers } from "lucide-react";
+import { Check, Layers, Tag } from "lucide-react";
 import { EmptyState, cn } from "@venore/plugin-sdk/ui";
 import { getQueueBoardHandler } from "../../features/get-manager-dashboard/handler";
 import { hrefWith, parseQueueSort, parseSectorFilter, sectorChips, shortGroupName, sortQueue, type QueueSort } from "../../shared/manager-stats";
 import { QUEUE_BUCKETS, bucketParam, defaultBucket, parseBucket, pendingDecisions } from "../../shared/queue-buckets";
+import { describeTags } from "../../shared/tag-labels";
+import { FLOW_BADGE } from "../public/palette";
 import { surfaceFor, type SurfaceKey } from "../../shared/routes";
 import { BlockedNotice } from "../public/shared";
 import { enterSurface } from "./context";
@@ -71,6 +73,7 @@ export async function QueueView({ surfaceKey, query }: { surfaceKey: SurfaceKey;
 
   const sectorId = parseSectorFilter(query?.setor);
   const sort = parseQueueSort(query?.ordem);
+  const tagFilter = query?.tag?.trim() || undefined;
   const result = await getQueueBoardHandler();
   const ordem = sort === "idade" ? undefined : sort;
 
@@ -100,9 +103,14 @@ export async function QueueView({ surfaceKey, query }: { surfaceKey: SurfaceKey;
           const bucketInfo = QUEUE_BUCKETS.find((entry) => entry.key === bucket);
           const items = allItems.filter((item) => item.bucket === bucket);
           const sectors = sectorChips(items);
-          const filtered = sectorId === undefined ? items : items.filter((item) => item.groupId === sectorId);
+          // Tags presentes nesta etapa (com quantos chamados cada), na ordem de atenção (fluxo primeiro).
+          const tagCount = new Map<string, number>();
+          for (const item of items) for (const name of new Set(item.tags)) tagCount.set(name, (tagCount.get(name) ?? 0) + 1);
+          const tagOptions = describeTags([...tagCount.keys()]);
+          const tag = tagFilter && tagCount.has(tagFilter) ? tagFilter : undefined;
+          const filtered = items.filter((item) => (sectorId === undefined || item.groupId === sectorId) && (tag === undefined || item.tags.includes(tag)));
           const sorted = sortQueue(filtered, sort);
-          const sectorName = sectors.find((chip) => chip.id === sectorId)?.name;
+          const filteredBy = sectorId !== undefined || tag !== undefined;
           const etapa = bucketParam(bucket);
           return (
             <div className="space-y-5">
@@ -118,28 +126,43 @@ export async function QueueView({ surfaceKey, query }: { surfaceKey: SurfaceKey;
                 {bucketInfo && <p className="text-sm text-muted-foreground">{bucketInfo.hint}</p>}
                 {sectors.length > 1 && (
                   <nav aria-label="Filtrar por setor" className="flex flex-wrap gap-1.5">
-                    <SectorChip href={hrefWith(surface.queue, { etapa, ordem })} active={sectorId === undefined}>
+                    <SectorChip href={hrefWith(surface.queue, { etapa, tag, ordem })} active={sectorId === undefined}>
                       Todos os setores · {items.length}
                     </SectorChip>
                     {sectors.map((chip) => (
-                      <SectorChip key={chip.id} href={hrefWith(surface.queue, { etapa, setor: chip.id, ordem })} active={chip.id === sectorId}>
+                      <SectorChip key={chip.id} href={hrefWith(surface.queue, { etapa, setor: chip.id, tag, ordem })} active={chip.id === sectorId}>
                         {shortGroupName(chip.name)} · {chip.count}
+                      </SectorChip>
+                    ))}
+                  </nav>
+                )}
+                {tagOptions.length > 0 && (
+                  <nav aria-label="Filtrar por tag" className="flex flex-wrap items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <Tag className="size-3" aria-hidden />
+                      Tags:
+                    </span>
+                    <SectorChip href={hrefWith(surface.queue, { etapa, setor: sectorId, ordem })} active={tag === undefined}>
+                      Todas
+                    </SectorChip>
+                    {tagOptions.map((option) => (
+                      <SectorChip key={option.name} href={hrefWith(surface.queue, { etapa, setor: sectorId, tag: option.name, ordem })} active={option.name === tag}>
+                        <span aria-hidden className={cn("me-1.5 size-1.5 rounded-full", FLOW_BADGE[option.color].dot)} />
+                        {option.label} · {tagCount.get(option.name)}
                       </SectorChip>
                     ))}
                   </nav>
                 )}
                 <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                   <p className="text-sm text-muted-foreground" aria-live="polite">
-                    {sectorId === undefined
-                      ? `${items.length} ${items.length === 1 ? "chamado" : "chamados"}`
-                      : `${sorted.length} de ${items.length} · ${sectorName ? shortGroupName(sectorName) : "setor"}`}
+                    {filteredBy ? `${sorted.length} de ${items.length} ${items.length === 1 ? "chamado" : "chamados"}` : `${items.length} ${items.length === 1 ? "chamado" : "chamados"}`}
                   </p>
                   <div className="flex items-center gap-1.5 text-sm" role="group" aria-label="Ordenar por">
                     <span className="text-muted-foreground">Ordenar:</span>
                     {SORTS.map((option) => (
                       <Link
                         key={option.key}
-                        href={hrefWith(surface.queue, { etapa, setor: sectorId, ordem: option.key === "idade" ? undefined : option.key })}
+                        href={hrefWith(surface.queue, { etapa, setor: sectorId, tag, ordem: option.key === "idade" ? undefined : option.key })}
                         aria-current={option.key === sort ? "true" : undefined}
                         className={cn(
                           "rounded-full px-2.5 py-1 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
@@ -157,11 +180,11 @@ export async function QueueView({ surfaceKey, query }: { surfaceKey: SurfaceKey;
                 <EmptyState
                   icon={<Layers className="size-6" />}
                   title={`Nada em “${bucketInfo?.label ?? "esta etapa"}”`}
-                  description={sectorId === undefined ? "Nenhum chamado nesta etapa agora." : "Nenhum chamado deste setor nesta etapa."}
+                  description={filteredBy ? "Nenhum chamado com esses filtros nesta etapa." : "Nenhum chamado nesta etapa agora."}
                   action={
-                    sectorId !== undefined ? (
+                    filteredBy ? (
                       <Link href={hrefWith(surface.queue, { etapa, ordem })} className="text-sm font-medium text-primary hover:underline">
-                        Ver todos os setores
+                        Limpar filtros
                       </Link>
                     ) : undefined
                   }

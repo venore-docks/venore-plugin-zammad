@@ -19,6 +19,7 @@ import { resolveAvatars } from "../../shared/avatars";
 import { articleToText, cleanSenderName, extractFormAnswers, extractReplyQuote, makeExcerpt } from "../../shared/html-text";
 import { canManageTicketState, loadAgentOptions, loadArticles, loadTicketForViewer } from "../../shared/own-ticket";
 import { getPerson } from "../../shared/people";
+import { loadTicketTags } from "../../shared/ticket-tags";
 import type { Requester } from "../../shared/requester";
 import { describeState, isAwaitingYou, isCustomerWaiting } from "../../shared/ticket-state";
 import { priorityLabel } from "../../shared/ticket-options";
@@ -145,11 +146,13 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
   linkQuotes(messages);
 
   const meId = requester.zammadUser.id;
-  const [requesterPerson, ownerPerson, agent, canClose] = await Promise.all([
+  const [requesterPerson, ownerPerson, agent, canClose, tags] = await Promise.all([
     ticket.customer_id === meId ? Promise.resolve(null) : getPerson(ticket.customer_id),
     ticket.owner_id && ticket.owner_id !== meId ? getPerson(ticket.owner_id) : Promise.resolve(null),
     buildAgentControls(ticket, requester, mode, role),
     canManageTicketState(requester),
+    // Tags são da equipe (marcas internas do fluxo): o solicitante não as vê.
+    mode === "agent" ? loadTicketTags(requester, [ticket]).then((found) => found.get(ticket.id) ?? []) : Promise.resolve([] as string[]),
   ]);
   const unassigned = !ticket.owner_id || ticket.owner_id === 1;
   // Decisões do solicitante: só para quem abriu o chamado e o está vendo como solicitante.
@@ -192,6 +195,7 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
       owner: unassigned ? null : { name: ticket.owner_id === meId ? "Você" : (ownerPerson?.name ?? "Responsável") },
       assignedToMe: ticket.owner_id === meId,
       agent,
+      tags,
       messages,
     },
   };

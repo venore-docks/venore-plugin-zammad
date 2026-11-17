@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Clock, Flag, Tag } from "lucide-react";
-import { describeTags } from "../../../../shared/tag-labels";
+import { Clock, Flag } from "lucide-react";
+import { TagChips } from "../../../public/tag-chips";
 import { cn } from "@venore/plugin-sdk/ui";
 import type { AssigneeOption, QueueRow as QueueRowData } from "../../../../features/get-manager-dashboard/types";
 import { ageTone, formatAge, shortGroupName } from "../../../../shared/manager-stats";
@@ -45,7 +45,6 @@ export function QueueRow({
   flowStateIds?: Partial<Record<FlowStepKey, number>>;
 }) {
   const inFlow = ticket.step !== null && Object.keys(flowStateIds).length > 0;
-  const tags = describeTags(ticket.tags);
   return (
     <li className={cn("space-y-3 rounded-xl border border-s-4 bg-card p-4", FLOW_BADGE[ticket.stateColor].border)}>
       <div className="flex items-start justify-between gap-3">
@@ -66,22 +65,10 @@ export function QueueRow({
           )}
         </span>
       </div>
-      {(inFlow || tags.length > 0) && (
+      {(inFlow || ticket.tags.length > 0) && (
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           {inFlow && <StateBadge label={ticket.stateLabel} tone="open" color={ticket.stateColor} />}
-          {tags.length > 0 && (
-            <ul aria-label="Tags" className="contents">
-              {tags.map((tag) => (
-                <li
-                  key={tag.name}
-                  className={cn("inline-flex items-center gap-1 rounded-md border px-2 py-0.5 font-medium text-foreground", FLOW_BADGE[tag.color].badge)}
-                >
-                  <Tag className={cn("size-3", FLOW_BADGE[tag.color].icon)} aria-hidden />
-                  {tag.label}
-                </li>
-              ))}
-            </ul>
-          )}
+          <TagChips tags={ticket.tags} className="contents" />
           {ticket.ownerId !== null && <span>Com {ticket.ownerName ?? "um agente"}</span>}
         </div>
       )}

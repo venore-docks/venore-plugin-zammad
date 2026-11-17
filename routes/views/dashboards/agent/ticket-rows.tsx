@@ -4,6 +4,7 @@ import { cn } from "@venore/plugin-sdk/ui";
 import type { TicketSummary } from "../../../../contracts/types";
 import { isStale, isUrgentPriority, waitingLabel } from "../../../../shared/agent-stats";
 import { StateBadge } from "../../../public/shared";
+import { TagChips } from "../../../public/tag-chips";
 
 // Linha de chamado do agente: confortável ao toque (altura mínima), título sempre truncado, quem espera e há quanto
 // tempo. Usada no dashboard e em "Atribuídos a mim" (o `TicketGroup` compartilhado não tem essas informações).
@@ -31,6 +32,7 @@ export function AgentTicketRow({ ticket, href, now }: { ticket: TicketSummary; h
               <StateBadge label={ticket.stateLabel} tone={ticket.stateTone} color={ticket.stateColor} />
             </span>
             {urgent && <span className="rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-xs font-medium text-foreground">{ticket.priorityLabel}</span>}
+            <TagChips tags={ticket.tags} as="span" className="contents" />
             <span className={cn("inline-flex items-center gap-1 text-xs", stale ? "font-medium text-warning" : "text-muted-foreground")}>
               <Clock className="size-3" aria-hidden />
               {ticket.awaitingYou ? `Esperando ${waitingLabel(ticket.updatedAt, now)}` : `Atualizado ${waitingLabel(ticket.updatedAt, now)}`}
