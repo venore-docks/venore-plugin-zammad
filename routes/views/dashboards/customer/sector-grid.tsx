@@ -12,7 +12,7 @@ export function SectorGrid({ sectors, newTicketHref }: { sectors: SectorForm[]; 
       <h2 id="colabora-sectors" className="text-lg font-semibold tracking-tight text-foreground">
         Para quem é o seu pedido?
       </h2>
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid gap-3">
         {sectors.map((sector) => {
           const accent = accentFor(sector.groupId);
           return (

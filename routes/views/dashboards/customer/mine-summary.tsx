@@ -107,7 +107,7 @@ function FirstTimeGuide() {
         <p className="font-medium text-foreground">Você ainda não abriu nenhum chamado</p>
         <p className="text-sm text-muted-foreground">É simples e leva poucos minutos:</p>
       </div>
-      <ol className="grid gap-3 sm:grid-cols-3">
+      <ol className="grid gap-3">
         {GUIDE_STEPS.map((step, position) => (
           <li key={step.title} className="flex min-w-0 items-start gap-3 rounded-lg bg-muted/40 p-3">
             <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">{step.icon}</span>

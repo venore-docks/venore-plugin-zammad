@@ -381,7 +381,7 @@ function SectorStep({
           )}
         </div>
       )}
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3">
         {topLevel.map((sector) => {
           const active = openParentId === sector.groupId;
           const hasChildren = childrenOf(sector.groupId).length > 0;

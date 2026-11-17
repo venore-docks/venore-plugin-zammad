@@ -136,7 +136,7 @@ estado" só se sustenta se ninguém mandar. Pelo mesmo motivo o plugin valida as
 
 ---
 
-## 3. O que o plugin faz (v1.1.0)
+## 3. O que o plugin faz (v1.2.0)
 
 ### 3.1 Fluxo (`shared/flow.ts`, testado em `flow.test.ts`)
 Estados por nome → `FlowStep`; cores semânticas; ações do cliente (palavras); transições da equipe
@@ -151,6 +151,16 @@ comportamento genérico antigo (encerrar/reabrir), para outros Zammads.
   resposta some nesses passos (e em Finalizado aparece "Novo chamado").
 - **Equipe (app)**: "Próximo passo" com os botões do fluxo; dica do passo; seletor de estado só com os
   destinos permitidos; prioridade continua no seletor.
+- **Fila do gestor (v1.2.0)**: abas por etapa — Novo, Em análise, Reavaliação, Autorizado, Não autorizado e
+  Atribuídos (abertos dos agentes da equipe) — com filtro de setor secundário (`?etapa=&setor=&ordem=`).
+  Card de **Novo**: "Analisar" abre um diálogo com o resumo do pedido (respostas, texto, anexos) e as decisões
+  Manter em análise / Autorizar / Não autorizar (motivo obrigatório) / **Autorizar e atribuir** (um só PUT com
+  `state_id` = Autorizado + `owner_id`; o gatilho "Administrador atribui agente" leva a Em andamento). Card de
+  **Em análise / Reavaliação**: Continuar análise, Autorizar, Não autorizar e Autorizar e atribuir. Card de
+  **Autorizado**: escolher agente + Atribuir. O número no menu "Fila" = decisões pendentes (Novo + Em análise +
+  Reavaliação + Autorizado).
+- Layout de **uma coluna** em todo o plugin (sem grades de 2 colunas de conteúdo) e moldura alinhada à
+  esquerda, junto do breadcrumb do portal.
 - Cores: só tokens do tema (`success`, `warning`, `destructive`, `primary`, `chart-2`, `muted`) — tabelas
   `FLOW_BADGE`/`FLOW_BUTTON` em `routes/public/palette.ts`. O editor de temas do core expõe sucesso e
   perigo (além de alerta) na paleta personalizada.

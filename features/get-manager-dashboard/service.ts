@@ -1,12 +1,16 @@
 import type { OperationResult } from "@venore/plugin-sdk";
 import type { ZammadExpandedTicket } from "../../contracts/zammad";
-import { UNASSIGNED_OWNER_ID } from "../../shared/access-rules";
+import { UNASSIGNED_OWNER_ID, isUnassigned } from "../../shared/access-rules";
+import { flowStepOf, type FlowStep } from "../../shared/flow";
+import { loadAgentOptions } from "../../shared/own-ticket";
+import { bucketOf, countBuckets } from "../../shared/queue-buckets";
+import { describeState } from "../../shared/ticket-state";
 import { assigneesFor, teamFor } from "../../shared/directory";
 import { isUrgentPriority, pickLeastLoaded, rankLoads, sectorChips, sortQueue, summarizeManager, ageMs, type KpiTicket } from "../../shared/manager-stats";
 import { getPeople } from "../../shared/people";
 import type { Requester } from "../../shared/requester";
 import { priorityLabel } from "../../shared/ticket-options";
-import { searchOpenTicketsByOwner } from "../../shared/ticket-search";
+import { searchOpenTicketsByOwner, searchTicketsByOwner } from "../../shared/ticket-search";
 import { isCustomerWaiting } from "../../shared/ticket-state";
 import type {
   AllocationOptions,
@@ -59,20 +63,34 @@ function loadsOf(snapshot: Snapshot): Map<number, { open: number; waiting: numbe
   return loads;
 }
 
-async function toRows(tickets: ZammadExpandedTicket[], now: number): Promise<QueueRow[]> {
+async function toRows(tickets: ZammadExpandedTicket[], now: number, ownerNames: Map<number, string> = new Map()): Promise<QueueRow[]> {
   const people = await getPeople(tickets.map((ticket) => ticket.customer_id));
-  return tickets.map((ticket) => ({
-    id: ticket.id,
-    number: String(ticket.number),
-    title: ticket.title,
-    group: ticket.group,
-    groupId: ticket.group_id,
-    priorityId: ticket.priority_id,
-    priorityLabel: priorityLabel(ticket.priority ?? ""),
-    urgent: isUrgentPriority(ticket.priority),
-    requesterName: people.get(ticket.customer_id)?.name ?? null,
-    ageMs: ageMs(ticket.created_at, now),
-  }));
+  return tickets.flatMap((ticket) => {
+    const state = describeState(ticket.state ?? "");
+    const ownerId = isUnassigned(ticket.owner_id) ? null : ticket.owner_id;
+    const bucket = bucketOf(state.step, ownerId !== null);
+    if (!bucket) return [];
+    return [
+      {
+        id: ticket.id,
+        number: String(ticket.number),
+        title: ticket.title,
+        group: ticket.group,
+        groupId: ticket.group_id,
+        priorityId: ticket.priority_id,
+        priorityLabel: priorityLabel(ticket.priority ?? ""),
+        urgent: isUrgentPriority(ticket.priority),
+        requesterName: people.get(ticket.customer_id)?.name ?? null,
+        ageMs: ageMs(ticket.created_at, now),
+        step: state.step,
+        stateLabel: state.label,
+        stateColor: state.color,
+        bucket,
+        ownerId,
+        ownerName: ownerId === null ? null : (ownerNames.get(ownerId) ?? null),
+      },
+    ];
+  });
 }
 
 // Quem recebe chamados de cada setor presente nas linhas (um cálculo por setor distinto, sem N+1: o diretório
@@ -95,7 +113,7 @@ async function allocationFor(rows: QueueRow[], loads: Map<number, { open: number
 }
 
 export async function getManagerDashboard(requester: Requester): Promise<GetManagerDashboardResult> {
-  const snapshot = await loadSnapshot(requester);
+  const [snapshot, options] = await Promise.all([loadSnapshot(requester), loadAgentOptions()]);
   if (!snapshot.success) return snapshot;
   const { now, members, queue, perMember } = snapshot.data;
 
@@ -108,16 +126,38 @@ export async function getManagerDashboard(requester: Requester): Promise<GetMana
   const oldest = [...queue].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()).slice(0, QUEUE_TOP);
   const queueTop = await toRows(oldest, now);
   const allocation = await allocationFor(queueTop, loads);
-  return { success: true, data: { kpis, agents, queueTop, allocation } };
+  return { success: true, data: { kpis, agents, queueTop, allocation, flowStateIds: flowStateIdsOf(options) } };
 }
 
+// A fila do gestor por etapa: sem responsável (Novo, Em análise, Autorizado, Reavaliação), os "Não autorizado"
+// (fechados, à espera do solicitante) e os já atribuídos aos agentes da equipe.
 export async function getQueueBoard(requester: Requester): Promise<GetQueueBoardResult> {
-  const snapshot = await loadSnapshot(requester);
+  const [snapshot, unassignedAll, options] = await Promise.all([
+    loadSnapshot(requester),
+    searchTicketsByOwner(requester, UNASSIGNED_OWNER_ID),
+    loadAgentOptions(),
+  ]);
   if (!snapshot.success) return snapshot;
-  const { now, queue } = snapshot.data;
-  const items = sortQueue(await toRows(queue, now), "idade");
+  const { now, queue, perMember, members } = snapshot.data;
+  const denied = unassignedAll.success ? unassignedAll.data.filter((ticket) => flowStepOf(ticket.state) === "nao_autorizado") : [];
+
+  const byId = new Map<number, ZammadExpandedTicket>();
+  for (const ticket of [...queue, ...denied, ...perMember.flat()]) byId.set(ticket.id, ticket);
+  const ownerNames = new Map(members.map((member) => [member.id, member.name]));
+  const items = sortQueue(await toRows([...byId.values()], now, ownerNames), "idade");
+
   const allocation = await allocationFor(items, loadsOf(snapshot.data));
-  return { success: true, data: { items, sectors: sectorChips(items), allocation } };
+  return { success: true, data: { items, sectors: sectorChips(items), allocation, counts: countBuckets(items), flowStateIds: flowStateIdsOf(options) } };
+}
+
+function flowStateIdsOf(options: Awaited<ReturnType<typeof loadAgentOptions>>): Partial<Record<FlowStep, number>> {
+  const ids: Partial<Record<FlowStep, number>> = {};
+  if (!options.success) return ids;
+  for (const state of options.data.states) {
+    const step = flowStepOf(state.name);
+    if (step) ids[step] = state.id;
+  }
+  return ids;
 }
 
 // Carga por agente com cache curto (60 s) por gestor: serve só à dica "menos carregado" do detalhe do chamado,

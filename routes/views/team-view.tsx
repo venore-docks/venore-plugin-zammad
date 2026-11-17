@@ -116,7 +116,7 @@ export async function TeamView({ surfaceKey, query }: { surfaceKey: SurfaceKey; 
                     {visible.length} {visible.length === 1 ? "agente" : "agentes"} · {totalOpen} {totalOpen === 1 ? "chamado aberto" : "chamados abertos"}
                     {totalWaiting > 0 ? ` · ${totalWaiting} aguardando` : ""}
                   </p>
-                  <ul className="grid gap-3 sm:grid-cols-2">
+                  <ul className="grid gap-3">
                     {ranked.map((agent) => {
                       const member = memberById.get(agent.id);
                       const names = (member?.groupIds ?? []).map((id) => groupName.get(id)).filter((name): name is string => Boolean(name));

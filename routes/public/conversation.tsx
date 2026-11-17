@@ -90,7 +90,7 @@ function Message({ message, first }: { message: TicketMessage; first: boolean })
         {message.answers.length > 0 && (
           <div className="space-y-3 rounded-lg border bg-background/70 p-4">
             <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Respostas do formulário</p>
-            <dl className="grid gap-x-8 gap-y-3.5 sm:grid-cols-2">
+            <dl className="grid gap-y-3.5">
               {message.answers.map((answer) => (
                 <div key={answer.label} className="min-w-0 space-y-0.5">
                   <dt className="text-xs leading-snug text-muted-foreground">{answer.label}</dt>

@@ -10,6 +10,14 @@ const LIMIT = 100;
 // Chamados ABERTOS (não encerrados) de um responsável, do mais recente ao mais antigo. Em nome da pessoa
 // que pergunta: o Zammad só devolve o que os grupos dela permitem. `ownerId` 1 = sem responsável (fila).
 export async function searchOpenTicketsByOwner(requester: Requester, ownerId: number): Promise<OperationResult<ZammadExpandedTicket[]>> {
+  const found = await searchTicketsByOwner(requester, ownerId);
+  if (!found.success) return found;
+  return { success: true, data: found.data.filter((ticket) => !describeState(ticket.state ?? "").closed) };
+}
+
+// Todos os chamados de um responsável (abertos e encerrados), os 100 mais recentes. A fila do gestor usa para
+// achar os "Não autorizado" (fechados), que esperam o solicitante reenviar.
+export async function searchTicketsByOwner(requester: Requester, ownerId: number): Promise<OperationResult<ZammadExpandedTicket[]>> {
   const query = new URLSearchParams({
     query: `owner_id:${ownerId}`,
     limit: String(LIMIT),
@@ -19,6 +27,5 @@ export async function searchOpenTicketsByOwner(requester: Requester, ownerId: nu
   });
   const result = await zammadRequest<ZammadExpandedTicket[]>(`tickets/search?${query.toString()}`, { onBehalfOf: requester.email });
   if (!result.success) return result;
-  const open = (Array.isArray(result.data) ? result.data : []).filter((ticket) => !describeState(ticket.state ?? "").closed);
-  return { success: true, data: open };
+  return { success: true, data: Array.isArray(result.data) ? result.data : [] };
 }

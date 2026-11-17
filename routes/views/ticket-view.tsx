@@ -52,7 +52,7 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
       backHref={backHref}
     >
       <ReplyProvider>
-        <div className="mx-auto max-w-3xl space-y-4 pb-6">
+        <div className="max-w-3xl space-y-4 pb-6">
           <header className="space-y-3 rounded-xl border border-t-4 border-t-primary bg-card p-4 sm:p-5">
             {surfaceKey === "app" && <h2 className="text-lg leading-snug font-semibold break-words text-foreground">{ticket.title}</h2>}
             <div className="flex flex-wrap items-center gap-2">

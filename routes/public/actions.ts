@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { isPluginActive } from "@venore/plugin-sdk";
-import { agentUpdateTicket, changeTicketState, createTicket, customerRespond, replyTicket, searchViewAsTargets, startViewAs, stopViewAs } from "../../index";
+import { agentUpdateTicket, changeTicketState, createTicket, customerRespond, getTicket, replyTicket, searchViewAsTargets, startViewAs, stopViewAs } from "../../index";
 import type { AgentUpdateInput, AnswerValue, CreatedTicket, CustomerRespondInput, TicketAttachment, ViewAsPerson } from "../../index";
 import { APP_SURFACE, PORTAL_SURFACE } from "../../shared/routes";
 
@@ -82,6 +82,45 @@ export async function replyTicketAction(formData: FormData): Promise<ZammadActio
   if (!result.success) return { ok: false, error: result.error.message };
   revalidateTicket(ticketId);
   return { ok: true, data: result.data };
+}
+
+// Resumo de um chamado para o diálogo "Analisar" da fila do gestor (carregado só quando o diálogo abre).
+export type TicketPreview = {
+  id: number;
+  number: string;
+  title: string;
+  group: string;
+  requesterName: string;
+  createdAt: string;
+  priorityLabel: string;
+  stateLabel: string;
+  text: string;
+  answers: { label: string; value: string }[];
+  attachments: number;
+};
+
+export async function ticketPreviewAction(ticketId: number): Promise<ZammadActionResult<TicketPreview>> {
+  if (!(await isPluginActive("colabora"))) return { ok: false, error: DISABLED };
+  const result = await getTicket({ ticketId: Number(ticketId), asAgent: true });
+  if (!result.success) return { ok: false, error: result.error.message };
+  const ticket = result.data;
+  const first = ticket.messages.find((message) => !message.internal) ?? ticket.messages[0] ?? null;
+  return {
+    ok: true,
+    data: {
+      id: ticket.id,
+      number: ticket.number,
+      title: ticket.title,
+      group: ticket.group,
+      requesterName: ticket.requester.name,
+      createdAt: ticket.createdAt,
+      priorityLabel: ticket.priorityLabel,
+      stateLabel: ticket.stateLabel,
+      text: first?.text ?? "",
+      answers: first?.answers ?? [],
+      attachments: ticket.messages.reduce((total, message) => total + message.attachments.length, 0),
+    },
+  };
 }
 
 // Decisão do solicitante no fluxo da FEM (aprovar, pedir ajustes, rejeitar, não resolvido, reenviar).

@@ -1,5 +1,7 @@
 import type { OperationResult } from "@venore/plugin-sdk";
+import type { FlowStepKey, TicketStateColor } from "../../contracts/types";
 import type { AgentLoadRow, ManagerKpis, SectorChip } from "../../shared/manager-stats";
+import type { QueueBucket } from "../../shared/queue-buckets";
 
 // Quem pode receber um chamado e quanto já tem (null = carga desconhecida: fora da equipe lida).
 export type AssigneeOption = { id: number; name: string; open: number | null; waiting: number | null };
@@ -17,6 +19,14 @@ export type QueueRow = {
   requesterName: string | null;
   // Há quanto tempo o chamado foi aberto (ms), calculado no servidor.
   ageMs: number;
+  // Etapa do fluxo da FEM (null fora do fluxo), o estado para exibir e a aba da fila do gestor.
+  step: FlowStepKey | null;
+  stateLabel: string;
+  stateColor: TicketStateColor;
+  bucket: QueueBucket;
+  // Responsável (null = sem responsável).
+  ownerId: number | null;
+  ownerName: string | null;
 };
 
 // Opções de alocação por setor (grupo do Zammad), sem repetir por chamado.
@@ -32,12 +42,16 @@ export type ManagerDashboardData = {
   // Os mais antigos da fila (até 5).
   queueTop: QueueRow[];
   allocation: AllocationOptions;
+  flowStateIds: Partial<Record<FlowStepKey, number>>;
 };
 
 export type QueueBoardData = {
   items: QueueRow[];
   sectors: SectorChip[];
   allocation: AllocationOptions;
+  counts: Record<QueueBucket, number>;
+  // Id de cada estado do fluxo no Zammad (para os botões Autorizar, Não autorizar, Em análise).
+  flowStateIds: Partial<Record<FlowStepKey, number>>;
 };
 
 // Carga por agente (para a sugestão no detalhe do chamado).

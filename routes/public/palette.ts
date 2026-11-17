@@ -45,13 +45,14 @@ export const ACCENTS: Accent[] = [
 // Cada tema (Aurora inclusive) e a paleta personalizada do editor de temas redefinem esses tokens.
 export type FlowTone = "neutral" | "info" | "primary" | "warning" | "success" | "danger";
 
-export const FLOW_BADGE: Record<FlowTone, { badge: string; dot: string; bar: string; soft: string; icon: string }> = {
-  neutral: { badge: "border-border bg-muted", dot: "bg-muted-foreground/50", bar: "bg-border", soft: "border-border bg-muted", icon: "text-muted-foreground" },
-  info: { badge: "border-chart-2/40 bg-chart-2/10", dot: "bg-chart-2", bar: "bg-chart-2", soft: "border-chart-2/40 bg-chart-2/10", icon: "text-chart-2" },
-  primary: { badge: "border-primary/40 bg-primary/10", dot: "bg-primary", bar: "bg-primary", soft: "border-primary/40 bg-primary/10", icon: "text-primary" },
-  warning: { badge: "border-warning-border bg-warning-soft", dot: "bg-warning", bar: "bg-warning", soft: "border-warning-border bg-warning-soft", icon: "text-warning" },
-  success: { badge: "border-success-border bg-success-soft", dot: "bg-success", bar: "bg-success", soft: "border-success-border bg-success-soft", icon: "text-success" },
-  danger: { badge: "border-destructive/40 bg-destructive/10", dot: "bg-destructive", bar: "bg-destructive", soft: "border-destructive/40 bg-destructive/10", icon: "text-destructive" },
+// `border`: faixa lateral do card (border-s-4) na cor do estado.
+export const FLOW_BADGE: Record<FlowTone, { badge: string; dot: string; bar: string; soft: string; icon: string; border: string }> = {
+  neutral: { badge: "border-border bg-muted", dot: "bg-muted-foreground/50", bar: "bg-border", soft: "border-border bg-muted", icon: "text-muted-foreground", border: "border-s-border" },
+  info: { badge: "border-chart-2/40 bg-chart-2/10", dot: "bg-chart-2", bar: "bg-chart-2", soft: "border-chart-2/40 bg-chart-2/10", icon: "text-chart-2", border: "border-s-chart-2" },
+  primary: { badge: "border-primary/40 bg-primary/10", dot: "bg-primary", bar: "bg-primary", soft: "border-primary/40 bg-primary/10", icon: "text-primary", border: "border-s-primary" },
+  warning: { badge: "border-warning-border bg-warning-soft", dot: "bg-warning", bar: "bg-warning", soft: "border-warning-border bg-warning-soft", icon: "text-warning", border: "border-s-warning" },
+  success: { badge: "border-success-border bg-success-soft", dot: "bg-success", bar: "bg-success", soft: "border-success-border bg-success-soft", icon: "text-success", border: "border-s-success" },
+  danger: { badge: "border-destructive/40 bg-destructive/10", dot: "bg-destructive", bar: "bg-destructive", soft: "border-destructive/40 bg-destructive/10", icon: "text-destructive", border: "border-s-destructive" },
 };
 
 // Botão de decisão: cheio, na cor semântica, para chamar a atenção (o texto usa o *-foreground do

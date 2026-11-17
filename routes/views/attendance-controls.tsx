@@ -162,7 +162,7 @@ export function AttendanceControls({ ticketId, controls }: { ticketId: number; c
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4">
         <label className={cn("space-y-1.5 text-sm", !canChangeState && "hidden")}>
           <span className="font-medium text-foreground">Estado</span>
           <Select value={String(stateId)} onValueChange={(value) => setStateId(Number(value))}>

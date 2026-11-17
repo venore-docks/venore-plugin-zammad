@@ -52,7 +52,7 @@ export async function NewTicketView({ surfaceKey, setor }: { surfaceKey: Surface
       subtitle="Vamos guiar você, uma pergunta por vez. Leva poucos minutos."
       backHref={surfaceKey === "app" ? surface.home : undefined}
     >
-      <div className="mx-auto max-w-3xl space-y-4">
+      <div className="max-w-3xl space-y-4">
         {unavailable && (
           <p role="status" className="rounded-xl border border-warning-border bg-warning-soft px-4 py-3 text-sm text-foreground">
             O setor do link não está disponível para você. Escolha abaixo um dos setores liberados.

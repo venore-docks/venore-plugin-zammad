@@ -95,7 +95,7 @@ export async function ManagerDashboard({ surfaceKey }: DashboardProps) {
 
 function ManagerBody({ surfaceKey, data }: { surfaceKey: DashboardProps["surfaceKey"]; data: ManagerDashboardData }) {
   const surface = surfaceFor(surfaceKey);
-  const { kpis, agents, queueTop, allocation } = data;
+  const { kpis, agents, queueTop, allocation, flowStateIds } = data;
   const max = maxOpen(agents);
   const shown = agents.slice(0, MAX_AGENT_ROWS);
 
@@ -127,8 +127,8 @@ function ManagerBody({ surfaceKey, data }: { surfaceKey: DashboardProps["surface
         />
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-5">
-        <div className="min-w-0 space-y-3 lg:col-span-2">
+      <div className="grid gap-5">
+        <div className="min-w-0 space-y-3">
           <h3 className="text-sm font-semibold text-foreground">Carga por agente</h3>
           {shown.length === 0 ? (
             <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">Nenhum agente responde pelos setores que você gerencia.</p>
@@ -164,7 +164,7 @@ function ManagerBody({ surfaceKey, data }: { surfaceKey: DashboardProps["surface
           )}
         </div>
 
-        <div className="min-w-0 space-y-3 lg:col-span-3">
+        <div className="min-w-0 space-y-3">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-sm font-semibold text-foreground">Fila — mais antigos</h3>
             {kpis.queue > queueTop.length && (
@@ -191,6 +191,7 @@ function ManagerBody({ surfaceKey, data }: { surfaceKey: DashboardProps["surface
                   href={surface.detail(ticket.id)}
                   options={allocation.byGroup[ticket.groupId] ?? []}
                   suggestedId={allocation.suggestedByGroup[ticket.groupId] ?? null}
+                  flowStateIds={flowStateIds}
                 />
               ))}
             </ul>

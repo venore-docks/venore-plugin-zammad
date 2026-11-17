@@ -48,7 +48,7 @@ export function ColaboraFrame({ surfaceKey, viewer, active, title, subtitle, bac
 
   const items = viewer ? navItemsFor(surface, viewer) : [];
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6 py-8">
+    <div className="w-full max-w-5xl space-y-6 pt-2 pb-8">
       <header className="space-y-5">
         {backHref && (
           <Link href={backHref} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
