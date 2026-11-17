@@ -32,7 +32,7 @@ export function AgentTicketRow({ ticket, href, now }: { ticket: TicketSummary; h
               <StateBadge label={ticket.stateLabel} tone={ticket.stateTone} color={ticket.stateColor} />
             </span>
             {urgent && <span className="rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-xs font-medium text-foreground">{ticket.priorityLabel}</span>}
-            <TagChips tags={ticket.tags} as="span" className="contents" />
+            <TagChips tags={ticket.tags} as="span" className="contents" stateLabel={ticket.stateLabel} />
             <span className={cn("inline-flex items-center gap-1 text-xs", stale ? "font-medium text-warning" : "text-muted-foreground")}>
               <Clock className="size-3" aria-hidden />
               {ticket.awaitingYou ? `Esperando ${waitingLabel(ticket.updatedAt, now)}` : `Atualizado ${waitingLabel(ticket.updatedAt, now)}`}

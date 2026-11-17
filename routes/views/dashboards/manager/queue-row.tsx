@@ -45,46 +45,60 @@ export function QueueRow({
   flowStateIds?: Partial<Record<FlowStepKey, number>>;
 }) {
   const inFlow = ticket.step !== null && Object.keys(flowStateIds).length > 0;
+  // A aba da fila já diz a etapa: o selo de estado só aparece em "Atribuídos", onde os estados variam.
+  const showState = inFlow && ticket.bucket === "atribuidos";
   return (
-    <li className={cn("space-y-3 rounded-xl border border-s-4 bg-card p-4", FLOW_BADGE[ticket.stateColor].border)}>
-      <div className="flex items-start justify-between gap-3">
-        <Link href={href} className="min-w-0 flex-1 space-y-1 rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
-          <span className="block font-medium break-words text-foreground">{ticket.title}</span>
-          <span className="block text-xs break-words text-muted-foreground">
-            #{ticket.number} · {shortGroupName(ticket.group)}
-            {ticket.requesterName ? ` · ${ticket.requesterName}` : ""}
-          </span>
-        </Link>
-        <span className="flex shrink-0 flex-col items-end gap-1">
-          <AgeBadge ms={ticket.ageMs} />
-          {ticket.urgent && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-xs font-medium text-foreground">
-              <Flag className="size-3 text-destructive" aria-hidden />
-              {ticket.priorityLabel}
-            </span>
-          )}
-        </span>
-      </div>
-      {(inFlow || ticket.tags.length > 0) && (
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          {inFlow && <StateBadge label={ticket.stateLabel} tone="open" color={ticket.stateColor} />}
-          <TagChips tags={ticket.tags} className="contents" />
-          {ticket.ownerId !== null && <span>Com {ticket.ownerName ?? "um agente"}</span>}
+    <li className={cn("rounded-xl border border-s-4 bg-card px-4 py-3", FLOW_BADGE[ticket.stateColor].border)}>
+      <div className="flex flex-col gap-2.5 md:flex-row md:items-center md:gap-4">
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex items-center gap-2">
+            <Link
+              href={href}
+              className="min-w-0 truncate rounded-sm text-sm font-semibold text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              title={ticket.title}
+            >
+              {ticket.title}
+            </Link>
+            {ticket.urgent && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-xs font-medium text-foreground">
+                <Flag className="size-3 text-destructive" aria-hidden />
+                {ticket.priorityLabel}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+            <span className="tabular-nums">#{ticket.number}</span>
+            <span aria-hidden>·</span>
+            <span>{shortGroupName(ticket.group)}</span>
+            {ticket.requesterName && (
+              <>
+                <span aria-hidden>·</span>
+                <span className="truncate">{ticket.requesterName}</span>
+              </>
+            )}
+            <span aria-hidden>·</span>
+            <AgeBadge ms={ticket.ageMs} />
+            {showState && <StateBadge label={ticket.stateLabel} tone="open" color={ticket.stateColor} />}
+            {ticket.ownerId !== null && <span>Com {ticket.ownerName ?? "um agente"}</span>}
+            <TagChips tags={ticket.tags} as="span" className="contents" stateLabel={ticket.stateLabel} />
+          </div>
         </div>
-      )}
-      {inFlow ? (
-        <DecisionActions
-          ticketId={ticket.id}
-          title={ticket.title}
-          bucket={ticket.bucket}
-          detailHref={href}
-          flowStateIds={flowStateIds}
-          options={options}
-          suggestedId={suggestedId}
-        />
-      ) : (
-        <QuickAssign ticketId={ticket.id} options={options} suggestedId={suggestedId} />
-      )}
+        <div className="md:shrink-0">
+          {inFlow ? (
+            <DecisionActions
+              ticketId={ticket.id}
+              title={ticket.title}
+              bucket={ticket.bucket}
+              detailHref={href}
+              flowStateIds={flowStateIds}
+              options={options}
+              suggestedId={suggestedId}
+            />
+          ) : (
+            <QuickAssign ticketId={ticket.id} options={options} suggestedId={suggestedId} />
+          )}
+        </div>
+      </div>
     </li>
   );
 }

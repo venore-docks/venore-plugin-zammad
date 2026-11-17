@@ -12,6 +12,7 @@ import { getTicketAttachment } from "./api/attachment";
 import { appMetadata } from "./app/metadata";
 import { appEntries, portalEntries } from "./entries";
 import { legacyApp, legacyPortal } from "./legacy";
+import { TicketSidebar } from "./views/ticket-sidebar";
 
 // Cada tela existe nas DUAS superfícies, com o mesmo desenho de caminho:
 //   portal /colabora/…           dentro da casca do Venore Docks (área `public`, caminho completo)
@@ -43,6 +44,9 @@ export const colaboraRouteTable: PluginRouteTable = {
     { pattern: "chamados/novo", Component: asPluginPage(legacyPortal.New) },
     { pattern: "chamados/:ticketId", Component: asPluginPage(legacyPortal.Ticket) },
   ],
+  // Barra contextual do chamado no portal (desktop): as propriedades saem da coluna principal, que fica só com a
+  // conversa. Casada pelo dispatcher único do slot @sidebarContextual do core.
+  sidebarContextual: [{ pattern: "colabora/chamado/:ticketId", Component: asPluginPage(TicketSidebar) }],
   standalone: [
     { pattern: "colabora/app", Component: asPluginPage(appEntries.Home), ...app },
     { pattern: "colabora/app/meus", Component: asPluginPage(appEntries.Mine), ...app },

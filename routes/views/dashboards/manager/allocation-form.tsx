@@ -55,7 +55,7 @@ export function AllocationForm({ ticketId, controls, children }: { ticketId: num
 
   return (
     <section
-      className={cn("space-y-4 rounded-xl border p-4 sm:p-5", unassigned ? "border-warning-border bg-warning-soft" : "bg-card")}
+      className={cn("space-y-4 rounded-xl border p-4 @md:p-5", unassigned ? "border-warning-border bg-warning-soft" : "bg-card")}
       aria-label="Responsável"
     >
       <div className="flex items-center gap-3">
@@ -74,9 +74,9 @@ export function AllocationForm({ ticketId, controls, children }: { ticketId: num
         <p className="text-sm text-muted-foreground">Nenhum agente do Zammad atende o setor deste chamado.</p>
       ) : (
         <div className="space-y-2">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-3 @md:flex-row @md:items-center">
             <Select value={ownerValue} onValueChange={choose} disabled={busy}>
-              <SelectTrigger className="h-11 w-full sm:flex-1" aria-label="Novo responsável pelo chamado">
+              <SelectTrigger className="h-11 w-full @md:flex-1" aria-label="Novo responsável pelo chamado">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

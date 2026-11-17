@@ -34,12 +34,14 @@ type FlowButtonProps = {
   confirmTitle: string;
   confirmLabel: string;
   disabled?: boolean;
+  // "sm": botão compacto (cards de lista); "default": botão de painel.
+  size?: "default" | "sm";
   run: (reason: string) => Promise<ActionResult>;
 };
 
 // Botão de decisão do fluxo: cheio, na cor semântica (tokens do tema), e SEMPRE com confirmação — é fácil
 // clicar sem querer, e a decisão notifica outra pessoa. Com `reason`, o diálogo pede o texto.
-export function FlowButton({ label, color, icon, prompt, reason, confirmTitle, confirmLabel, disabled, run }: FlowButtonProps) {
+export function FlowButton({ label, color, icon, prompt, reason, confirmTitle, confirmLabel, disabled, size = "default", run }: FlowButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
@@ -74,7 +76,15 @@ export function FlowButton({ label, color, icon, prompt, reason, confirmTitle, c
       }}
     >
       <AlertDialogTrigger asChild>
-        <Button type="button" disabled={disabled || busy} className={cn("h-11 w-full justify-center gap-2 font-semibold shadow-sm sm:w-auto", FLOW_BUTTON[color])}>
+        <Button
+          type="button"
+          disabled={disabled || busy}
+          className={cn(
+            "justify-center font-semibold",
+            size === "sm" ? "h-8 gap-1.5 px-3 text-xs [&_svg]:size-3.5" : "h-11 w-full gap-2 shadow-sm @md:w-auto",
+            FLOW_BUTTON[color],
+          )}
+        >
           {icon}
           {label}
         </Button>
@@ -150,7 +160,7 @@ export function CustomerDecisionPanel({
   if (actions.length === 0) return null;
   const tone = FLOW_BADGE[color];
   return (
-    <section aria-label="Sua decisão" className={cn("space-y-3 rounded-xl border-2 p-4 sm:p-5", tone.soft)}>
+    <section aria-label="Sua decisão" className={cn("space-y-3 rounded-xl border-2 p-4 @md:p-5", tone.soft)}>
       <div className="space-y-1">
         <h3 className="flex items-center gap-2 text-base font-semibold text-foreground">
           <CircleCheck className={cn("size-5 shrink-0", tone.icon)} />
@@ -158,7 +168,7 @@ export function CustomerDecisionPanel({
         </h3>
         <p className="text-sm text-foreground/80">{hint}</p>
       </div>
-      <div className="grid gap-2 sm:flex sm:flex-wrap">
+      <div className="grid gap-2 @md:flex @md:flex-wrap">
         {actions.map((action) => (
           <FlowButton
             key={action.key}
@@ -195,7 +205,7 @@ const STAFF_ICONS: Record<TicketStateColor, ReactElement> = {
 export function StaffFlowButtons({ ticketId, actions, disabled }: { ticketId: number; actions: StaffFlowAction[]; disabled?: boolean }) {
   if (actions.length === 0) return null;
   return (
-    <div className="grid gap-2 sm:flex sm:flex-wrap">
+    <div className="grid gap-2 @md:flex @md:flex-wrap">
       {actions.map((action) => (
         <FlowButton
           key={action.stateId}

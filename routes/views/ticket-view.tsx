@@ -1,19 +1,15 @@
 import Link from "next/link";
-import { BellRing, CircleCheck, Plus, UserRound } from "lucide-react";
+import { BellRing, CircleCheck, Plus } from "lucide-react";
 import { Button } from "@venore/plugin-sdk/ui";
-import { getTicket } from "../../index";
 import { surfaceFor, type SurfaceKey } from "../../shared/routes";
 import { Conversation } from "../public/conversation";
-import { CustomerDecisionPanel } from "../public/flow-actions";
-import { FlowProgress } from "../public/flow-progress";
-import { TagChips } from "../public/tag-chips";
 import { ReplyProvider } from "../public/reply-context";
-import { BlockedNotice, StateBadge, formatDateTime } from "../public/shared";
-import { ReplyBox, TicketStateButton } from "../public/ticket-actions";
-import { AllocationControls } from "./allocation-controls";
-import { AttendanceControls } from "./attendance-controls";
+import { BlockedNotice, formatDateTime } from "../public/shared";
+import { ReplyBox } from "../public/ticket-actions";
 import { enterSurface } from "./context";
 import { ColaboraFrame } from "./frame";
+import { loadTicketForView } from "./ticket-data";
+import { TicketProperties } from "./ticket-properties";
 
 // A conversa de um chamado, nas duas superfícies. Solicitante: vê as mensagens e responde. Agente (chamado
 // atribuído a ele): vê também as notas internas e o solicitante, e atende (responde, nota, estado, prioridade).
@@ -31,7 +27,7 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
   }
   const { viewer } = entered;
 
-  const result = await getTicket({ ticketId, asAgent: true });
+  const result = await loadTicketForView(ticketId);
   if (!result.success) {
     return (
       <ColaboraFrame surfaceKey={surfaceKey} viewer={viewer} active={null} title="Chamado" backHref={surface.mine}>
@@ -54,58 +50,11 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
     >
       <ReplyProvider>
         <div className="max-w-3xl space-y-4 pb-6">
-          <header className="space-y-3 rounded-xl border border-t-4 border-t-primary bg-card p-4 sm:p-5">
-            {surfaceKey === "app" && <h2 className="text-lg leading-snug font-semibold break-words text-foreground">{ticket.title}</h2>}
-            <div className="flex flex-wrap items-center gap-2">
-              <StateBadge label={ticket.stateLabel} tone={ticket.stateTone} color={ticket.stateColor} />
-              {agent && <span className="rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground">Prioridade: {ticket.priorityLabel}</span>}
-              {agent && <TagChips tags={ticket.tags} className="contents" />}
-            </div>
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
-              {agent && (
-                <div className="min-w-0">
-                  <dt className="text-muted-foreground">Solicitante</dt>
-                  <dd className="flex items-center gap-1 truncate font-medium text-foreground">
-                    <UserRound className="size-3 shrink-0" />
-                    {ticket.requester.name}
-                  </dd>
-                </div>
-              )}
-              <div className="min-w-0">
-                <dt className="text-muted-foreground">Responsável</dt>
-                <dd className="truncate font-medium text-foreground">{ticket.owner?.name ?? "Ninguém (na fila)"}</dd>
-              </div>
-              <div className="min-w-0">
-                <dt className="text-muted-foreground">Aberto em</dt>
-                <dd className="font-medium text-foreground">{formatDateTime(ticket.createdAt)}</dd>
-              </div>
-            </dl>
-            {ticket.flowStep && <FlowProgress step={ticket.flowStep} />}
-            {/* Fora do fluxo da FEM: colaborador da equipe vendo o PRÓPRIO pedido encerra/reabre como antes. */}
-            {!agent && !ticket.flowStep && ticket.canClose && <TicketStateButton ticketId={ticket.id} closed={ticket.closed} />}
-          </header>
-
-          {ticket.customerActions.length > 0 && (
-            <CustomerDecisionPanel
-              ticketId={ticket.id}
-              title={ticket.flowStep === "nao_autorizado" ? "Seu pedido não foi autorizado" : "Seu pedido foi concluído. Está tudo certo?"}
-              hint={
-                ticket.flowStep === "nao_autorizado"
-                  ? "Veja o motivo na conversa. Se ajustou o pedido, reenvie explicando o que mudou."
-                  : "Confira a entrega e escolha uma opção. Sem resposta, o chamado é finalizado em 48 horas."
-              }
-              color={ticket.stateColor}
-              actions={ticket.customerActions}
-              readOnly={Boolean(viewer.viewingAs)}
-            />
-          )}
-
-          {agent && (
-            <>
-              <AllocationControls key={`alloc-${ticket.id}-${agent.ownerId}`} ticketId={ticket.id} controls={agent} />
-              <AttendanceControls key={`att-${ticket.id}-${agent.stateId}-${agent.priorityId}`} ticketId={ticket.id} controls={agent} />
-            </>
-          )}
+          {/* Portal: no desktop as propriedades estão na barra contextual (ticket-sidebar.tsx) e aqui fica só a
+              conversa; no celular e no app, empilhadas acima dela. */}
+          <div className={surfaceKey === "portal" ? "lg:hidden" : undefined}>
+            <TicketProperties ticket={ticket} surfaceKey={surfaceKey} readOnly={Boolean(viewer.viewingAs)} />
+          </div>
 
           {agent && ticket.customerWaiting && (
             <div className="flex items-center gap-3 rounded-xl border border-warning-border bg-warning-soft p-3 text-sm text-foreground">
@@ -144,7 +93,7 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
               <CircleCheck className="mt-0.5 size-5 shrink-0 text-success" />
               <span>
                 <strong>Este chamado está encerrado.</strong>
-                {agent ? " Para reabrir, mude o estado acima." : " Se ainda precisa de ajuda, escreva abaixo — a equipe será avisada."}
+                {agent ? " Para reabrir, mude o estado em Atendimento." : " Se ainda precisa de ajuda, escreva abaixo — a equipe será avisada."}
               </span>
             </div>
           )}
@@ -177,7 +126,7 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
 // Por que a pessoa não pode responder este chamado (ele não está com ela).
 function blockedMessage(ownerName: string | null, canAllocate: boolean): string {
   if (ownerName === null) {
-    return canAllocate ? "Este chamado está na fila. Atribua a um agente (acima) para ele atender e responder." : "Este chamado não está atribuído a você.";
+    return canAllocate ? "Este chamado está na fila. Atribua a um agente (em Responsável) para ele atender e responder." : "Este chamado não está atribuído a você.";
   }
   return `Este chamado está com ${ownerName}. Só quem atende responde ao solicitante.`;
 }

@@ -5,8 +5,10 @@ import { FLOW_BADGE } from "./palette";
 
 // Selos das tags do Zammad (só para a equipe). As do fluxo da FEM têm nome e cor semântica; as demais, neutras.
 // `as="span"` para usar dentro de um link/linha que já é um item de lista.
-export function TagChips({ tags, as = "ul", className }: { tags: readonly string[] | undefined; as?: "ul" | "span"; className?: string }) {
-  const views = describeTags(tags ?? []);
+// `stateLabel`: esconde a tag que só repete o estado (ex.: tag "nao-autorizado" num chamado em Não autorizado).
+export function TagChips({ tags, as = "ul", className, stateLabel }: { tags: readonly string[] | undefined; as?: "ul" | "span"; className?: string; stateLabel?: string }) {
+  const same = stateLabel?.trim().toLowerCase();
+  const views = describeTags(tags ?? []).filter((tag) => tag.label.toLowerCase() !== same);
   if (views.length === 0) return null;
   const Outer = as;
   const Item = as === "ul" ? "li" : "span";

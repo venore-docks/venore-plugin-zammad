@@ -29,7 +29,9 @@ import { agentUpdateTicketAction, ticketPreviewAction, type TicketPreview } from
 import { FlowButton } from "../../../public/flow-actions";
 import { FLOW_BUTTON } from "../../../public/palette";
 import { formatDateTime } from "../../../public/shared";
-import { QuickAssign } from "./quick-assign";
+
+// Botão compacto dos cards da fila.
+const SMALL = "h-8 gap-1.5 px-3 text-xs font-semibold [&_svg]:size-3.5";
 
 type DecisionProps = {
   ticketId: number;
@@ -162,7 +164,7 @@ function AnalyzeDialog({ props, label, icon, variant }: { props: DecisionProps; 
       <Button
         type="button"
         onClick={() => openDialog(true)}
-        className={cn("h-10 gap-2 font-semibold", variant === "primary" ? FLOW_BUTTON.primary : FLOW_BUTTON.neutral)}
+        className={cn(SMALL, variant === "primary" ? FLOW_BUTTON.primary : FLOW_BUTTON.neutral)}
       >
         {icon}
         {label}
@@ -275,19 +277,86 @@ function AnalyzeDialog({ props, label, icon, variant }: { props: DecisionProps; 
   );
 }
 
-// Ações do card da fila do gestor, por etapa:
-//   Novo                     Analisar (diálogo)
-//   Em análise / Reavaliação Continuar análise · Autorizar · Não autorizar · Atribuir a agente (autoriza e atribui)
-//   Autorizado               escolher agente + Atribuir
+
+// "Atribuir" com confirmação: escolhe o agente num diálogo e confirma. `authorizedId` presente = autoriza junto
+// (Em análise/Reavaliação); ausente = só atribui (Autorizado). Nos dois casos o gatilho do Zammad leva o chamado a
+// Em andamento e avisa o solicitante.
+function AssignDialog({
+  ticketId,
+  authorizedId,
+  options,
+  suggestedId,
+}: {
+  ticketId: number;
+  authorizedId?: number;
+  options: AssigneeOption[];
+  suggestedId: number | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(suggestedId ? String(suggestedId) : "");
+  const { busy, send } = useSend();
+  const chosen = options.find((person) => String(person.id) === value);
+
+  function confirm() {
+    if (!value) return;
+    const update = authorizedId ? { stateId: authorizedId, ownerId: Number(value) } : { ownerId: Number(value) };
+    send(update, ticketId, authorizedId ? "Autorizado e atribuído. O chamado está em andamento." : "Chamado atribuído. Está em andamento.", () => setOpen(false));
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => !busy && setOpen(next)}>
+      <Button type="button" disabled={options.length === 0} onClick={() => setOpen(true)} className={cn(SMALL, FLOW_BUTTON.primary)}>
+        <UserCheck className="size-3.5" />
+        Atribuir
+      </Button>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{authorizedId ? "Autorizar e atribuir" : "Atribuir responsável"}</DialogTitle>
+          <DialogDescription>
+            {authorizedId ? "O pedido será autorizado e vai para Em andamento com o agente escolhido." : "O chamado vai para Em andamento com o agente escolhido."} O solicitante
+            é avisado por e-mail.
+          </DialogDescription>
+        </DialogHeader>
+        <Select value={value} onValueChange={setValue} disabled={busy}>
+          <SelectTrigger className="h-10 w-full" aria-label="Agente">
+            <SelectValue placeholder="Escolher agente" />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((person) => (
+              <SelectItem key={person.id} value={String(person.id)}>
+                {optionLabel(person, suggestedId)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" disabled={busy} onClick={() => setOpen(false)}>
+            Voltar
+          </Button>
+          <Button disabled={busy || !value} onClick={confirm} className={cn("font-semibold", FLOW_BUTTON.primary)}>
+            <UserCheck className="size-4" />
+            {busy ? "Atribuindo…" : chosen ? `Atribuir a ${chosen.name.split(" ")[0]}` : "Atribuir"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Ações do card da fila do gestor, por etapa (botões compactos, todos com confirmação):
+//   Novo                     Analisar (diálogo com resumo e decisões)
+//   Em análise / Reavaliação Continuar análise · Autorizar · Atribuir (autoriza e atribui) · Não autorizar
+//   Autorizado               Atribuir
 //   Não autorizado           aguardando o solicitante
-//   Atribuídos               só a informação (o detalhe do chamado realoca)
+//   Atribuídos               Ver atendimento
 export function DecisionActions(props: DecisionProps) {
   const { ticketId, bucket, flowStateIds, options, suggestedId, detailHref } = props;
+  const row = "flex flex-wrap items-center gap-1.5";
 
   if (bucket === "novo") {
     return (
-      <div className="flex flex-wrap gap-2">
-        <AnalyzeDialog props={props} label="Analisar" icon={<FileSearch className="size-4" />} variant="primary" />
+      <div className={row}>
+        <AnalyzeDialog props={props} label="Analisar" icon={<FileSearch className="size-3.5" />} variant="primary" />
       </div>
     );
   }
@@ -295,52 +364,62 @@ export function DecisionActions(props: DecisionProps) {
     const authorizedId = flowStateIds.autorizado;
     const deniedId = flowStateIds.nao_autorizado;
     return (
-      <div className="space-y-3">
-        <div className="flex flex-wrap gap-2">
-          <AnalyzeDialog props={props} label="Continuar análise" icon={<FileSearch className="size-4" />} variant="outline" />
-          {authorizedId && (
-            <FlowButton
-              label="Autorizar"
-              color="success"
-              icon={<CircleCheck className="size-4" />}
-              prompt="O pedido fica autorizado, esperando um responsável."
-              reason="none"
-              confirmTitle="Autorizar este chamado?"
-              confirmLabel="Autorizar"
-              run={async () => {
-                const result = await agentUpdateTicketAction({ ticketId, stateId: authorizedId });
-                return result.ok ? { ok: true, message: "Chamado autorizado. Agora atribua um responsável." } : result;
-              }}
-            />
-          )}
-          {deniedId && (
-            <FlowButton
-              label="Não autorizar"
-              color="danger"
-              icon={<CircleX className="size-4" />}
-              prompt="Explique o motivo. O solicitante recebe este texto por e-mail e pode reenviar o pedido."
-              reason="required"
-              confirmTitle="Não autorizar este chamado?"
-              confirmLabel="Não autorizar"
-              run={async (reason) => {
-                const result = await agentUpdateTicketAction({ ticketId, stateId: deniedId, reason });
-                return result.ok ? { ok: true, message: "Chamado não autorizado. O solicitante foi avisado." } : result;
-              }}
-            />
-          )}
-        </div>
-        <AuthorizeAndAssign ticketId={ticketId} authorizedId={authorizedId} options={options} suggestedId={suggestedId} />
+      <div className={row}>
+        <AnalyzeDialog props={props} label="Continuar análise" icon={<FileSearch className="size-3.5" />} variant="outline" />
+        {authorizedId && (
+          <FlowButton
+            size="sm"
+            label="Autorizar"
+            color="success"
+            icon={<CircleCheck className="size-3.5" />}
+            prompt="O pedido fica autorizado, esperando um responsável."
+            reason="none"
+            confirmTitle="Autorizar este chamado?"
+            confirmLabel="Autorizar"
+            run={async () => {
+              const result = await agentUpdateTicketAction({ ticketId, stateId: authorizedId });
+              return result.ok ? { ok: true, message: "Chamado autorizado. Agora atribua um responsável." } : result;
+            }}
+          />
+        )}
+        {authorizedId && <AssignDialog ticketId={ticketId} authorizedId={authorizedId} options={options} suggestedId={suggestedId} />}
+        {deniedId && (
+          <FlowButton
+            size="sm"
+            label="Não autorizar"
+            color="danger"
+            icon={<CircleX className="size-3.5" />}
+            prompt="Explique o motivo. O solicitante recebe este texto por e-mail e pode reenviar o pedido."
+            reason="required"
+            confirmTitle="Não autorizar este chamado?"
+            confirmLabel="Não autorizar"
+            run={async (reason) => {
+              const result = await agentUpdateTicketAction({ ticketId, stateId: deniedId, reason });
+              return result.ok ? { ok: true, message: "Chamado não autorizado. O solicitante foi avisado." } : result;
+            }}
+          />
+        )}
       </div>
     );
   }
-  if (bucket === "autorizado") return <QuickAssign ticketId={ticketId} options={options} suggestedId={suggestedId} />;
+  if (bucket === "autorizado") {
+    return options.length === 0 ? (
+      <p className="text-xs text-muted-foreground">Nenhum agente atende este setor.</p>
+    ) : (
+      <div className={row}>
+        <AssignDialog ticketId={ticketId} options={options} suggestedId={suggestedId} />
+      </div>
+    );
+  }
   if (bucket === "nao_autorizado") {
-    return <p className="text-sm text-muted-foreground">Aguardando o solicitante reenviar com explicação.</p>;
+    return <p className="text-xs text-muted-foreground">Aguardando o solicitante reenviar.</p>;
   }
   return (
-    <Link href={detailHref} className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
-      <ExternalLink className="size-3.5" aria-hidden />
-      Ver o atendimento
-    </Link>
+    <Button asChild variant="outline" className={SMALL}>
+      <Link href={detailHref}>
+        <ExternalLink className="size-3.5" aria-hidden />
+        Ver atendimento
+      </Link>
+    </Button>
   );
 }

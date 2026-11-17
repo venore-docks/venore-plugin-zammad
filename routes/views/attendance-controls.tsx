@@ -104,7 +104,7 @@ export function AttendanceControls({ ticketId, controls }: { ticketId: number; c
   const canChangeState = controls.states.some((option) => option.id !== controls.stateId);
 
   return (
-    <section className="space-y-4 rounded-xl border bg-card p-4 sm:p-5" aria-label="Atendimento">
+    <section className="space-y-4 rounded-xl border bg-card p-4 @md:p-5" aria-label="Atendimento">
       <h3 className="text-sm font-semibold text-foreground">Atendimento</h3>
 
       {controls.flowHint && (
@@ -124,15 +124,15 @@ export function AttendanceControls({ ticketId, controls }: { ticketId: number; c
       {hasQuick && (
         <div className="space-y-2">
           <p className="text-xs font-medium text-muted-foreground">Ações rápidas</p>
-          <div className="grid gap-2 sm:flex sm:flex-wrap">
+          <div className="grid gap-2 @md:flex @md:flex-wrap">
             {showInProgress && (
-              <Button type="button" variant="outline" className="h-11 justify-start sm:justify-center" disabled={busy} onClick={() => send({ stateId: inProgress.id }, "Chamado em andamento.")}>
+              <Button type="button" variant="outline" className="h-11 justify-start @md:justify-center" disabled={busy} onClick={() => send({ stateId: inProgress.id }, "Chamado em andamento.")}>
                 <PlayCircle className="size-4" />
                 Marcar em andamento
               </Button>
             )}
             {showPending && (
-              <Button type="button" variant="outline" className="h-11 justify-start sm:justify-center" disabled={busy} onClick={quickPending}>
+              <Button type="button" variant="outline" className="h-11 justify-start @md:justify-center" disabled={busy} onClick={quickPending}>
                 <Hourglass className="size-4" />
                 Pendente até amanhã 9h
               </Button>
@@ -140,7 +140,7 @@ export function AttendanceControls({ ticketId, controls }: { ticketId: number; c
             {showClose && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button type="button" variant="outline" className="h-11 justify-start sm:justify-center" disabled={busy}>
+                  <Button type="button" variant="outline" className="h-11 justify-start @md:justify-center" disabled={busy}>
                     <CircleCheck className="size-4" />
                     Encerrar
                   </Button>
@@ -207,7 +207,7 @@ export function AttendanceControls({ ticketId, controls }: { ticketId: number; c
         </p>
       )}
 
-      <Button className="h-11 w-full sm:w-auto" disabled={!dirty || busy} onClick={save}>
+      <Button className="h-11 w-full @md:w-auto" disabled={!dirty || busy} onClick={save}>
         {busy ? "Salvando…" : "Salvar alterações"}
       </Button>
     </section>
