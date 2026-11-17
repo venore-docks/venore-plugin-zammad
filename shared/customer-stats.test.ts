@@ -13,6 +13,7 @@ function ticket(id: number, over: Partial<TicketSummary> = {}): TicketSummary {
     group: "TI",
     stateLabel: "Aberto",
     stateTone: "open",
+    stateColor: "primary",
     closed: false,
     awaitingYou: false,
     priorityLabel: "Normal",

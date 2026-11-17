@@ -40,6 +40,31 @@ export const ACCENTS: Accent[] = [
   { soft: "bg-warning/15", border: "border-warning/50", top: "border-t-warning", solid: "bg-warning", ring: "ring-warning/60" },
 ];
 
+// Cores SEMÂNTICAS do fluxo (estado e botões de decisão). Só tokens: success/warning (com -soft/-border),
+// destructive (perigo; sem -soft no vocabulário, por isso /10 e /40), primary e chart-2 (informação).
+// Cada tema (Aurora inclusive) e a paleta personalizada do editor de temas redefinem esses tokens.
+export type FlowTone = "neutral" | "info" | "primary" | "warning" | "success" | "danger";
+
+export const FLOW_BADGE: Record<FlowTone, { badge: string; dot: string; bar: string; soft: string; icon: string }> = {
+  neutral: { badge: "border-border bg-muted", dot: "bg-muted-foreground/50", bar: "bg-border", soft: "border-border bg-muted", icon: "text-muted-foreground" },
+  info: { badge: "border-chart-2/40 bg-chart-2/10", dot: "bg-chart-2", bar: "bg-chart-2", soft: "border-chart-2/40 bg-chart-2/10", icon: "text-chart-2" },
+  primary: { badge: "border-primary/40 bg-primary/10", dot: "bg-primary", bar: "bg-primary", soft: "border-primary/40 bg-primary/10", icon: "text-primary" },
+  warning: { badge: "border-warning-border bg-warning-soft", dot: "bg-warning", bar: "bg-warning", soft: "border-warning-border bg-warning-soft", icon: "text-warning" },
+  success: { badge: "border-success-border bg-success-soft", dot: "bg-success", bar: "bg-success", soft: "border-success-border bg-success-soft", icon: "text-success" },
+  danger: { badge: "border-destructive/40 bg-destructive/10", dot: "bg-destructive", bar: "bg-destructive", soft: "border-destructive/40 bg-destructive/10", icon: "text-destructive" },
+};
+
+// Botão de decisão: cheio, na cor semântica, para chamar a atenção (o texto usa o *-foreground do
+// mesmo token, que cada tema calibra para contraste). Informação/neutro usam primary/contorno.
+export const FLOW_BUTTON: Record<FlowTone, string> = {
+  neutral: "border border-border bg-card text-foreground hover:bg-muted",
+  info: "bg-primary text-primary-foreground hover:bg-primary/90",
+  primary: "bg-primary text-primary-foreground hover:bg-primary/90",
+  warning: "bg-warning text-warning-foreground hover:bg-warning/90",
+  success: "bg-success text-success-foreground hover:bg-success/90",
+  danger: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+};
+
 // Cor estável por setor (não muda se a ordem da lista mudar). Subgrupos herdam a cor do pai.
 export function accentFor(rootGroupId: number): Accent {
   return ACCENTS[Math.abs(rootGroupId) % ACCENTS.length];

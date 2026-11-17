@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { isPluginActive } from "@venore/plugin-sdk";
-import { agentUpdateTicket, changeTicketState, createTicket, replyTicket, searchViewAsTargets, startViewAs, stopViewAs } from "../../index";
-import type { AgentUpdateInput, AnswerValue, CreatedTicket, TicketAttachment, ViewAsPerson } from "../../index";
+import { agentUpdateTicket, changeTicketState, createTicket, customerRespond, replyTicket, searchViewAsTargets, startViewAs, stopViewAs } from "../../index";
+import type { AgentUpdateInput, AnswerValue, CreatedTicket, CustomerRespondInput, TicketAttachment, ViewAsPerson } from "../../index";
 import { APP_SURFACE, PORTAL_SURFACE } from "../../shared/routes";
 
 // Toda action passa pelo handler do barrel (autorização + conta no Zammad lá dentro). Servem às DUAS
@@ -82,6 +82,15 @@ export async function replyTicketAction(formData: FormData): Promise<ZammadActio
   if (!result.success) return { ok: false, error: result.error.message };
   revalidateTicket(ticketId);
   return { ok: true, data: result.data };
+}
+
+// Decisão do solicitante no fluxo da FEM (aprovar, pedir ajustes, rejeitar, não resolvido, reenviar).
+export async function customerRespondAction(input: CustomerRespondInput): Promise<ZammadActionResult<{ message: string }>> {
+  if (!(await isPluginActive("colabora"))) return { ok: false, error: DISABLED };
+  const result = await customerRespond({ ticketId: Number(input.ticketId), action: input.action, reason: input.reason ?? null });
+  if (!result.success) return { ok: false, error: result.error.message };
+  revalidateTicket(Number(input.ticketId));
+  return { ok: true, data: { message: result.data.message } };
 }
 
 export async function changeTicketStateAction(ticketId: number, action: "close" | "reopen"): Promise<ZammadActionResult<{ closed: boolean }>> {

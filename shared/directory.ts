@@ -7,7 +7,7 @@ import { zammadRequest } from "./zammad-client";
 // Papéis, usuários e grupos do Zammad (quem atende o quê), lidos com o token da integração e guardados
 // em memória por poucos minutos: mudam raramente e a conversa os consulta a cada abertura de chamado.
 // Falha de leitura = vazio/"colaborador comum" (falha segura: nunca concede acesso a mais).
-type ZammadRoleRaw = { id: number; permissions?: string[]; group_ids?: Record<string, string[]> };
+type ZammadRoleRaw = { id: number; name?: string; permissions?: string[]; group_ids?: Record<string, string[]> };
 type ZammadUserRaw = {
   id: number;
   email?: string | null;
@@ -28,7 +28,7 @@ export async function loadDirRoles(): Promise<DirRole[] | null> {
   if (rolesCache && Date.now() - rolesCache.at < TTL_MS) return rolesCache.roles;
   const result = await zammadRequest<ZammadRoleRaw[]>("roles?expand=true");
   if (!result.success || !Array.isArray(result.data)) return null;
-  const roles = result.data.map((role) => ({ id: role.id, permissions: role.permissions ?? [], groupAccess: role.group_ids ?? {} }));
+  const roles = result.data.map((role) => ({ id: role.id, name: role.name ?? "", permissions: role.permissions ?? [], groupAccess: role.group_ids ?? {} }));
   rolesCache = { at: Date.now(), roles };
   return roles;
 }
@@ -69,7 +69,20 @@ export async function staffRoleFor(requester: Requester): Promise<StaffRole> {
   const roles = await loadDirRoles();
   if (!roles) return "customer";
   const mine = new Set(requester.zammadUser.role_ids);
-  return staffRoleOf(roles.filter((role) => mine.has(role.id)).map((role) => role.permissions));
+  const own = roles.filter((role) => mine.has(role.id));
+  return staffRoleOf(
+    own.map((role) => role.permissions),
+    own.map((role) => role.name ?? ""),
+  );
+}
+
+// A pessoa responde pelo grupo (acesso de dono: full/change, pelos papéis ou pelo próprio usuário)?
+// Falha de leitura = não (falha segura: sem controles de gestor).
+export async function supervisesGroup(requester: Requester, groupId: number): Promise<boolean> {
+  const [users, roles] = await Promise.all([loadDirUsers(), loadDirRoles()]);
+  if (!users || !roles) return false;
+  const me = users.find((user) => user.id === requester.zammadUser.id);
+  return me ? managedGroupIds(me, roles).includes(groupId) : false;
 }
 
 // Quem pode receber chamados deste grupo (para o gestor alocar).

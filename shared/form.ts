@@ -1,7 +1,7 @@
 import type { AnswerValue, FieldType, GroupWizardConfig, SectorForm, WizardConfig, WizardField, WizardStep } from "../contracts/types";
 import type { ZammadAttribute, ZammadGroup, ZammadSchema } from "../contracts/zammad";
 import { DEFAULT_AUDIENCE, isSectorVisible, type AudienceViewer } from "./audience";
-import { evaluateWorkflows, flattenOptions, type EvaluationContext } from "./workflow";
+import { allowedGroupIds, evaluateWorkflows, flattenOptions, type EvaluationContext } from "./workflow";
 
 // Monta o formulário em etapas de cada setor (= grupo do Zammad) a partir do schema do Zammad e da
 // configuração de apresentação. Puro: os testes rodam contra o recorte real em __fixtures__.
@@ -32,8 +32,10 @@ export type BuildOptions = {
 };
 
 // Campos de triagem que o solicitante nunca responde, mesmo que o Zammad os mostre ao cliente: quem define é a
-// equipe (prioridade = gestor). O chamado nasce com o padrão do Zammad e o gestor ajusta no atendimento.
-// `prioridade_cliente` é o atributo "Prioridade inicial" do Zammad da FEM.
+// equipe. A prioridade nativa é do gestor; a SUGESTÃO do solicitante é o campo customizado
+// `prioridade_sugerida` (o Zammad não deixa cliente ver a prioridade nativa na criação), que o wizard pergunta
+// normalmente e os gatilhos "Sincronizar Prioridade - …" copiam para a nativa na criação.
+// `prioridade_cliente` é o atributo antigo "Prioridade inicial" do Zammad da FEM (abandonado).
 export const NEVER_ASKED: ReadonlySet<string> = new Set(["priority_id", "prioridade_cliente", "state_id", "owner_id", "customer_id", "group_id", "title"]);
 
 export type BuiltForms ={ sectors: SectorForm[]; unsupported: string[]; skippedFields: string[] };
@@ -44,18 +46,61 @@ export function buildSectorForms(schema: ZammadSchema, config: WizardConfig, opt
   const sectors: SectorForm[] = [];
   // A herança de audiência anda pela árvore inteira (inclusive setores ocultos), por isso usa todos os grupos.
   const tree = schema.groups.map((group) => ({ groupId: group.id, parentId: group.parent_id }));
+  // Audiência do PRÓPRIO Zammad: os Core Workflows da máscara de criação que mexem no campo Grupo (ex.:
+  // "<Setor> - Cliente" só vê o grupo do setor). Vale para quem pede; admin do plugin vê tudo (prévia).
+  const zammadAllowed =
+    options.viewer && !options.viewer.isAdmin
+      ? groupsAllowedByZammad(schema, options.roleIds ?? [], options.role ?? "ticket.customer", unsupported)
+      : null;
 
   for (const group of schema.groups) {
     if (!group.active) continue;
     const groupConfig = groupConfigFor(config, group.id);
     if (!groupConfig.enabled && !options.includeDisabled) continue;
     if (options.viewer && !isSectorVisible(group.id, tree, config, options.viewer)) continue;
+    if (zammadAllowed && !zammadAllowed.has(group.id)) continue;
     const form = buildSectorForm(schema, group, groupConfig, options, unsupported, skipped);
     sectors.push(form);
   }
 
   sectors.sort(compareSectors);
   return { sectors, unsupported: [...unsupported], skippedFields: [...skipped] };
+}
+
+// Grupos que o Zammad deixa a pessoa escolher, já expandidos pela árvore: liberar um setor libera as
+// subcategorias dele (convenção "<Setor>" + "<Setor>::*"), e o pai de uma subcategoria liberada aparece
+// para a pessoa navegar até ela. null = o Zammad não restringe.
+export function groupsAllowedByZammad(
+  schema: ZammadSchema,
+  roleIds: number[],
+  role: EvaluationContext["role"],
+  unsupported?: Set<string>,
+): Set<number> | null {
+  const result = allowedGroupIds(schema.workflows, { screen: "create_middle", session: { roleIds }, role }, schema.groups.map((group) => String(group.id)));
+  result.unsupported.forEach((message) => unsupported?.add(message));
+  if (result.allowed === null) return null;
+  const direct = new Set(result.allowed.map(Number));
+  const parentOf = new Map(schema.groups.map((group) => [group.id, group.parent_id]));
+  const ancestors = (id: number): number[] => {
+    const out: number[] = [];
+    const seen = new Set<number>();
+    let current = parentOf.get(id) ?? null;
+    while (current !== null && !seen.has(current)) {
+      seen.add(current);
+      out.push(current);
+      current = parentOf.get(current) ?? null;
+    }
+    return out;
+  };
+  const visible = new Set<number>();
+  for (const group of schema.groups) {
+    const chain = ancestors(group.id);
+    if (direct.has(group.id) || chain.some((id) => direct.has(id))) {
+      visible.add(group.id);
+      chain.forEach((id) => visible.add(id));
+    }
+  }
+  return visible;
 }
 
 function compareSectors(a: SectorForm, b: SectorForm): number {

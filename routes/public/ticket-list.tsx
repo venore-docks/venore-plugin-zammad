@@ -40,7 +40,7 @@ export function TicketGroup({
                 muted && "opacity-80",
               )}
             >
-              <span aria-hidden className={cn("w-1.5 self-stretch", waiting ? "bg-warning" : toneBar(ticket.stateTone))} />
+              <span aria-hidden className={cn("w-1.5 self-stretch", waiting ? "bg-warning" : toneBar(ticket.stateTone, ticket.stateColor))} />
               <span className="min-w-0 flex-1 space-y-1 py-3.5">
                 <span className="block truncate font-medium text-foreground">{ticket.title}</span>
                 <span className="block truncate text-xs text-muted-foreground">
@@ -49,7 +49,7 @@ export function TicketGroup({
                 </span>
               </span>
               <span className="flex shrink-0 flex-col items-end gap-1.5">
-                <StateBadge label={ticket.stateLabel} tone={ticket.stateTone} />
+                <StateBadge label={ticket.stateLabel} tone={ticket.stateTone} color={ticket.stateColor} />
                 {showRequester && <span className="text-xs text-muted-foreground">{ticket.priorityLabel}</span>}
               </span>
               <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />

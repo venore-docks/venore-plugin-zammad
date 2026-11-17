@@ -28,11 +28,16 @@ export function isUnassigned(ownerId: number | null | undefined): boolean {
 
 // Papel de quem tem os papéis do Zammad com estas permissões (uma lista por papel). Admin vence gestor,
 // que vence agente. Sem `ticket.agent`/`admin` em nenhum papel = colaborador comum.
-export function staffRoleOf(rolePermissions: string[][]): StaffRole {
+// Gestor = papel com `report` OU papel com nome "<Setor> - Administrador" (convenção da FEM: o
+// administrador do setor é o gestor e não precisa ter relatórios).
+export const SECTOR_MANAGER_ROLE = /\s-\s*administrador\s*$/i;
+
+export function staffRoleOf(rolePermissions: string[][], roleNames: readonly string[] = []): StaffRole {
   const all = new Set(rolePermissions.flat());
   if (all.has("admin")) return "admin";
   if (!all.has("ticket.agent")) return "customer";
-  return all.has("report") ? "manager" : "agent";
+  if (all.has("report")) return "manager";
+  return roleNames.some((name) => SECTOR_MANAGER_ROLE.test(name)) ? "manager" : "agent";
 }
 
 export type AccessInput = {
@@ -42,12 +47,16 @@ export type AccessInput = {
   role: StaffRole;
   // A superfície pede visão de agente (o app); o portal comum nunca pede.
   asAgent: boolean;
+  // O supervisor responde pelo grupo do chamado? Falso quando um gestor abriu chamado em OUTRO setor:
+  // ali ele é só o solicitante (sem controles de gestor). Ausente = sim.
+  supervisesGroup?: boolean;
 };
 
 export function viewerMode(input: AccessInput): ViewerMode | null {
   if (input.asAgent && isStaff(input.role)) {
     // Supervisor vê o que o Zammad deixar; agente, só o que está com ele (a fila não é dele).
-    if (isSupervisor(input.role) || input.ownerId === input.meId) return "agent";
+    if (input.ownerId === input.meId) return "agent";
+    if (isSupervisor(input.role) && (input.supervisesGroup ?? true)) return "agent";
   }
   if (input.customerId === input.meId) return "customer";
   return null;

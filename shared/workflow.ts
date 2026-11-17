@@ -215,6 +215,48 @@ function applyOperator(
   }
 }
 
+// Grupos que a máscara de criação do Zammad deixa escolher, pelos Core Workflows que mexem em
+// `ticket.group_id` (no Zammad da FEM: 520 "Grupos ocultos para clientes" remove todos, 521–524 devolvem o
+// grupo do setor a quem tem a função "<Setor> - Cliente"). Mesma ordem e mesmas condições do resto.
+//   null  = nenhum workflow restringe (todos os grupos).
+//   lista = só estes ids (string), já com add/remove aplicados.
+// `allGroupIds` é a base para "remover opção" quando nada fixou a lista antes.
+export function allowedGroupIds(
+  workflows: ZammadWorkflow[],
+  context: Omit<EvaluationContext, "ticket">,
+  allGroupIds: readonly string[],
+): { allowed: string[] | null; unsupported: string[] } {
+  const unsupported = new Set<string>();
+  let allowed: string[] | null = null;
+  const applicable = workflows
+    .filter((workflow) => workflow.active && workflow.object === "Ticket" && appliesToScreen(workflow, context.screen))
+    .sort((a, b) => a.priority - b.priority || a.id - b.id);
+
+  for (const workflow of applicable) {
+    const label = `workflow #${workflow.id} "${workflow.name}"`;
+    const action = workflow.perform?.["ticket.group_id"];
+    const fullContext = { ...context, ticket: {} };
+    const matched =
+      matchesConditions(workflow.condition_selected, fullContext, {}, label, unsupported) &&
+      matchesConditions(workflow.condition_saved, fullContext, {}, label, unsupported);
+    if (!matched) continue;
+    if (action) {
+      const operators = Array.isArray(action.operator) ? action.operator : [action.operator];
+      for (const operator of operators) {
+        const value = toStringList(action[operator]);
+        if (operator === "set_fixed_to") allowed = value;
+        else if (operator === "remove_option") allowed = (allowed ?? [...allGroupIds]).filter((id) => !value.includes(id));
+        else if (operator === "add_option") allowed = allowed === null ? null : [...new Set([...allowed, ...value])];
+        else if (operator !== "set_readonly" && operator !== "unset_readonly" && operator !== "show" && operator !== "set_mandatory") {
+          unsupported.add(`${label}: ação "${operator}" em "group_id" não é aplicada`);
+        }
+      }
+    }
+    if (workflow.stop_after_match) break;
+  }
+  return { allowed, unsupported: [...unsupported] };
+}
+
 export function toStringList(value: unknown): string[] {
   if (value === undefined || value === null || value === "") return [];
   if (Array.isArray(value)) return value.filter((item) => item !== null && item !== "").map(String);

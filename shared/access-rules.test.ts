@@ -17,12 +17,27 @@ describe("staffRoleOf (papéis reais do Zammad da FEM)", () => {
     expect(staffRoleOf([])).toBe("customer");
   });
 
+  it("função \"<Setor> - Administrador\" (sem report) é gestor; \"- Agente\" continua agente", () => {
+    expect(staffRoleOf([CLIENTES, AGENTE_MARKETING], ["Padrão - Cliente", "Manutenção - Administrador"])).toBe("manager");
+    expect(staffRoleOf([CLIENTES, AGENTE_MARKETING], ["Manutenção - Agente"])).toBe("agent");
+    // Nome de gestor sem ticket.agent não basta.
+    expect(staffRoleOf([CLIENTES], ["Manutenção - Administrador"])).toBe("customer");
+  });
+
   it("`report` sozinho (sem ticket.agent) não faz ninguém gestor", () => {
     expect(staffRoleOf([["report"]])).toBe("customer");
   });
 });
 
 describe("viewerMode", () => {
+  it("gestor que abriu chamado em OUTRO setor é só o solicitante ali", () => {
+    const own = { ...base, customerId: 30, meId: 30, role: "manager" as StaffRole };
+    expect(viewerMode({ ...own, supervisesGroup: false })).toBe("customer");
+    expect(viewerMode({ ...own, supervisesGroup: true })).toBe("agent");
+    // Se o chamado está COM ele, atende normalmente.
+    expect(viewerMode({ ...own, ownerId: 30, supervisesGroup: false })).toBe("agent");
+  });
+
   it("solicitante vê o próprio chamado; chamado alheio não aparece", () => {
     expect(viewerMode({ ...base, meId: 10 })).toBe("customer");
     expect(viewerMode({ ...base })).toBeNull();

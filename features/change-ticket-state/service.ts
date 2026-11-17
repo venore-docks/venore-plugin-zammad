@@ -19,7 +19,12 @@ export async function changeTicketState(requester: Requester, input: ChangeTicke
   }
   const ticket = await loadOwnTicket(requester, input.ticketId);
   if (!ticket.success) return finish(ticket);
-  const closed = describeState(ticket.data.state ?? "").closed;
+  const described = describeState(ticket.data.state ?? "");
+  // No fluxo da FEM o solicitante não encerra nem reabre: usa os botões de decisão (customer-respond).
+  if (described.step) {
+    return finish(failure("flow_managed", "Este chamado segue o fluxo de atendimento do setor: use os botões de decisão do chamado."));
+  }
+  const closed = described.closed;
   if (input.action === "close" && closed) return finish({ success: true, data: { closed: true } });
   if (input.action === "reopen" && !closed) return finish({ success: true, data: { closed: false } });
 

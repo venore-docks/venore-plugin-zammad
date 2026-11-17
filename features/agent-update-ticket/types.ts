@@ -5,10 +5,13 @@ import type { OperationResult } from "@venore/plugin-sdk";
 //                 Só gestor/admin; o destino precisa atender o setor do chamado.
 //   stateId / pendingTime / priorityId = quem atende o chamado ou o supervisiona.
 //   pendingTime = "YYYY-MM-DDTHH:mm" (datetime-local), obrigatório nos estados "pending …".
+//   reason      = no fluxo da FEM, texto PÚBLICO que acompanha a mudança de estado (obrigatório em
+//                 "Não autorizado"; opcional em "Concluído"). Vira nota pública no mesmo envio.
 export type AgentUpdateInput = {
   ticketId: number;
   stateId?: number;
   pendingTime?: string | null;
+  reason?: string | null;
   priorityId?: number;
   ownerId?: number | null;
 };

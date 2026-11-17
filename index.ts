@@ -6,6 +6,7 @@ export { listMyTicketsHandler as listMyTickets } from "./features/list-my-ticket
 export { getTicketHandler as getTicket } from "./features/get-ticket/handler";
 export { replyTicketHandler as replyTicket } from "./features/reply-ticket/handler";
 export { changeTicketStateHandler as changeTicketState } from "./features/change-ticket-state/handler";
+export { customerRespondHandler as customerRespond } from "./features/customer-respond/handler";
 export { downloadAttachmentHandler as downloadAttachment } from "./features/download-attachment/handler";
 export { listAgentTicketsHandler as listAgentTickets } from "./features/list-agent-tickets/handler";
 export { agentUpdateTicketHandler as agentUpdateTicket } from "./features/agent-update-ticket/handler";
@@ -32,6 +33,11 @@ export type {
   AnswerValue,
   AttachmentLimits,
   CreatedTicket,
+  CustomerActionKey,
+  CustomerActionOption,
+  FlowStepKey,
+  StaffFlowAction,
+  TicketStateColor,
   FieldOption,
   FieldType,
   GroupWizardConfig,
@@ -53,6 +59,7 @@ export type { ListMyTicketsResult } from "./features/list-my-tickets/types";
 export type { GetTicketInput, GetTicketResult } from "./features/get-ticket/types";
 export type { ReplyTicketInput, ReplyTicketResult } from "./features/reply-ticket/types";
 export type { ChangeTicketStateInput, ChangeTicketStateResult } from "./features/change-ticket-state/types";
+export type { CustomerRespondInput, CustomerRespondResult } from "./features/customer-respond/types";
 export type { ListAgentTicketsInput, ListAgentTicketsResult } from "./features/list-agent-tickets/types";
 export type { GetTeamOverviewResult, TeamMember, TeamOverview } from "./features/get-team-overview/types";
 export type { AppViewer, GetAppViewerResult } from "./features/get-app-viewer/types";

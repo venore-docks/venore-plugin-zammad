@@ -28,7 +28,7 @@ export function AgentTicketRow({ ticket, href, now }: { ticket: TicketSummary; h
           </span>
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="sm:hidden">
-              <StateBadge label={ticket.stateLabel} tone={ticket.stateTone} />
+              <StateBadge label={ticket.stateLabel} tone={ticket.stateTone} color={ticket.stateColor} />
             </span>
             {urgent && <span className="rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-xs font-medium text-foreground">{ticket.priorityLabel}</span>}
             <span className={cn("inline-flex items-center gap-1 text-xs", stale ? "font-medium text-warning" : "text-muted-foreground")}>
@@ -38,7 +38,7 @@ export function AgentTicketRow({ ticket, href, now }: { ticket: TicketSummary; h
           </span>
         </span>
         <span className="hidden shrink-0 sm:block">
-          <StateBadge label={ticket.stateLabel} tone={ticket.stateTone} />
+          <StateBadge label={ticket.stateLabel} tone={ticket.stateTone} color={ticket.stateColor} />
         </span>
         <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 rtl:rotate-180" aria-hidden />
       </Link>

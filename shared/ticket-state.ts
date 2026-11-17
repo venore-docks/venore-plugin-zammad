@@ -1,19 +1,29 @@
-import type { TicketStateTone } from "../contracts/types";
+import type { TicketStateColor, TicketStateTone } from "../contracts/types";
+import { FLOW_STEPS, flowStepOf, type FlowStep } from "./flow";
 
 // Nomes padrão do Zammad traduzidos; estado criado à mão (ex.: "em andamento") aparece como está.
-const STATE_LABELS: Record<string, { label: string; tone: TicketStateTone }> = {
-  new: { label: "Recebido", tone: "new" },
-  open: { label: "Em atendimento", tone: "open" },
-  "pending reminder": { label: "Aguardando retorno", tone: "pending" },
-  "pending close": { label: "Será encerrado em breve", tone: "pending" },
-  closed: { label: "Encerrado", tone: "closed" },
-  merged: { label: "Unificado a outro chamado", tone: "closed" },
+const STATE_LABELS: Record<string, { label: string; tone: TicketStateTone; color: TicketStateColor }> = {
+  new: { label: "Recebido", tone: "new", color: "info" },
+  open: { label: "Em atendimento", tone: "open", color: "primary" },
+  "pending reminder": { label: "Aguardando retorno", tone: "pending", color: "warning" },
+  "pending close": { label: "Será encerrado em breve", tone: "pending", color: "warning" },
+  closed: { label: "Encerrado", tone: "closed", color: "neutral" },
+  merged: { label: "Unificado a outro chamado", tone: "closed", color: "neutral" },
 };
 
-export function describeState(state: string): { label: string; tone: TicketStateTone; closed: boolean } {
+export type DescribedState = { label: string; tone: TicketStateTone; color: TicketStateColor; closed: boolean; step: FlowStep | null };
+
+export function describeState(state: string): DescribedState {
+  // Fluxo da FEM (Novo, Em análise, …, Finalizado): nome, cor e "fechado" vêm do fluxo.
+  const step = flowStepOf(state);
+  if (step) {
+    const info = FLOW_STEPS[step];
+    const tone: TicketStateTone = step === "novo" ? "new" : info.closed ? "closed" : "open";
+    return { label: info.label, tone, color: info.color, closed: info.closed, step };
+  }
   const known = STATE_LABELS[state.toLowerCase()];
-  if (known) return { ...known, closed: known.tone === "closed" };
-  return { label: state.charAt(0).toUpperCase() + state.slice(1), tone: "open", closed: false };
+  if (known) return { ...known, closed: known.tone === "closed", step: null };
+  return { label: state.charAt(0).toUpperCase() + state.slice(1), tone: "open", color: "primary", closed: false, step: null };
 }
 
 // O SOLICITANTE escreveu depois da última resposta da equipe (ou a equipe ainda não respondeu): na visão

@@ -41,6 +41,33 @@ export type AttachmentLimits = { maxFiles: number; maxTotalBytes: number };
 
 export type TicketStateTone = "new" | "open" | "pending" | "closed";
 
+// Cor semântica do estado e dos botões do fluxo. A interface traduz para TOKENS do tema
+// (info = chart-2, primary, warning, success, danger = destructive, neutral = muted) — nunca cor fixa.
+export type TicketStateColor = "neutral" | "info" | "primary" | "warning" | "success" | "danger";
+
+// Etapas do fluxo da FEM (ver shared/flow.ts). null = Zammad sem esses estados (comportamento genérico).
+export type FlowStepKey = "novo" | "em_analise" | "autorizado" | "nao_autorizado" | "reavaliacao" | "em_andamento" | "concluido" | "finalizado";
+export type CustomerActionKey = "approve" | "adjust" | "reject" | "not_solved" | "resubmit";
+
+// Botão de decisão do SOLICITANTE (Concluído / Não autorizado): manda a palavra de controle no assunto.
+export type CustomerActionOption = {
+  key: CustomerActionKey;
+  label: string;
+  prompt: string;
+  color: TicketStateColor;
+  reasonRequired: boolean;
+};
+
+// Botão de atalho da EQUIPE: muda para `stateId` (com texto público opcional/obrigatório).
+export type StaffFlowAction = {
+  stateId: number;
+  label: string;
+  prompt: string;
+  color: TicketStateColor;
+  reason: "required" | "optional" | "none";
+  done: string;
+};
+
 export type TicketSummary = {
   id: number;
   number: string;
@@ -48,6 +75,7 @@ export type TicketSummary = {
   group: string;
   stateLabel: string;
   stateTone: TicketStateTone;
+  stateColor: TicketStateColor;
   closed: boolean;
   // A equipe respondeu e a pessoa ainda não (o chamado está esperando por ela).
   awaitingYou: boolean;
@@ -108,8 +136,15 @@ export type AgentControls = {
   assignees: { id: number; name: string }[];
   stateId: number;
   priorityId: number;
+  // No fluxo da FEM: só os estados para onde ESTA pessoa pode levar o chamado (mais o atual).
   states: AgentStateOption[];
   priorities: AgentPriorityOption[];
+  // O chamado está no fluxo da FEM (estados por nome). Fora dele, os atalhos genéricos de antes.
+  inFlow: boolean;
+  // Atalhos do fluxo (Autorizar, Não autorizar, Concluir…). Vazio fora do fluxo da FEM.
+  flowActions: StaffFlowAction[];
+  // Dica do passo atual para a equipe (ex.: "Atribua um responsável: o chamado vai para Em andamento").
+  flowHint: string | null;
 };
 
 export type TicketDetail = {
@@ -119,8 +154,17 @@ export type TicketDetail = {
   group: string;
   stateLabel: string;
   stateTone: TicketStateTone;
+  stateColor: TicketStateColor;
   closed: boolean;
   awaitingYou: boolean;
+  // Etapa do fluxo da FEM e a explicação dela para quem vê (null fora do fluxo).
+  flowStep: FlowStepKey | null;
+  flowHint: string | null;
+  // Decisões do solicitante neste passo (só para quem abriu o chamado; vazio nos demais casos).
+  customerActions: CustomerActionOption[];
+  // O solicitante pode escrever mensagem comum? (false em Concluído/Não autorizado/Finalizado.)
+  customerCanReply: boolean;
+  customerReplyBlocked: string | null;
   // O solicitante escreveu por último: na visão do agente, o chamado espera resposta dele.
   customerWaiting: boolean;
   // Só agente/admin do Zammad encerra e reabre; colaborador comum só responde.

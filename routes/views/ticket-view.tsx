@@ -1,7 +1,11 @@
-import { BellRing, CircleCheck, UserRound } from "lucide-react";
+import Link from "next/link";
+import { BellRing, CircleCheck, Plus, UserRound } from "lucide-react";
+import { Button } from "@venore/plugin-sdk/ui";
 import { getTicket } from "../../index";
 import { surfaceFor, type SurfaceKey } from "../../shared/routes";
 import { Conversation } from "../public/conversation";
+import { CustomerDecisionPanel } from "../public/flow-actions";
+import { FlowProgress } from "../public/flow-progress";
 import { ReplyProvider } from "../public/reply-context";
 import { BlockedNotice, StateBadge, formatDateTime } from "../public/shared";
 import { ReplyBox, TicketStateButton } from "../public/ticket-actions";
@@ -52,7 +56,7 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
           <header className="space-y-3 rounded-xl border border-t-4 border-t-primary bg-card p-4 sm:p-5">
             {surfaceKey === "app" && <h2 className="text-lg leading-snug font-semibold break-words text-foreground">{ticket.title}</h2>}
             <div className="flex flex-wrap items-center gap-2">
-              <StateBadge label={ticket.stateLabel} tone={ticket.stateTone} />
+              <StateBadge label={ticket.stateLabel} tone={ticket.stateTone} color={ticket.stateColor} />
               {agent && <span className="rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground">Prioridade: {ticket.priorityLabel}</span>}
             </div>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
@@ -74,9 +78,25 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
                 <dd className="font-medium text-foreground">{formatDateTime(ticket.createdAt)}</dd>
               </div>
             </dl>
-            {/* Colaborador da equipe vendo o PRÓPRIO pedido: encerrar/reabrir como antes. */}
-            {!agent && ticket.canClose && <TicketStateButton ticketId={ticket.id} closed={ticket.closed} />}
+            {ticket.flowStep && <FlowProgress step={ticket.flowStep} />}
+            {/* Fora do fluxo da FEM: colaborador da equipe vendo o PRÓPRIO pedido encerra/reabre como antes. */}
+            {!agent && !ticket.flowStep && ticket.canClose && <TicketStateButton ticketId={ticket.id} closed={ticket.closed} />}
           </header>
+
+          {!agent && ticket.customerActions.length > 0 && (
+            <CustomerDecisionPanel
+              ticketId={ticket.id}
+              title={ticket.flowStep === "nao_autorizado" ? "Seu pedido não foi autorizado" : "Seu pedido foi concluído. Está tudo certo?"}
+              hint={
+                ticket.flowStep === "nao_autorizado"
+                  ? "Veja o motivo na conversa. Se ajustou o pedido, reenvie explicando o que mudou."
+                  : "Confira a entrega e escolha uma opção. Sem resposta, o chamado é finalizado em 48 horas."
+              }
+              color={ticket.stateColor}
+              actions={ticket.customerActions}
+              readOnly={Boolean(viewer.viewingAs)}
+            />
+          )}
 
           {agent && (
             <>
@@ -93,7 +113,7 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
               </span>
             </div>
           )}
-          {!agent && ticket.awaitingYou && (
+          {!agent && ticket.awaitingYou && ticket.customerActions.length === 0 && ticket.customerCanReply && (
             <a href="#responder" className="flex items-center gap-3 rounded-xl border border-warning-border bg-warning-soft p-3 text-sm text-foreground">
               <BellRing className="size-5 shrink-0 text-warning" />
               <span>
@@ -101,7 +121,23 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
               </span>
             </a>
           )}
-          {ticket.closed && (
+          {ticket.flowStep === "finalizado" && (
+            <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted p-3 text-sm text-foreground sm:flex-row sm:items-center">
+              <CircleCheck className="size-5 shrink-0 text-success" />
+              <span className="flex-1">
+                <strong>Este chamado foi finalizado.</strong> Precisa de algo mais? Abra um novo chamado.
+              </span>
+              {!agent && (
+                <Button asChild size="sm" className="h-10">
+                  <Link href={surface.newTicket}>
+                    <Plus className="size-4" />
+                    Novo chamado
+                  </Link>
+                </Button>
+              )}
+            </div>
+          )}
+          {ticket.closed && !ticket.flowStep && (
             <div className="flex items-start gap-3 rounded-xl border border-success-border bg-success-soft p-3 text-sm text-foreground">
               <CircleCheck className="mt-0.5 size-5 shrink-0 text-success" />
               <span>
@@ -118,6 +154,11 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
             <p className="rounded-xl border border-dashed px-4 py-3 text-sm text-muted-foreground">
               Aqui {viewer.viewingAs.name} responderia ao chamado. No “ver como” nada é enviado em nome de outra pessoa.
             </p>
+          ) : !agent && !ticket.customerCanReply ? (
+            // Fluxo da FEM: em Concluído/Não autorizado a resposta é pelos botões; em Finalizado, novo chamado.
+            ticket.flowStep === "finalizado" ? null : (
+              <p className="rounded-xl border border-dashed px-4 py-3 text-sm text-muted-foreground">{ticket.customerReplyBlocked}</p>
+            )
           ) : (
             <ReplyBox
               ticketId={ticket.id}

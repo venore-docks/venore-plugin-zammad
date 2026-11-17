@@ -1,4 +1,17 @@
-import type { AgentControls, TicketAttachmentInfo, TicketMessage } from "../../contracts/types";
+import type { AgentControls, CustomerActionOption, StaffFlowAction, TicketAttachmentInfo, TicketMessage } from "../../contracts/types";
+import {
+  CUSTOMER_ACTIONS,
+  FLOW_STEPS,
+  allowedTargets,
+  customerActionsFor,
+  customerCanReply,
+  customerMustDecide,
+  customerReplyBlockedMessage,
+  flowStepOf,
+  staffActionsFor,
+  staffHintFor,
+  type FlowStep,
+} from "../../shared/flow";
 import type { ZammadArticle, ZammadExpandedTicket } from "../../contracts/zammad";
 import { canAllocate, canEditTicket, canWorkTicket, isUnassigned, type StaffRole, type ViewerMode } from "../../shared/access-rules";
 import { assigneesFor } from "../../shared/directory";
@@ -76,17 +89,40 @@ async function buildAgentControls(ticket: ZammadExpandedTicket, requester: Reque
   if (mode !== "agent") return null;
   const meId = requester.zammadUser.id;
   const allocate = canAllocate(mode, role);
+  const work = canWorkTicket(mode, ticket.owner_id, meId);
   const [options, assignees] = await Promise.all([loadAgentOptions(), allocate ? assigneesFor(ticket.group_id) : Promise.resolve([])]);
+  const allStates = options.success ? options.data.states : [];
+
+  // Fluxo da FEM: o seletor de estado só oferece o que esta pessoa pode fazer (como os Core Workflows na
+  // tela do Zammad), e os atalhos viram botões coloridos. Fora do fluxo, a lista inteira, como antes.
+  const step = flowStepOf(ticket.state);
+  const actor = { supervisor: allocate, worker: work };
+  let states = allStates;
+  let flowActions: StaffFlowAction[] = [];
+  let flowHint: string | null = null;
+  if (step) {
+    const targets = allowedTargets(step, actor);
+    states = allStates.filter((state) => state.id === ticket.state_id || targets.includes(flowStepOf(state.name) as FlowStep));
+    flowActions = staffActionsFor(step, actor).flatMap((action) => {
+      const state = allStates.find((candidate) => flowStepOf(candidate.name) === action.target);
+      return state ? [{ stateId: state.id, label: action.label, prompt: action.prompt, color: action.color, reason: action.reason, done: action.done }] : [];
+    });
+    flowHint = staffHintFor(step, { ...actor, hasOwner: !isUnassigned(ticket.owner_id) });
+  }
+
   return {
-    canWork: canWorkTicket(mode, ticket.owner_id, meId),
+    canWork: work,
     canAllocate: allocate,
     canEdit: canEditTicket(mode, role, ticket.owner_id, meId),
     ownerId: isUnassigned(ticket.owner_id) ? null : ticket.owner_id,
     assignees: assignees.map((person) => ({ id: person.id, name: person.name })),
     stateId: ticket.state_id,
     priorityId: ticket.priority_id,
-    states: options.success ? options.data.states.map(({ id, label, tone, needsPending }) => ({ id, label, tone, needsPending })) : [],
+    states: states.map(({ id, label, tone, needsPending }) => ({ id, label, tone, needsPending })),
     priorities: options.success ? options.data.priorities.map(({ id, label }) => ({ id, label })) : [],
+    inFlow: step !== null,
+    flowActions,
+    flowHint,
   };
 }
 
@@ -116,6 +152,15 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
     canManageTicketState(requester),
   ]);
   const unassigned = !ticket.owner_id || ticket.owner_id === 1;
+  // Decisões do solicitante: só para quem abriu o chamado e o está vendo como solicitante.
+  const isRequesterView = mode === "customer" && ticket.customer_id === meId;
+  const customerActions: CustomerActionOption[] = isRequesterView
+    ? customerActionsFor(state.step).map((key) => {
+        const info = CUSTOMER_ACTIONS[key];
+        return { key, label: info.label, prompt: info.prompt, color: info.color, reasonRequired: info.reasonRequired };
+      })
+    : [];
+  const canReply = !state.step || customerCanReply(state.step);
 
   return {
     success: true,
@@ -126,8 +171,14 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
       group: ticket.group,
       stateLabel: state.label,
       stateTone: state.tone,
+      stateColor: state.color,
       closed: state.closed,
-      awaitingYou: isAwaitingYou(ticket, state.closed),
+      flowStep: state.step,
+      flowHint: state.step ? FLOW_STEPS[state.step].hint : null,
+      customerActions,
+      customerCanReply: canReply,
+      customerReplyBlocked: canReply ? null : customerReplyBlockedMessage(state.step),
+      awaitingYou: isAwaitingYou(ticket, state.closed) || (isRequesterView && customerMustDecide(state.step)),
       customerWaiting: !state.closed && isCustomerWaiting(ticket),
       canClose,
       createdAt: ticket.created_at,

@@ -22,6 +22,7 @@ function ticket(id: number, over: Partial<TicketSummary> = {}): TicketSummary {
     group: "TI",
     stateLabel: "Em atendimento",
     stateTone: "open",
+    stateColor: "primary",
     closed: false,
     awaitingYou: false,
     priorityLabel: "Normal",

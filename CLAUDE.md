@@ -27,6 +27,20 @@ São as mesmas do core: `AGENTS.md` (camadas handler → service, `OperationResu
   Booleanos nunca vêm pré-marcados, para que a pessoa responda de fato.
 - **Settings são de leitura pública**: segredo nunca vai em setting, só em variável de ambiente.
 
+## Fluxo de atendimento da FEM (v1.1.0) — ler `docs/zammad-fem.md` antes de mexer
+
+- Estados reconhecidos **por nome** (`shared/flow.ts`): Novo → Em análise → Autorizado → Em andamento →
+  Concluído → Finalizado, com Não autorizado → Reavaliação. Fora deles, comportamento genérico antigo.
+- **Cliente nunca manda `state_id`**: decide por botões que criam artigo `web`/`Customer`/público com a
+  palavra de controle no ASSUNTO (`[APROVADO]` `[AJUSTAR]` `[REJEITADO]` `[NAO_RESOLVIDO]` `[REENVIAR]`);
+  os gatilhos do Zammad mudam o estado (`features/customer-respond`). Mudar uma palavra = mudar o gatilho.
+- A API não aplica Core Workflows: as transições da equipe são validadas no servidor (`canMoveTo` em
+  `agent-update-ticket`). "Não autorizar" exige motivo, enviado como nota PÚBLICA no mesmo PUT.
+- Audiência dos setores também vem do Zammad: workflows da máscara de criação em `ticket.group_id`
+  (`allowedGroupIds` + `groupsAllowedByZammad`).
+- Gestor = `report` OU função `<Setor> - Administrador`.
+- Cores do fluxo: `FLOW_BADGE`/`FLOW_BUTTON` em `routes/public/palette.ts` (só tokens).
+
 ## Verificar contra o core
 
 **Sempre pelo PowerShell** (no Git Bash o vitest do core falha com erros enganosos) e **com o script**, que é
@@ -91,7 +105,8 @@ quando a versão nova chega no `main`. O repo precisa ser **público**, senão o
 - **Escrita NÃO testada contra o Zammad real** (responder, encerrar, reabrir). Encerrar/reabrir só
   para quem tem `ticket.agent`/`admin` (`canManageTicketState` em `shared/own-ticket.ts`, lê
   `GET /roles?expand=true`; vale no botão e no servidor). Estados via `new`/`closed` por nome.
-  Resposta em chamado encerrado tenta reabrir (best-effort).
+  Resposta em chamado encerrado tenta reabrir (best-effort). **Só fora do fluxo da FEM** — dentro dele,
+  `change-ticket-state` recusa e a reabertura não acontece (ver a seção do fluxo acima).
 - **Resumo das respostas** no 1º artigo (`composeBody`) é extraído por `extractFormAnswers`
   (`shared/html-text.ts`) e exibido como lista; mudar o formato do resumo exige mudar os dois.
 - **"Responder" a uma mensagem da equipe** (como no WhatsApp): o navegador manda só o `quoteArticleId`;

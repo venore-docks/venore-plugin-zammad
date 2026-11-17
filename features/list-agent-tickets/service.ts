@@ -44,6 +44,7 @@ async function toSummaries(tickets: ZammadExpandedTicket[]): Promise<TicketSumma
       group: ticket.group,
       stateLabel: state.label,
       stateTone: state.tone,
+      stateColor: state.color,
       closed: false,
       // Para quem atende: o solicitante falou por último (o chamado espera resposta dele).
       awaitingYou: isCustomerWaiting(ticket),

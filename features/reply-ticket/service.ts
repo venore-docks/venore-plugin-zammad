@@ -6,6 +6,7 @@ import { loadArticles, loadTicketForViewer, resolveStateId } from "../../shared/
 import { getPerson } from "../../shared/people";
 import type { Requester } from "../../shared/requester";
 import { failure } from "../../shared/results";
+import { customerCanReply, customerReplyBlockedMessage, flowStepOf } from "../../shared/flow";
 import { describeState } from "../../shared/ticket-state";
 import { zammadRequest } from "../../shared/zammad-client";
 import type { ReplyTicketInput, ReplyTicketResult } from "./types";
@@ -29,6 +30,12 @@ export async function replyTicket(requester: Requester, input: ReplyTicketInput)
   const agentMode = mode === "agent";
   if (agentMode && !canWorkTicket(mode, ticket.owner_id, meId)) {
     return finish(failure("not_owner", "Assuma o chamado para responder."));
+  }
+  // Fluxo da FEM: em Concluído/Não autorizado o solicitante responde pelos botões (customer-respond); em
+  // Finalizado não reabre. Uma mensagem solta em Concluído cairia no gatilho de reserva "pede ajustes".
+  const step = flowStepOf(ticket.state);
+  if (!agentMode && step && !customerCanReply(step)) {
+    return finish(failure("reply_blocked", customerReplyBlockedMessage(step)));
   }
   // Nota interna é só do agente: no modo solicitante o campo é ignorado (nunca vira nota).
   const internal = agentMode && Boolean(input.internal);
@@ -83,8 +90,9 @@ export async function replyTicket(requester: Requester, input: ReplyTicketInput)
 
   // Resposta do SOLICITANTE em chamado encerrado = quer reabrir. O Zammad só deixa cliente usar o estado
   // "new"; se falhar, a mensagem já foi enviada (a equipe é avisada do mesmo jeito) — não é erro.
+  // Só FORA do fluxo da FEM: lá o cliente nunca muda estado (os gatilhos fazem isso).
   let reopened = false;
-  if (!agentMode && describeState(ticket.state ?? "").closed) {
+  if (!agentMode && !step && describeState(ticket.state ?? "").closed) {
     const stateId = await resolveStateId("new");
     if (stateId.success) {
       const updated = await zammadRequest(`tickets/${ticket.id}`, {

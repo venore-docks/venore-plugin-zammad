@@ -114,6 +114,8 @@ atendimento (agente/gestor), fila e equipe. Uma faixa fixa mostra "Vendo como Fu
 | Perguntas, opções, obrigatoriedade | **Atributos de ticket** + **Core Workflows** do Zammad, lidos pela API |
 | Ordem das etapas, textos de ajuda, nome/descrição do setor, setores ocultos, audiência dos setores | Plugin (setting `colabora.wizard`) |
 | Grupos de pessoas (quem pertence a quê) | Plugin (setting `colabora.groups`, só ids de usuário) |
+| Quem abre chamado em qual setor (além dos grupos de pessoas) | Core Workflows do Zammad no campo **Grupo** (ex.: função `<Setor> - Cliente`) |
+| Estados, transições, avisos e tags | Zammad (estados + gatilhos); o plugin só manda palavras de controle e valida a equipe — ver [docs/zammad-fem.md](docs/zammad-fem.md) |
 
 Criar ou mudar um campo no Zammad aparece no portal em até 5 minutos, ou na hora com
 "Recarregar do Zammad" no admin. Não é preciso deploy.
@@ -128,6 +130,8 @@ O endpoint de Core Workflows do Zammad (`/core_workflows/perform`) não aceita t
 plugin lê as regras e as aplica localmente (`shared/workflow.ts`). Ele suporta condições
 `ticket.*` e `session.role_ids` (is, is not, is set, not set, modo expert AND/OR/NOT) e as ações
 show, hide, remove, set_mandatory, set_optional, set_fixed_to, add_option, remove_option e fill_in.
+No campo **Grupo** (`ticket.group_id`) ele aplica set_fixed_to, add_option e remove_option para decidir
+quais setores a pessoa vê (liberar um setor libera as subcategorias).
 O que estiver fora disso aparece no admin como "regra não aplicada".
 
 ## Configuração

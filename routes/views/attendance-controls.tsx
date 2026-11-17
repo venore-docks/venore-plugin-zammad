@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CircleCheck, Hourglass, PlayCircle } from "lucide-react";
+import { CircleCheck, Hourglass, Info, PlayCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -21,7 +21,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  cn,
 } from "@venore/plugin-sdk/ui";
+import { StaffFlowButtons } from "../public/flow-actions";
 import type { AgentControls, AgentStateOption } from "../../contracts/types";
 import { localNow } from "../../shared/answers";
 import { tomorrowAtNineLocal } from "../../shared/agent-stats";
@@ -93,14 +95,31 @@ export function AttendanceControls({ ticketId, controls }: { ticketId: number; c
     send({ stateId: pendingState.id, pendingTime: until }, "Chamado pendente até amanhã, 9h.");
   }
 
-  const showInProgress = inProgress && inProgress.id !== controls.stateId;
-  const showPending = pendingState && pendingState.id !== controls.stateId;
-  const showClose = closedState && closedState.id !== controls.stateId;
+  // No fluxo da FEM os atalhos são os botões do fluxo (cores semânticas); os genéricos ficam de fora.
+  const showInProgress = !controls.inFlow && inProgress && inProgress.id !== controls.stateId;
+  const showPending = !controls.inFlow && pendingState && pendingState.id !== controls.stateId;
+  const showClose = !controls.inFlow && closedState && closedState.id !== controls.stateId;
   const hasQuick = showInProgress || showPending || showClose;
+  // Só o estado atual na lista = nada a mudar por aqui (o seletor some; fica a prioridade).
+  const canChangeState = controls.states.some((option) => option.id !== controls.stateId);
 
   return (
     <section className="space-y-4 rounded-xl border bg-card p-4 sm:p-5" aria-label="Atendimento">
       <h3 className="text-sm font-semibold text-foreground">Atendimento</h3>
+
+      {controls.flowHint && (
+        <p className="flex items-start gap-2 rounded-lg border border-chart-2/40 bg-chart-2/10 px-3 py-2 text-sm text-foreground">
+          <Info className="mt-0.5 size-4 shrink-0 text-chart-2" />
+          {controls.flowHint}
+        </p>
+      )}
+
+      {controls.flowActions.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">Próximo passo</p>
+          <StaffFlowButtons ticketId={ticketId} actions={controls.flowActions} disabled={busy} />
+        </div>
+      )}
 
       {hasQuick && (
         <div className="space-y-2">
@@ -144,7 +163,7 @@ export function AttendanceControls({ ticketId, controls }: { ticketId: number; c
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="space-y-1.5 text-sm">
+        <label className={cn("space-y-1.5 text-sm", !canChangeState && "hidden")}>
           <span className="font-medium text-foreground">Estado</span>
           <Select value={String(stateId)} onValueChange={(value) => setStateId(Number(value))}>
             <SelectTrigger className="h-11 w-full">

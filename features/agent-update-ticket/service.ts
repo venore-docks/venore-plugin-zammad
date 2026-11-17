@@ -1,5 +1,7 @@
 import { beginOperation, endOperation } from "@venore/plugin-sdk/observability";
-import { UNASSIGNED_OWNER_ID, canAllocate, canEditTicket } from "../../shared/access-rules";
+import { UNASSIGNED_OWNER_ID, canAllocate, canEditTicket, canWorkTicket } from "../../shared/access-rules";
+import { composeReplyBody } from "../../shared/answers";
+import { FLOW_STEPS, canMoveTo, flowStepOf, staffActionFor, validateReason } from "../../shared/flow";
 import { assigneesFor } from "../../shared/directory";
 import { loadAgentOptions, loadTicketForViewer } from "../../shared/own-ticket";
 import type { Requester } from "../../shared/requester";
@@ -47,6 +49,25 @@ export async function agentUpdateTicket(requester: Requester, input: AgentUpdate
     if (input.stateId !== undefined && input.stateId !== ticket.state_id) {
       const state = options.data.states.find((candidate) => candidate.id === input.stateId);
       if (!state) return finish(failure("invalid_state", "Estado inválido."));
+      // Fluxo da FEM: a API do Zammad não aplica os Core Workflows, então a regra de quem muda o quê
+      // (600–607) é repetida aqui. Fora do fluxo, vale o comportamento genérico.
+      const currentStep = flowStepOf(ticket.state);
+      if (currentStep) {
+        const targetStep = flowStepOf(state.name);
+        const actor = { supervisor: canAllocate(mode, role), worker: canWorkTicket(mode, ticket.owner_id, meId) };
+        if (!targetStep || !canMoveTo(currentStep, targetStep, actor)) {
+          return finish(failure("forbidden_transition", `Você não pode levar este chamado de “${FLOW_STEPS[currentStep].label}” para “${state.label}”.`));
+        }
+        const action = staffActionFor(targetStep);
+        const reasonError = validateReason(input.reason, action?.reason === "required");
+        if (reasonError) return finish(failure("invalid_reason", reasonError));
+        const reason = (input.reason ?? "").trim();
+        // O texto vai como nota PÚBLICA no mesmo PUT: o gatilho de aviso ao cliente lê #{article.body_as_text}
+        // ("Motivo:") e exige artigo público. Nota (não e-mail) para o cliente não receber dois e-mails.
+        if (reason) {
+          body.article = { subject: state.label, body: composeReplyBody(reason, null), content_type: "text/html", type: "note", internal: false };
+        }
+      }
       const pendingError = validatePending(state, input.pendingTime);
       if (pendingError) return finish(failure("invalid_pending", pendingError));
       body.state_id = state.id;

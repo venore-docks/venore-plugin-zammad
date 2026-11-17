@@ -1,5 +1,6 @@
 import type { TicketSummary } from "../../contracts/types";
 import type { ZammadExpandedTicket } from "../../contracts/zammad";
+import { customerMustDecide } from "../../shared/flow";
 import type { Requester } from "../../shared/requester";
 import { priorityLabel } from "../../shared/ticket-options";
 import { describeState, isAwaitingYou } from "../../shared/ticket-state";
@@ -30,8 +31,10 @@ export async function listMyTickets(requester: Requester): Promise<ListMyTickets
       group: ticket.group,
       stateLabel: state.label,
       stateTone: state.tone,
+      stateColor: state.color,
       closed: state.closed,
-      awaitingYou: isAwaitingYou(ticket, state.closed),
+      // Concluído / Não autorizado esperam a decisão de quem abriu (fluxo da FEM).
+      awaitingYou: isAwaitingYou(ticket, state.closed) || customerMustDecide(state.step),
       priorityLabel: priorityLabel(ticket.priority ?? ""),
       requesterName: null,
       createdAt: ticket.created_at,

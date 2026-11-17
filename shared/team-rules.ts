@@ -3,7 +3,7 @@
 // No Zammad o acesso a um grupo vem do PRÓPRIO usuário (`group_ids`) e dos PAPÉIS dele (cada papel tem os
 // seus `group_ids`); vale a união. Cada acesso é uma lista: full, change, read, create, overview. Só quem
 // tem `full` ou `change` pode ser RESPONSÁVEL por chamados do grupo.
-export type DirRole = { id: number; permissions: string[]; groupAccess: Record<string, string[]> };
+export type DirRole = { id: number; name?: string; permissions: string[]; groupAccess: Record<string, string[]> };
 export type DirUser = { id: number; name: string; email: string | null; active: boolean; roleIds: number[]; groupAccess: Record<string, string[]> };
 
 const OWNER_ACCESS = ["full", "change"];

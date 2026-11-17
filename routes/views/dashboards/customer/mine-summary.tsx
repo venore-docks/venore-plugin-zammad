@@ -74,7 +74,7 @@ export function MineSummary({ data, surface, compact }: { data: CustomerDashboar
                   href={surface.detail(ticket.id)}
                   className="group flex items-center gap-3 overflow-hidden rounded-xl border bg-card pe-3 transition-colors hover:border-foreground/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 >
-                  <span aria-hidden className={cn("w-1.5 self-stretch", ticket.awaitingYou && !ticket.closed ? "bg-warning" : toneBar(ticket.stateTone))} />
+                  <span aria-hidden className={cn("w-1.5 self-stretch", ticket.awaitingYou && !ticket.closed ? "bg-warning" : toneBar(ticket.stateTone, ticket.stateColor))} />
                   <span className="min-w-0 flex-1 space-y-1 py-3">
                     <span className="block truncate font-medium text-foreground">{ticket.title}</span>
                     <span className="block truncate text-xs text-muted-foreground">
@@ -82,7 +82,7 @@ export function MineSummary({ data, surface, compact }: { data: CustomerDashboar
                     </span>
                   </span>
                   <span className="shrink-0">
-                    <StateBadge label={ticket.stateLabel} tone={ticket.stateTone} />
+                    <StateBadge label={ticket.stateLabel} tone={ticket.stateTone} color={ticket.stateColor} />
                   </span>
                 </Link>
               </li>

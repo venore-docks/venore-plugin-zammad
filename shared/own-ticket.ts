@@ -1,8 +1,8 @@
 import "server-only";
 import type { OperationResult } from "@venore/plugin-sdk";
 import type { ZammadArticle, ZammadExpandedTicket, ZammadTicketPriority, ZammadTicketState } from "../contracts/zammad";
-import { isStaff, viewerMode, type StaffRole, type ViewerMode } from "./access-rules";
-import { staffRoleFor } from "./directory";
+import { isStaff, isSupervisor, viewerMode, type StaffRole, type ViewerMode } from "./access-rules";
+import { staffRoleFor, supervisesGroup } from "./directory";
 import type { Requester } from "./requester";
 import { buildPriorityOptions, buildStateOptions, type PriorityOption, type StateOption } from "./ticket-options";
 import { failure } from "./results";
@@ -42,12 +42,19 @@ export async function loadTicketForViewer(requester: Requester, ticketId: number
       : result;
   }
   const role = asAgent ? await staffRoleFor(requester) : "customer";
+  const meId = requester.zammadUser.id;
+  // Gestor que abriu chamado em OUTRO setor é só o solicitante ali (sem autorizar o próprio pedido).
+  const supervises =
+    isSupervisor(role) && result.data.customer_id === meId && result.data.owner_id !== meId
+      ? await supervisesGroup(requester, result.data.group_id)
+      : true;
   const mode = viewerMode({
     customerId: result.data.customer_id,
     ownerId: result.data.owner_id,
-    meId: requester.zammadUser.id,
+    meId,
     role,
     asAgent,
+    supervisesGroup: supervises,
   });
   if (!mode) return failure("ticket_not_found", NOT_FOUND);
   return { success: true, data: { ticket: result.data, mode, role } };

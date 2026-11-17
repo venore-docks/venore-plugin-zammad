@@ -1,23 +1,25 @@
 import Link from "next/link";
 import { cn } from "@venore/plugin-sdk/ui";
 import { Button } from "@venore/plugin-sdk/ui";
-import type { TicketStateTone } from "../../contracts/types";
+import type { TicketStateColor, TicketStateTone } from "../../contracts/types";
+import { FLOW_BADGE } from "./palette";
 
-// Cada estado tem uma cor própria (tokens do tema): novo = azul-esverdeado, em atendimento = cor
-// primária, aguardando = âmbar, encerrado = neutro. A bolinha reforça a cor sem depender só do texto.
-const TONES: Record<TicketStateTone, { badge: string; dot: string; bar: string }> = {
-  new: { badge: "border-chart-2/40 bg-chart-2/10", dot: "bg-chart-2", bar: "bg-chart-2" },
-  open: { badge: "border-primary/40 bg-primary/10", dot: "bg-primary", bar: "bg-primary" },
-  pending: { badge: "border-warning-border bg-warning-soft", dot: "bg-warning", bar: "bg-warning" },
-  closed: { badge: "border-border bg-muted", dot: "bg-muted-foreground/50", bar: "bg-border" },
-};
+// Cada estado tem uma cor SEMÂNTICA (tokens do tema, ver palette.ts): informação = novo, primária = em
+// andamento, alerta = em análise/aguardando, sucesso = autorizado/concluído, perigo = não autorizado,
+// neutro = finalizado. A bolinha reforça a cor sem depender só do texto. `tone` (legado) vira cor quando
+// `color` não vem.
+const TONE_COLOR: Record<TicketStateTone, TicketStateColor> = { new: "info", open: "primary", pending: "warning", closed: "neutral" };
 
-export function toneBar(tone: TicketStateTone): string {
-  return TONES[tone].bar;
+function colorOf(tone: TicketStateTone, color?: TicketStateColor): TicketStateColor {
+  return color ?? TONE_COLOR[tone];
 }
 
-export function StateBadge({ label, tone }: { label: string; tone: TicketStateTone }) {
-  const classes = TONES[tone];
+export function toneBar(tone: TicketStateTone, color?: TicketStateColor): string {
+  return FLOW_BADGE[colorOf(tone, color)].bar;
+}
+
+export function StateBadge({ label, tone, color }: { label: string; tone: TicketStateTone; color?: TicketStateColor }) {
+  const classes = FLOW_BADGE[colorOf(tone, color)];
   return (
     <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium text-foreground", classes.badge)}>
       <span aria-hidden className={cn("size-1.5 rounded-full", classes.dot)} />
