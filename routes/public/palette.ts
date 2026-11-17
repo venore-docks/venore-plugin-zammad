@@ -77,8 +77,8 @@ export const FLOW_BUTTON_SUBTLE: Record<FlowTone, string> = {
   danger: "bg-destructive/75 text-destructive-foreground hover:bg-destructive",
 };
 
-// Tamanho do botão compacto: baixo e com cantos quase retos.
-export const FLOW_BUTTON_SMALL = "h-6 gap-1 rounded-sm px-2 py-0 text-xs font-medium shadow-none has-[>svg]:px-2 [&_svg]:size-3";
+// Tamanho do botão compacto: 20 px, texto 11 px, cantos quase retos e sem ícone (o texto já diz a ação).
+export const FLOW_BUTTON_SMALL = "h-5 gap-0 rounded-sm px-1.5 py-0 text-[0.6875rem] leading-none font-medium shadow-none has-[>svg]:px-1.5 [&_svg]:hidden";
 
 // Cor estável por setor (não muda se a ordem da lista mudar). Subgrupos herdam a cor do pai.
 export function accentFor(rootGroupId: number): Accent {
