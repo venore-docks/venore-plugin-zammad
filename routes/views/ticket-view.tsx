@@ -73,13 +73,13 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
             </a>
           )}
           {ticket.flowStep === "finalizado" && (
-            <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted p-3 text-sm text-foreground sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 text-sm text-foreground sm:flex-row sm:items-center">
               <CircleCheck className="size-5 shrink-0 text-success" />
               <span className="flex-1">
                 <strong>Este chamado foi finalizado.</strong> Precisa de algo mais? Abra um novo chamado.
               </span>
               {!agent && (
-                <Button asChild size="sm" className="h-10">
+                <Button asChild size="sm" variant="outline" className="h-10">
                   <Link href={surface.newTicket}>
                     <Plus className="size-4" />
                     Novo chamado
@@ -89,7 +89,7 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
             </div>
           )}
           {ticket.closed && !ticket.flowStep && (
-            <div className="flex items-start gap-3 rounded-lg border border-success-border bg-success-soft p-3 text-sm text-foreground">
+            <div className="flex items-start gap-3 rounded-lg border bg-card p-3 text-sm text-foreground">
               <CircleCheck className="mt-0.5 size-5 shrink-0 text-success" />
               <span>
                 <strong>Este chamado está encerrado.</strong>

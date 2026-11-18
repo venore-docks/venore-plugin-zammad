@@ -6,8 +6,10 @@ não roda sozinho: typecheck, lint e build rodam **a partir do core**. Visão ge
 ## Regras de arquitetura
 
 São as mesmas do core: `AGENTS.md` (camadas handler → service, `OperationResult<T>`),
-`.claude/rules/plugin-routes.md` (toda rota em `routes/route-table.ts`) e
-`.claude/rules/css-tokens.md` (só tokens shadcn).
+`.claude/rules/plugin-routes.md` (toda rota em `routes/route-table.ts`),
+`.claude/rules/css-tokens.md` (só tokens shadcn) e `.claude/rules/ui-design.md` (telas que guiam:
+cor só para o que pede ação, uma ação principal por bloco, o secundário recolhido, um nível de caixa).
+O Colabora é a referência dessa regra.
 
 ## Pontos que importam
 
@@ -39,7 +41,9 @@ São as mesmas do core: `AGENTS.md` (camadas handler → service, `OperationResu
 - Audiência dos setores também vem do Zammad: workflows da máscara de criação em `ticket.group_id`
   (`allowedGroupIds` + `groupsAllowedByZammad`).
 - Gestor = `report` OU função `<Setor> - Administrador`.
-- Cores do fluxo: `FLOW_BADGE`/`FLOW_BUTTON` em `routes/public/palette.ts` (só tokens).
+- Cores do fluxo: `FLOW_BADGE` em `routes/public/palette.ts` (só tokens; só a bolinha do selo e o ícone da tag).
+  Botões de decisão por peso (`FlowEmphasis` em `public/flow-actions.tsx`: 1º cheio, 2º contorno, resto texto),
+  nunca na cor do estado.
 
 ## Verificar contra o core
 

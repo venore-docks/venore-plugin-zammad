@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { BellRing, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { cn } from "@venore/plugin-sdk/ui";
 import type { TicketSummary } from "../../index";
-import { StateBadge, formatDateTime, toneBar } from "./shared";
+import { AwaitingBadge, LIST_CLASS, ROW_LINK_CLASS, StateBadge, formatDateTime } from "./shared";
 
 // Lista de chamados, igual no portal e no app. Cada linha abre a conversa na MESMA superfície
-// (`hrefFor`); o Zammad não aparece. `waiting` destaca o grupo que espera resposta de quem está olhando.
+// (`hrefFor`); o Zammad não aparece. Regra de design: um cartão com divisórias, título + setor · data, selo
+// neutro; `waiting` (o grupo que espera quem está olhando) troca o selo pelo "Aguardando você".
 export function TicketGroup({
   title,
   tickets,
@@ -13,6 +14,7 @@ export function TicketGroup({
   waiting = false,
   muted = false,
   showRequester = false,
+  waitingLabel,
 }: {
   title: string;
   tickets: TicketSummary[];
@@ -20,39 +22,29 @@ export function TicketGroup({
   waiting?: boolean;
   muted?: boolean;
   showRequester?: boolean;
+  /** Texto do selo de espera quando quem espera não é quem está olhando (ex.: gestor vendo um agente). */
+  waitingLabel?: string;
 }) {
   if (tickets.length === 0) return null;
   return (
-    <section className="space-y-3">
-      <h2 className={cn("flex items-center gap-2 text-sm font-semibold", waiting ? "text-warning" : "text-foreground", muted && "text-muted-foreground")}>
-        {waiting && <BellRing className="size-4" />}
+    <section className="space-y-2">
+      <h2 className={cn("flex items-center gap-2 text-sm font-semibold", muted ? "text-muted-foreground" : "text-foreground")}>
         {title}
-        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">{tickets.length}</span>
+        <span className="text-xs font-normal text-muted-foreground tabular-nums">{tickets.length}</span>
       </h2>
-      <ul className="space-y-2">
+      <ul className={LIST_CLASS}>
         {tickets.map((ticket) => (
           <li key={ticket.id}>
-            <Link
-              href={hrefFor(ticket.id)}
-              className={cn(
-                "group flex items-center gap-3 overflow-hidden rounded-lg border bg-card pe-3 transition-all hover:-translate-y-0.5 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                waiting && "border-warning-border bg-warning-soft",
-                muted && "opacity-80",
-              )}
-            >
-              <span aria-hidden className={cn("w-1.5 self-stretch", waiting ? "bg-warning" : toneBar(ticket.stateTone, ticket.stateColor))} />
-              <span className="min-w-0 flex-1 space-y-1 py-3.5">
-                <span className="block truncate font-medium text-foreground">{ticket.title}</span>
+            <Link href={hrefFor(ticket.id)} className={ROW_LINK_CLASS}>
+              <span className="min-w-0 flex-1 space-y-0.5">
+                <span className={cn("block truncate text-sm font-medium", muted ? "text-muted-foreground" : "text-foreground")}>{ticket.title}</span>
                 <span className="block truncate text-xs text-muted-foreground">
-                  #{ticket.number} · {ticket.group}
+                  {ticket.group}
                   {showRequester && ticket.requesterName ? ` · ${ticket.requesterName}` : ""} · {formatDateTime(ticket.updatedAt)}
                 </span>
               </span>
-              <span className="flex shrink-0 flex-col items-end gap-1.5">
-                <StateBadge label={ticket.stateLabel} tone={ticket.stateTone} color={ticket.stateColor} />
-                {showRequester && <span className="text-xs text-muted-foreground">{ticket.priorityLabel}</span>}
-              </span>
-              <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+              {waiting ? <AwaitingBadge label={waitingLabel} /> : <StateBadge label={ticket.stateLabel} tone={ticket.stateTone} color={ticket.stateColor} />}
+              <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground rtl:rotate-180" />
             </Link>
           </li>
         ))}

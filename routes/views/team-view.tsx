@@ -4,9 +4,9 @@ import { EmptyState, cn } from "@venore/plugin-sdk/ui";
 import { getTeamOverview } from "../../index";
 import { hrefWith, maxOpen, parseSectorFilter, rankLoads } from "../../shared/manager-stats";
 import { surfaceFor, type SurfaceKey } from "../../shared/routes";
-import { BlockedNotice } from "../public/shared";
+import { BlockedNotice, LIST_CLASS } from "../public/shared";
 import { enterSurface } from "./context";
-import { LevelPill, LoadBar, initialsOf } from "./dashboards/manager/load-bar";
+import { LevelPill, LoadBar } from "./dashboards/manager/load-bar";
 import { ColaboraFrame } from "./frame";
 import type { ViewQuery } from "./query";
 
@@ -16,8 +16,8 @@ function Chip({ href, active, children }: { href: string; active: boolean; child
       href={href}
       aria-current={active ? "true" : undefined}
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-        active ? "border-primary bg-primary font-medium text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
+        "inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        active ? "border-foreground/30 bg-muted font-medium text-foreground" : "bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
       )}
     >
       {children}
@@ -116,7 +116,7 @@ export async function TeamView({ surfaceKey, query }: { surfaceKey: SurfaceKey; 
                     {visible.length} {visible.length === 1 ? "agente" : "agentes"} · {totalOpen} {totalOpen === 1 ? "chamado aberto" : "chamados abertos"}
                     {totalWaiting > 0 ? ` · ${totalWaiting} aguardando` : ""}
                   </p>
-                  <ul className="grid gap-3">
+                  <ul className={LIST_CLASS}>
                     {ranked.map((agent) => {
                       const member = memberById.get(agent.id);
                       const names = (member?.groupIds ?? []).map((id) => groupName.get(id)).filter((name): name is string => Boolean(name));
@@ -124,10 +124,9 @@ export async function TeamView({ surfaceKey, query }: { surfaceKey: SurfaceKey; 
                         <li key={agent.id}>
                           <Link
                             href={surface.teamAgent(agent.id)}
-                            className="block space-y-3 rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                            className="group block space-y-2 px-4 py-3 transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
                           >
                             <span className="flex items-center gap-3">
-                              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-chart-6/20 text-xs font-semibold text-foreground">{initialsOf(agent.name)}</span>
                               <span className="min-w-0 flex-1">
                                 <span className="block truncate text-sm font-medium text-foreground">{agent.name}</span>
                                 {names.length > 0 && (
@@ -137,16 +136,14 @@ export async function TeamView({ surfaceKey, query }: { surfaceKey: SurfaceKey; 
                                   </span>
                                 )}
                               </span>
+                              <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                                {agent.open} {agent.open === 1 ? "aberto" : "abertos"}
+                                {agent.waiting > 0 ? ` · ${agent.waiting} aguardando` : ""}
+                              </span>
                               <LevelPill level={agent.level} />
-                              <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                              <ChevronRight className="size-4 shrink-0 text-muted-foreground rtl:rotate-180" aria-hidden />
                             </span>
                             <LoadBar open={agent.open} waiting={agent.waiting} max={max} />
-                            <span className="flex flex-wrap items-baseline justify-between gap-x-3 text-xs text-muted-foreground tabular-nums">
-                              <span>
-                                <strong className="text-base font-semibold text-foreground">{agent.open}</strong> {agent.open === 1 ? "aberto" : "abertos"}
-                              </span>
-                              {agent.waiting > 0 && <span>{agent.waiting} aguardando resposta</span>}
-                            </span>
                           </Link>
                         </li>
                       );

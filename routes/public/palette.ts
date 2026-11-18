@@ -40,45 +40,20 @@ export const ACCENTS: Accent[] = [
   { soft: "bg-warning/15", border: "border-warning/50", top: "border-t-warning", solid: "bg-warning", ring: "ring-warning/60" },
 ];
 
-// Cores SEMÂNTICAS do fluxo (estado e botões de decisão). Só tokens: success/warning (com -soft/-border),
-// destructive (perigo; sem -soft no vocabulário, por isso /10 e /40), primary e chart-2 (informação).
-// Cada tema (Aurora inclusive) e a paleta personalizada do editor de temas redefinem esses tokens.
+// Cores SEMÂNTICAS do fluxo (estado e tags). Só tokens: success/warning, destructive, primary e chart-2
+// (informação); cada tema e a paleta personalizada do editor de temas os redefinem. Regra de design (core
+// `.claude/rules/ui-design.md`): a cor do estado vai só na BOLINHA do selo e no ícone da tag — selo, cartão e
+// botão ficam neutros; cor forte é reservada ao que pede ação.
 export type FlowTone = "neutral" | "info" | "primary" | "warning" | "success" | "danger";
 
-// `border`: faixa lateral do card (border-s-4) na cor do estado.
-export const FLOW_BADGE: Record<FlowTone, { badge: string; dot: string; bar: string; soft: string; icon: string; border: string }> = {
-  neutral: { badge: "border-border bg-muted", dot: "bg-muted-foreground/50", bar: "bg-border", soft: "border-border bg-muted", icon: "text-muted-foreground", border: "border-s-border" },
-  info: { badge: "border-chart-2/40 bg-chart-2/10", dot: "bg-chart-2", bar: "bg-chart-2", soft: "border-chart-2/40 bg-chart-2/10", icon: "text-chart-2", border: "border-s-chart-2" },
-  primary: { badge: "border-primary/40 bg-primary/10", dot: "bg-primary", bar: "bg-primary", soft: "border-primary/40 bg-primary/10", icon: "text-primary", border: "border-s-primary" },
-  warning: { badge: "border-warning-border bg-warning-soft", dot: "bg-warning", bar: "bg-warning", soft: "border-warning-border bg-warning-soft", icon: "text-warning", border: "border-s-warning" },
-  success: { badge: "border-success-border bg-success-soft", dot: "bg-success", bar: "bg-success", soft: "border-success-border bg-success-soft", icon: "text-success", border: "border-s-success" },
-  danger: { badge: "border-destructive/40 bg-destructive/10", dot: "bg-destructive", bar: "bg-destructive", soft: "border-destructive/40 bg-destructive/10", icon: "text-destructive", border: "border-s-destructive" },
+export const FLOW_BADGE: Record<FlowTone, { dot: string; icon: string }> = {
+  neutral: { dot: "bg-muted-foreground/50", icon: "text-muted-foreground" },
+  info: { dot: "bg-chart-2", icon: "text-chart-2" },
+  primary: { dot: "bg-primary", icon: "text-primary" },
+  warning: { dot: "bg-warning", icon: "text-warning" },
+  success: { dot: "bg-success", icon: "text-success" },
+  danger: { dot: "bg-destructive", icon: "text-destructive" },
 };
-
-// Botão de decisão: cheio, na cor semântica, para chamar a atenção (o texto usa o *-foreground do
-// mesmo token, que cada tema calibra para contraste). Informação/neutro usam primary/contorno.
-export const FLOW_BUTTON: Record<FlowTone, string> = {
-  neutral: "border border-border bg-card text-foreground hover:bg-muted",
-  info: "bg-primary text-primary-foreground hover:bg-primary/90",
-  primary: "bg-primary text-primary-foreground hover:bg-primary/90",
-  warning: "bg-warning text-warning-foreground hover:bg-warning/90",
-  success: "bg-success text-success-foreground hover:bg-success/90",
-  danger: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-};
-
-// Versão COMPACTA (cards de lista): o fundo na cor semântica com um pouco de transparência (cheio no hover) —
-// pequeno e menos pesado que o botão de painel, para o título e os dados do chamado continuarem em destaque.
-export const FLOW_BUTTON_SUBTLE: Record<FlowTone, string> = {
-  neutral: "bg-muted/80 text-foreground hover:bg-muted",
-  info: "bg-primary/75 text-primary-foreground hover:bg-primary",
-  primary: "bg-primary/75 text-primary-foreground hover:bg-primary",
-  warning: "bg-warning/75 text-warning-foreground hover:bg-warning",
-  success: "bg-success/75 text-success-foreground hover:bg-success",
-  danger: "bg-destructive/75 text-destructive-foreground hover:bg-destructive",
-};
-
-// Tamanho do botão compacto: 20 px, texto 11 px, cantos quase retos e sem ícone (o texto já diz a ação).
-export const FLOW_BUTTON_SMALL = "h-5 gap-0 rounded-sm px-1.5 py-0 text-[0.6875rem] leading-none font-medium shadow-none has-[>svg]:px-1.5 [&_svg]:hidden";
 
 // Cor estável por setor (não muda se a ordem da lista mudar). Subgrupos herdam a cor do pai.
 export function accentFor(rootGroupId: number): Accent {

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CircleCheck, CircleX, ExternalLink, FileSearch, Paperclip, Search, UserCheck } from "lucide-react";
+import { ExternalLink, Paperclip, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import {
   Button,
@@ -19,19 +19,13 @@ import {
   SelectTrigger,
   SelectValue,
   Textarea,
-  cn,
 } from "@venore/plugin-sdk/ui";
 import type { FlowStepKey } from "../../../../contracts/types";
 import type { AssigneeOption } from "../../../../features/get-manager-dashboard/types";
 import { REASON_MAX, validateReason } from "../../../../shared/flow";
 import type { QueueBucket } from "../../../../shared/queue-buckets";
 import { agentUpdateTicketAction, ticketPreviewAction, type TicketPreview } from "../../../public/actions";
-import { FlowButton } from "../../../public/flow-actions";
-import { FLOW_BUTTON, FLOW_BUTTON_SMALL, FLOW_BUTTON_SUBTLE } from "../../../public/palette";
 import { formatDateTime } from "../../../public/shared";
-
-// Botão compacto dos cards da fila.
-const SMALL = FLOW_BUTTON_SMALL;
 
 type DecisionProps = {
   ticketId: number;
@@ -64,6 +58,9 @@ function useSend() {
 function optionLabel(person: AssigneeOption, suggestedId: number | null): string {
   return `${person.name}${person.open !== null ? ` · ${person.open} ${person.open === 1 ? "aberto" : "abertos"}` : ""}${person.id === suggestedId ? " · sugerido" : ""}`;
 }
+
+// Botão da linha da fila: UM por linha, em contorno (regra de design). O título da linha abre o chamado.
+const ROW_BUTTON = "h-8 px-3 text-xs";
 
 // "Autorizar e atribuir": um só envio com Autorizado + responsável. O gatilho do Zammad
 // ("Administrador atribui agente") leva o chamado a Em andamento e avisa o solicitante.
@@ -99,7 +96,7 @@ function AuthorizeAndAssign({
         </SelectContent>
       </Select>
       <Button
-        className={cn("h-10 font-semibold sm:shrink-0", FLOW_BUTTON.primary)}
+        className="h-10 sm:shrink-0"
         disabled={busy || !value}
         onClick={() => send({ stateId: authorizedId, ownerId: Number(value) }, ticketId, "Autorizado e atribuído. O chamado está em andamento.", onDone)}
       >
@@ -110,9 +107,10 @@ function AuthorizeAndAssign({
   );
 }
 
-// Diálogo "Analisar": resumo do pedido e as decisões do gestor (manter em análise, autorizar, não autorizar,
-// ou autorizar já atribuindo um agente).
-function AnalyzeDialog({ props, label, icon, variant }: { props: DecisionProps; label: string; icon: React.ReactNode; variant: "primary" | "outline" }) {
+// Diálogo "Analisar": resumo do pedido e as decisões do gestor. A principal é "Autorizar e atribuir" (botão
+// cheio); "Só autorizar" em contorno; "Manter em análise" e "Não autorizar" em texto. A confirmação de
+// "não autorizar" (com motivo) é o único botão vermelho.
+function AnalyzeDialog({ props }: { props: DecisionProps }) {
   const { ticketId, bucket, detailHref, flowStateIds, options, suggestedId } = props;
   const [open, setOpen] = useState(false);
   const [preview, setPreview] = useState<TicketPreview | null>(null);
@@ -159,21 +157,18 @@ function AnalyzeDialog({ props, label, icon, variant }: { props: DecisionProps; 
     send({ stateId: deniedId, reason: reason.trim() }, ticketId, "Chamado não autorizado. O solicitante foi avisado.", close);
   }
 
+  const textLink = "h-auto px-0 py-1 font-normal text-muted-foreground underline-offset-4 hover:bg-transparent hover:text-foreground hover:underline";
+
   return (
     <Dialog open={open} onOpenChange={openDialog}>
-      <Button
-        type="button"
-        onClick={() => openDialog(true)}
-        className={cn(SMALL, variant === "primary" ? FLOW_BUTTON_SUBTLE.primary : FLOW_BUTTON_SUBTLE.neutral)}
-      >
-        {icon}
-        {label}
+      <Button type="button" variant="outline" className={ROW_BUTTON} onClick={() => openDialog(true)}>
+        Analisar
       </Button>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="pe-6 leading-snug">{preview?.title ?? props.title}</DialogTitle>
           <DialogDescription>
-            {preview ? `#${preview.number} · ${preview.group} · ${preview.requesterName} · aberto em ${formatDateTime(preview.createdAt)}` : "Carregando o pedido…"}
+            {preview ? `${preview.group} · ${preview.requesterName} · aberto em ${formatDateTime(preview.createdAt)}` : "Carregando o pedido…"}
           </DialogDescription>
         </DialogHeader>
 
@@ -185,22 +180,26 @@ function AnalyzeDialog({ props, label, icon, variant }: { props: DecisionProps; 
         {loading && !preview && <div className="h-28 animate-pulse rounded-md bg-muted" aria-hidden />}
         {preview && (
           <div className="space-y-4">
-            <div className="flex flex-wrap gap-2 text-xs">
-              <span className="rounded-full border px-2.5 py-0.5 text-muted-foreground">Estado: {preview.stateLabel}</span>
-              <span className="rounded-full border px-2.5 py-0.5 text-muted-foreground">Prioridade: {preview.priorityLabel}</span>
+            <p className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+              <span>#{preview.number}</span>
+              <span aria-hidden>·</span>
+              <span>Prioridade {preview.priorityLabel}</span>
               {preview.attachments > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-muted-foreground">
-                  <Paperclip className="size-3" aria-hidden />
-                  {preview.attachments} {preview.attachments === 1 ? "anexo" : "anexos"}
-                </span>
+                <>
+                  <span aria-hidden>·</span>
+                  <span className="inline-flex items-center gap-1">
+                    <Paperclip className="size-3" aria-hidden />
+                    {preview.attachments} {preview.attachments === 1 ? "anexo" : "anexos"}
+                  </span>
+                </>
               )}
-            </div>
+            </p>
             {preview.answers.length > 0 && (
-              <dl className="grid gap-2.5 rounded-md border bg-muted/40 p-3 text-sm">
+              <dl className="grid gap-2.5 text-sm">
                 {preview.answers.map((answer) => (
                   <div key={answer.label} className="min-w-0">
                     <dt className="text-xs text-muted-foreground">{answer.label}</dt>
-                    <dd className="font-medium break-words text-foreground">{answer.value}</dd>
+                    <dd className="break-words text-foreground">{answer.value}</dd>
                   </div>
                 ))}
               </dl>
@@ -214,7 +213,7 @@ function AnalyzeDialog({ props, label, icon, variant }: { props: DecisionProps; 
         )}
 
         {denying ? (
-          <div className="space-y-2 rounded-md border border-destructive/40 bg-destructive/10 p-3">
+          <div className="space-y-2 border-t pt-4">
             <label htmlFor={`deny-${ticketId}`} className="block text-sm font-medium text-foreground">
               Motivo da não autorização <span className="text-destructive">*</span>
               <span className="block text-xs font-normal text-muted-foreground">O solicitante recebe este texto por e-mail e pode reenviar o pedido.</span>
@@ -236,37 +235,29 @@ function AnalyzeDialog({ props, label, icon, variant }: { props: DecisionProps; 
               <Button variant="outline" disabled={busy} onClick={() => setDenying(false)}>
                 Voltar
               </Button>
-              <Button disabled={busy} onClick={deny} className={cn("font-semibold", FLOW_BUTTON.danger)}>
-                <CircleX className="size-4" />
-                {busy ? "Enviando…" : "Confirmar: não autorizar"}
+              <Button variant="destructive" disabled={busy} onClick={deny}>
+                {busy ? "Enviando…" : "Não autorizar"}
               </Button>
             </div>
           </div>
         ) : (
           <div className="space-y-3 border-t pt-4">
-            <p className="text-xs font-medium text-muted-foreground">Atribuir já autoriza e coloca o chamado em andamento:</p>
+            <p className="text-sm text-muted-foreground">Atribuir já autoriza e coloca o chamado em andamento.</p>
             <AuthorizeAndAssign ticketId={ticketId} authorizedId={authorizedId} options={options} suggestedId={suggestedId} onDone={close} />
-            <DialogFooter className="gap-2 pt-1 sm:justify-start">
+            <DialogFooter className="flex-row flex-wrap items-center gap-x-4 gap-y-2 pt-1 sm:justify-start">
+              {authorizedId && (
+                <Button variant="outline" disabled={busy} onClick={() => send({ stateId: authorizedId }, ticketId, "Chamado autorizado. Agora atribua um responsável.", close)}>
+                  Só autorizar
+                </Button>
+              )}
               {analysisId && (
-                <Button disabled={busy} onClick={keepAnalyzing} className={cn("h-10 font-semibold", FLOW_BUTTON.warning)}>
-                  <Search className="size-4" />
+                <Button variant="ghost" disabled={busy} onClick={keepAnalyzing} className={textLink}>
                   Manter em análise
                 </Button>
               )}
-              {authorizedId && (
-                <Button
-                  disabled={busy}
-                  onClick={() => send({ stateId: authorizedId }, ticketId, "Chamado autorizado. Agora atribua um responsável.", close)}
-                  className={cn("h-10 font-semibold", FLOW_BUTTON.success)}
-                >
-                  <CircleCheck className="size-4" />
-                  Autorizar
-                </Button>
-              )}
               {deniedId && (
-                <Button disabled={busy} onClick={() => setDenying(true)} className={cn("h-10 font-semibold", FLOW_BUTTON.danger)}>
-                  <CircleX className="size-4" />
-                  Não autorizar
+                <Button variant="ghost" disabled={busy} onClick={() => setDenying(true)} className={textLink}>
+                  Não autorizar…
                 </Button>
               )}
             </DialogFooter>
@@ -277,21 +268,9 @@ function AnalyzeDialog({ props, label, icon, variant }: { props: DecisionProps; 
   );
 }
 
-
-// "Atribuir" com confirmação: escolhe o agente num diálogo e confirma. `authorizedId` presente = autoriza junto
-// (Em análise/Reavaliação); ausente = só atribui (Autorizado). Nos dois casos o gatilho do Zammad leva o chamado a
-// Em andamento e avisa o solicitante.
-function AssignDialog({
-  ticketId,
-  authorizedId,
-  options,
-  suggestedId,
-}: {
-  ticketId: number;
-  authorizedId?: number;
-  options: AssigneeOption[];
-  suggestedId: number | null;
-}) {
+// "Atribuir" com confirmação: escolhe o agente num diálogo e confirma (etapa Autorizado). O gatilho do Zammad
+// leva o chamado a Em andamento e avisa o solicitante.
+function AssignDialog({ ticketId, options, suggestedId }: { ticketId: number; options: AssigneeOption[]; suggestedId: number | null }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(suggestedId ? String(suggestedId) : "");
   const { busy, send } = useSend();
@@ -299,23 +278,18 @@ function AssignDialog({
 
   function confirm() {
     if (!value) return;
-    const update = authorizedId ? { stateId: authorizedId, ownerId: Number(value) } : { ownerId: Number(value) };
-    send(update, ticketId, authorizedId ? "Autorizado e atribuído. O chamado está em andamento." : "Chamado atribuído. Está em andamento.", () => setOpen(false));
+    send({ ownerId: Number(value) }, ticketId, "Chamado atribuído. Está em andamento.", () => setOpen(false));
   }
 
   return (
     <Dialog open={open} onOpenChange={(next) => !busy && setOpen(next)}>
-      <Button type="button" disabled={options.length === 0} onClick={() => setOpen(true)} className={cn(SMALL, FLOW_BUTTON_SUBTLE.primary)}>
-        <UserCheck className="size-3.5" />
+      <Button type="button" variant="outline" className={ROW_BUTTON} disabled={options.length === 0} onClick={() => setOpen(true)}>
         Atribuir
       </Button>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{authorizedId ? "Autorizar e atribuir" : "Atribuir responsável"}</DialogTitle>
-          <DialogDescription>
-            {authorizedId ? "O pedido será autorizado e vai para Em andamento com o agente escolhido." : "O chamado vai para Em andamento com o agente escolhido."} O solicitante
-            é avisado por e-mail.
-          </DialogDescription>
+          <DialogTitle>Atribuir responsável</DialogTitle>
+          <DialogDescription>O chamado vai para Em andamento com o agente escolhido. O solicitante é avisado por e-mail.</DialogDescription>
         </DialogHeader>
         <Select value={value} onValueChange={setValue} disabled={busy}>
           <SelectTrigger className="h-10 w-full" aria-label="Agente">
@@ -333,7 +307,7 @@ function AssignDialog({
           <Button variant="outline" disabled={busy} onClick={() => setOpen(false)}>
             Voltar
           </Button>
-          <Button disabled={busy || !value} onClick={confirm} className={cn("font-semibold", FLOW_BUTTON.primary)}>
+          <Button disabled={busy || !value} onClick={confirm}>
             <UserCheck className="size-4" />
             {busy ? "Atribuindo…" : chosen ? `Atribuir a ${chosen.name.split(" ")[0]}` : "Atribuir"}
           </Button>
@@ -343,82 +317,26 @@ function AssignDialog({
   );
 }
 
-// Ações do card da fila do gestor, por etapa (botões compactos, todos com confirmação):
-//   Novo                     Analisar (diálogo com resumo e decisões)
-//   Em análise / Reavaliação Atribuir (autoriza e atribui) · Autorizar · Não autorizar (o título abre o chamado)
-//   Autorizado               Atribuir
-//   Não autorizado           aguardando o solicitante
-//   Atribuídos               Ver atendimento
+// Ação da linha da fila do gestor, por etapa (uma só, em contorno):
+//   Novo / Em análise / Reavaliação  Analisar (diálogo com resumo e todas as decisões)
+//   Autorizado                       Atribuir
+//   Não autorizado                   aguardando o solicitante (texto)
+//   Atribuídos                       Abrir
 export function DecisionActions(props: DecisionProps) {
-  const { ticketId, bucket, flowStateIds, options, suggestedId, detailHref } = props;
-  const row = "flex flex-wrap items-center gap-1.5";
+  const { bucket, options, suggestedId, detailHref, ticketId } = props;
 
-  if (bucket === "novo") {
-    return (
-      <div className={row}>
-        <AnalyzeDialog props={props} label="Analisar" icon={<FileSearch className="size-3.5" />} variant="primary" />
-      </div>
-    );
-  }
-  if (bucket === "analise" || bucket === "reavaliacao") {
-    const authorizedId = flowStateIds.autorizado;
-    const deniedId = flowStateIds.nao_autorizado;
-    return (
-      <div className={row}>
-        {authorizedId && <AssignDialog ticketId={ticketId} authorizedId={authorizedId} options={options} suggestedId={suggestedId} />}
-        {authorizedId && (
-          <FlowButton
-            size="sm"
-            label="Autorizar"
-            color="success"
-            icon={<CircleCheck className="size-3.5" />}
-            prompt="O pedido fica autorizado, esperando um responsável."
-            reason="none"
-            confirmTitle="Autorizar este chamado?"
-            confirmLabel="Autorizar"
-            run={async () => {
-              const result = await agentUpdateTicketAction({ ticketId, stateId: authorizedId });
-              return result.ok ? { ok: true, message: "Chamado autorizado. Agora atribua um responsável." } : result;
-            }}
-          />
-        )}
-        {deniedId && (
-          <FlowButton
-            size="sm"
-            label="Não autorizar"
-            color="danger"
-            icon={<CircleX className="size-3.5" />}
-            prompt="Explique o motivo. O solicitante recebe este texto por e-mail e pode reenviar o pedido."
-            reason="required"
-            confirmTitle="Não autorizar este chamado?"
-            confirmLabel="Não autorizar"
-            run={async (reason) => {
-              const result = await agentUpdateTicketAction({ ticketId, stateId: deniedId, reason });
-              return result.ok ? { ok: true, message: "Chamado não autorizado. O solicitante foi avisado." } : result;
-            }}
-          />
-        )}
-      </div>
-    );
-  }
+  if (bucket === "novo" || bucket === "analise" || bucket === "reavaliacao") return <AnalyzeDialog props={props} />;
   if (bucket === "autorizado") {
     return options.length === 0 ? (
       <p className="text-xs text-muted-foreground">Nenhum agente atende este setor.</p>
     ) : (
-      <div className={row}>
-        <AssignDialog ticketId={ticketId} options={options} suggestedId={suggestedId} />
-      </div>
+      <AssignDialog ticketId={ticketId} options={options} suggestedId={suggestedId} />
     );
   }
-  if (bucket === "nao_autorizado") {
-    return <p className="text-xs text-muted-foreground">Aguardando o solicitante reenviar.</p>;
-  }
+  if (bucket === "nao_autorizado") return <p className="text-xs text-muted-foreground">Aguardando o solicitante reenviar.</p>;
   return (
-    <Button asChild variant="ghost" className={cn(SMALL, FLOW_BUTTON_SUBTLE.neutral)}>
-      <Link href={detailHref}>
-        <ExternalLink className="size-3.5" aria-hidden />
-        Ver atendimento
-      </Link>
+    <Button asChild variant="outline" className={ROW_BUTTON}>
+      <Link href={detailHref}>Abrir</Link>
     </Button>
   );
 }

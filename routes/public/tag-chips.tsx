@@ -15,10 +15,8 @@ export function TagChips({ tags, as = "ul", className, stateLabel }: { tags: rea
   return (
     <Outer aria-label="Tags" className={cn("flex flex-wrap items-center gap-1.5", className)}>
       {views.map((tag) => (
-        <Item
-          key={tag.name}
-          className={cn("inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium text-foreground", FLOW_BADGE[tag.color].badge)}
-        >
+        // Neutro como o selo de estado (regra de design: cor forte só no que pede ação); o ícone leva a cor.
+        <Item key={tag.name} className="inline-flex items-center gap-1 rounded-md border bg-card px-2 py-0.5 text-xs text-muted-foreground">
           <Tag className={cn("size-3", FLOW_BADGE[tag.color].icon)} aria-hidden />
           {tag.label}
         </Item>

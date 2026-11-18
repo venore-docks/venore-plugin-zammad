@@ -161,9 +161,11 @@ comportamento genérico antigo (encerrar/reabrir), para outros Zammads.
   Reavaliação + Autorizado).
 - Layout de **uma coluna** em todo o plugin (sem grades de 2 colunas de conteúdo) e moldura alinhada à
   esquerda, junto do breadcrumb do portal.
-- Cores: só tokens do tema (`success`, `warning`, `destructive`, `primary`, `chart-2`, `muted`) — tabelas
-  `FLOW_BADGE`/`FLOW_BUTTON` em `routes/public/palette.ts`. O editor de temas do core expõe sucesso e
-  perigo (além de alerta) na paleta personalizada.
+- Cores: só tokens do tema (`success`, `warning`, `destructive`, `primary`, `chart-2`, `muted`) — tabela
+  `FLOW_BADGE` em `routes/public/palette.ts`. Desde a v1.4.0 segue a regra de design do core
+  (`.claude/rules/ui-design.md`): a cor do estado fica só na bolinha do selo; fundo colorido só para o que pede
+  ação ("Aguardando você", urgente, atrasado, nota interna). O editor de temas do core expõe sucesso e perigo
+  (além de alerta) na paleta personalizada.
 
 ### 3.3 Audiência dos setores vinda do Zammad
 `allowedGroupIds` (`shared/workflow.ts`) avalia os Core Workflows da máscara de criação que mexem em

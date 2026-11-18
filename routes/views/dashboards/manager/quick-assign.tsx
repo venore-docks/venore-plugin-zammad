@@ -37,7 +37,7 @@ export function QuickAssign({ ticketId, options, suggestedId }: { ticketId: numb
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
       <Select value={value} onValueChange={setValue} disabled={busy}>
-        <SelectTrigger className="h-10 w-full sm:flex-1" aria-label="Atribuir a">
+        <SelectTrigger className="h-9 w-full sm:w-52" aria-label="Atribuir a">
           <SelectValue placeholder="Escolher agente" />
         </SelectTrigger>
         <SelectContent>
@@ -50,7 +50,7 @@ export function QuickAssign({ ticketId, options, suggestedId }: { ticketId: numb
           ))}
         </SelectContent>
       </Select>
-      <Button className="h-10 sm:shrink-0" disabled={busy || !value} onClick={assign}>
+      <Button variant="outline" size="sm" className="h-9 sm:shrink-0" disabled={busy || !value} onClick={assign}>
         <UserCheck className="size-4" />
         {busy ? "Atribuindo…" : "Atribuir"}
       </Button>

@@ -1,12 +1,11 @@
-import Link from "next/link";
-import { ArrowRight, CircleCheck } from "lucide-react";
-import { Button, cn } from "@venore/plugin-sdk/ui";
+import { CircleCheck } from "lucide-react";
 import { getAgentDashboardHandler } from "../../../features/get-agent-dashboard/handler";
 import { surfaceFor } from "../../../shared/routes";
 import { AgentTicketList } from "./agent/ticket-rows";
 import type { DashboardProps } from "./types";
 
-// Dashboard do agente: "Meu atendimento". Só o que está atribuído a ele (a fila é do gestor).
+// Dashboard do agente: "Meu atendimento". Só o que está atribuído a ele (a fila é do gestor). Regra de design:
+// os números numa frase (só "esperam sua resposta" com cor), listas com divisórias, sem cartão em volta.
 export async function AgentDashboard({ surfaceKey }: DashboardProps) {
   const surface = surfaceFor(surfaceKey);
   const result = await getAgentDashboardHandler();
@@ -14,7 +13,7 @@ export async function AgentDashboard({ surfaceKey }: DashboardProps) {
 
   if (!result.success) {
     return (
-      <section className="space-y-2 rounded-lg border bg-card p-5" aria-label="Meu atendimento">
+      <section className="space-y-1" aria-label="Meu atendimento">
         <h2 className="text-lg font-semibold text-foreground">Meu atendimento</h2>
         <p className="text-sm text-muted-foreground">{result.error.message}</p>
       </section>
@@ -25,48 +24,48 @@ export async function AgentDashboard({ surfaceKey }: DashboardProps) {
   const allDone = stats.open === 0;
 
   return (
-    <section className="space-y-6 rounded-lg border bg-card p-4 sm:p-6" aria-label="Meu atendimento">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-foreground">Meu atendimento</h2>
-          <p className="text-sm text-muted-foreground">O que está com você agora.</p>
-        </div>
-        <Button asChild variant="outline">
-          <Link href={surface.assigned}>
-            Ver todos os atribuídos
-            <ArrowRight className="size-4 rtl:rotate-180" />
-          </Link>
-        </Button>
+    <section className="space-y-6" aria-label="Meu atendimento">
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold text-foreground">Meu atendimento</h2>
+        <p className="text-sm text-muted-foreground">
+          {allDone ? (
+            "Nada com você agora."
+          ) : (
+            <>
+              {stats.open} com você
+              {stats.awaiting > 0 && (
+                <>
+                  {" · "}
+                  <span className="font-medium text-warning">
+                    {stats.awaiting} {stats.awaiting === 1 ? "espera" : "esperam"} sua resposta
+                  </span>
+                </>
+              )}
+              {stats.stale > 0 && ` · ${stats.stale} sem retorno há mais de 24 h`}
+              {stats.urgent > 0 && ` · ${stats.urgent} ${stats.urgent === 1 ? "urgente" : "urgentes"}`}
+            </>
+          )}
+        </p>
       </div>
-
-      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="Atribuídos em aberto" value={stats.open} />
-        <Kpi label="Aguardando sua resposta" value={stats.awaiting} tone="warning" />
-        <Kpi label="Urgentes ou alta prioridade" value={stats.urgent} tone="destructive" />
-        <Kpi label="Sem retorno há mais de 24 h" value={stats.stale} tone="warning" />
-      </dl>
 
       {allDone ? (
         <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed px-4 py-10 text-center">
-          <CircleCheck className="size-8 text-success" aria-hidden />
+          <CircleCheck className="size-6 text-muted-foreground" aria-hidden />
           <p className="font-medium text-foreground">Tudo em dia</p>
-          <p className="max-w-sm text-sm text-muted-foreground">Nenhum chamado atribuído a você no momento. Quando chegar um, ele aparece aqui.</p>
+          <p className="max-w-sm text-sm text-muted-foreground">Quando um chamado for atribuído a você, ele aparece aqui.</p>
         </div>
       ) : (
         <div className="space-y-6">
           {needsReply.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-2">
               <h3 className="text-sm font-semibold text-foreground">Precisam da sua resposta</h3>
               <AgentTicketList tickets={needsReply} hrefFor={surface.detail} now={now} label="Precisam da sua resposta" />
             </div>
           ) : (
-            <p className="flex items-center gap-2 rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
-              <CircleCheck className="size-4 shrink-0 text-success" aria-hidden />
-              Ninguém esperando resposta sua. Bom trabalho!
-            </p>
+            <p className="text-sm text-muted-foreground">Ninguém esperando resposta sua.</p>
           )}
           {inProgress.length > 0 && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               <h3 className="text-sm font-semibold text-foreground">Em andamento</h3>
               <AgentTicketList tickets={inProgress} hrefFor={surface.detail} now={now} label="Em andamento" />
             </div>
@@ -74,21 +73,5 @@ export async function AgentDashboard({ surfaceKey }: DashboardProps) {
         </div>
       )}
     </section>
-  );
-}
-
-function Kpi({ label, value, tone }: { label: string; value: number; tone?: "warning" | "destructive" }) {
-  const hot = value > 0 && tone;
-  return (
-    <div
-      className={cn(
-        "flex min-w-0 flex-col-reverse justify-end gap-1 rounded-lg border p-4",
-        hot && tone === "warning" && "border-warning-border bg-warning-soft",
-        hot && tone === "destructive" && "border-destructive/40 bg-destructive/5",
-      )}
-    >
-      <dt className="text-xs leading-snug text-muted-foreground">{label}</dt>
-      <dd className="text-3xl font-semibold tracking-tight text-foreground tabular-nums sm:text-4xl">{value}</dd>
-    </div>
   );
 }

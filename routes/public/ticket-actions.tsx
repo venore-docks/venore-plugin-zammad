@@ -2,7 +2,7 @@
 
 import { useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CircleCheck, Lock, Mail, Paperclip, RotateCcw, Send, X } from "lucide-react";
+import { CircleCheck, Lock, Paperclip, RotateCcw, Send, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -127,7 +127,7 @@ export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number;
 
   if (agent && !agent.canWork) {
     return (
-      <div id="responder" className="rounded-lg border border-warning-border bg-warning-soft p-4 text-sm text-foreground">
+      <div id="responder" className="rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
         {agent.blockedMessage ?? "Este chamado não está com você."}
       </div>
     );
@@ -160,48 +160,41 @@ export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number;
     });
   }
 
+  // Regra de design: caixa neutra; só a nota interna ganha cor (âmbar tracejado), porque ali a cor evita um erro.
+  // As explicações de cada modo vão no placeholder; contador só perto do limite; limite de anexos no `title`.
+  const nearLimit = message.length >= DESCRIPTION_MAX * 0.9;
+  const tab =
+    "-mb-px inline-flex min-h-10 items-center gap-1.5 border-b-2 px-0.5 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50";
   return (
     <form
       ref={formRef}
       id="responder"
       onSubmit={submit}
-      className={cn("scroll-mt-24 space-y-3 rounded-lg border border-t-4 bg-card p-4 sm:p-5", internal ? "border-t-warning" : "border-t-chart-2")}
+      className={cn("scroll-mt-24 space-y-3 rounded-lg border p-4", internal ? "border-dashed border-warning-border bg-warning-soft" : "bg-card")}
       noValidate
     >
       {agent ? (
-        <div className="space-y-2">
-          <div role="group" aria-label="Tipo de mensagem" className="grid grid-cols-2 gap-1 rounded-md border bg-muted/50 p-1 text-sm sm:inline-grid">
-            <button
-              type="button"
-              aria-pressed={!internal}
-              disabled={Boolean(quote?.internal)}
-              onClick={() => setChosenInternal(false)}
-              className={cn(
-                "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50",
-                !internal ? "bg-background font-medium shadow-sm" : "text-muted-foreground",
-              )}
-            >
-              <Mail className="size-3.5" />
-              Ao solicitante (e-mail)
-              {drafts.reply.trim() && internal && <span aria-label="rascunho guardado" className="size-1.5 rounded-full bg-primary" />}
-            </button>
-            <button
-              type="button"
-              aria-pressed={internal}
-              onClick={() => setChosenInternal(true)}
-              className={cn(
-                "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                internal ? "bg-warning-soft font-medium shadow-sm" : "text-muted-foreground",
-              )}
-            >
-              <Lock className="size-3.5" />
-              Nota interna
-              {drafts.note.trim() && !internal && <span aria-label="rascunho guardado" className="size-1.5 rounded-full bg-warning" />}
-            </button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {internal ? "Só a equipe vê esta nota. O solicitante não recebe nada." : "Vai por e-mail para o solicitante e aparece na conversa dele."}
-          </p>
+        <div role="group" aria-label="Tipo de mensagem" className={cn("flex gap-5 border-b", internal && "border-warning-border")}>
+          <button
+            type="button"
+            aria-pressed={!internal}
+            disabled={Boolean(quote?.internal)}
+            onClick={() => setChosenInternal(false)}
+            className={cn(tab, !internal ? "border-foreground font-medium text-foreground" : "border-transparent text-muted-foreground hover:text-foreground")}
+          >
+            Responder
+            {drafts.reply.trim() && internal && <span aria-label="rascunho guardado" className="size-1.5 rounded-full bg-primary" />}
+          </button>
+          <button
+            type="button"
+            aria-pressed={internal}
+            onClick={() => setChosenInternal(true)}
+            className={cn(tab, internal ? "border-warning font-medium text-foreground" : "border-transparent text-muted-foreground hover:text-foreground")}
+          >
+            <Lock className="size-3.5" />
+            Nota interna
+            {drafts.note.trim() && !internal && <span aria-label="rascunho guardado" className="size-1.5 rounded-full bg-warning" />}
+          </button>
         </div>
       ) : (
         <label htmlFor="reply-message" className="block font-medium text-foreground">
@@ -209,7 +202,7 @@ export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number;
         </label>
       )}
       {quote && (
-        <div className="flex items-start gap-3 rounded-md border border-s-4 border-border border-s-chart-6 bg-muted/50 p-3">
+        <div className="flex items-start gap-3 rounded-md border-s-2 border-s-foreground/30 bg-muted/50 p-3">
           <div className="min-w-0 flex-1 space-y-0.5">
             <p className="text-xs font-semibold text-foreground">Respondendo a {quote.author}</p>
             <p className="line-clamp-2 text-sm text-muted-foreground">{quote.preview}</p>
@@ -236,16 +229,15 @@ export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number;
             formRef.current?.requestSubmit();
           }
         }}
-        placeholder={internal ? "Escreva a nota interna…" : "Escreva a sua mensagem…"}
+        placeholder={
+          internal ? "Só a equipe vê esta nota. O solicitante não recebe nada…" : agent ? "Escreva ao solicitante. Ele recebe por e-mail…" : "Escreva a sua mensagem…"
+        }
         aria-invalid={Boolean(error)}
-        className={cn("text-base", internal && "border-dashed border-warning-border bg-warning-soft")}
+        className={cn("text-base", internal && "bg-card")}
       />
-      {agent && (
-        <p className="flex flex-wrap items-center justify-between gap-x-3 text-xs text-muted-foreground">
-          <span className="hidden sm:inline">Ctrl+Enter (⌘+Enter) envia.</span>
-          <span className={cn("ms-auto tabular-nums", message.length > DESCRIPTION_MAX && "font-medium text-destructive")}>
-            {message.length.toLocaleString("pt-BR")} / {DESCRIPTION_MAX.toLocaleString("pt-BR")}
-          </span>
+      {nearLimit && (
+        <p className={cn("text-end text-xs tabular-nums", message.length > DESCRIPTION_MAX ? "font-medium text-destructive" : "text-muted-foreground")}>
+          {message.length.toLocaleString("pt-BR")} / {DESCRIPTION_MAX.toLocaleString("pt-BR")}
         </p>
       )}
       {error && (
@@ -290,15 +282,22 @@ export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number;
               event.target.value = "";
             }}
           />
-          <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()} disabled={files.length >= ATTACHMENT_LIMITS.maxFiles}>
-            <Paperclip className="size-3.5" />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            title={`Anexar (até ${ATTACHMENT_LIMITS.maxFiles} arquivos, ${formatBytes(ATTACHMENT_LIMITS.maxTotalBytes)})`}
+            onClick={() => inputRef.current?.click()}
+            disabled={files.length >= ATTACHMENT_LIMITS.maxFiles}
+            className="text-muted-foreground"
+          >
+            <Paperclip className="size-4" />
             Anexar
           </Button>
-          <span className="text-xs text-muted-foreground">Até {ATTACHMENT_LIMITS.maxFiles} arquivos, {formatBytes(ATTACHMENT_LIMITS.maxTotalBytes)}.</span>
         </div>
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" variant={internal ? "outline" : "default"} disabled={pending} title={agent ? "Ctrl+Enter (⌘+Enter) envia" : undefined}>
           <Send className="size-4" />
-          {pending ? "Enviando…" : internal ? "Salvar nota" : agent ? "Enviar ao solicitante" : "Enviar mensagem"}
+          {pending ? "Enviando…" : internal ? "Salvar nota" : "Enviar"}
         </Button>
       </div>
     </form>

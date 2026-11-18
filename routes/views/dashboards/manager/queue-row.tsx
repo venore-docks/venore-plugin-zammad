@@ -1,11 +1,9 @@
 import Link from "next/link";
-import { Clock, Flag } from "lucide-react";
-import { TagChips } from "../../../public/tag-chips";
+import { Flag } from "lucide-react";
 import { cn } from "@venore/plugin-sdk/ui";
 import type { AssigneeOption, QueueRow as QueueRowData } from "../../../../features/get-manager-dashboard/types";
 import { ageTone, formatAge, shortGroupName } from "../../../../shared/manager-stats";
 import type { FlowStepKey } from "../../../../contracts/types";
-import { FLOW_BADGE } from "../../../public/palette";
 import { StateBadge } from "../../../public/shared";
 import { DecisionActions } from "./decision-actions";
 import { QuickAssign } from "./quick-assign";
@@ -15,22 +13,17 @@ export function AgeBadge({ ms }: { ms: number }) {
   const tone = ageTone(ms);
   return (
     <span
-      className={cn(
-        "inline-flex items-center gap-1 text-xs font-medium tabular-nums",
-        tone === "fresh" && "text-muted-foreground",
-        tone === "aging" && "text-warning",
-        tone === "stale" && "text-destructive",
-      )}
+      className={cn("tabular-nums", tone === "aging" && "text-warning", tone === "stale" && "font-medium text-destructive")}
       title="Há quanto tempo o chamado foi aberto"
     >
-      <Clock className="size-3" aria-hidden />
-      {formatAge(ms)}
+      há {formatAge(ms)}
     </span>
   );
 }
 
-// Uma linha da fila: o chamado (abre o detalhe), o estado e, embaixo, as ações da etapa (fluxo da FEM) ou a
-// alocação rápida (Zammad fora do fluxo). Serve à home, à fila e ao app.
+// Uma linha da fila (regra de design: um sinal por item). Título (bandeira se urgente) + setor · solicitante ·
+// idade (· responsável), e UMA ação: "Analisar"/"Atribuir"/"Abrir" (fluxo da FEM) ou a alocação rápida (Zammad
+// fora do fluxo). Número e tags ficam no detalhe. Serve à home, à fila e ao app. Vai dentro de `LIST_CLASS`.
 export function QueueRow({
   ticket,
   href,
@@ -47,57 +40,40 @@ export function QueueRow({
   const inFlow = ticket.step !== null && Object.keys(flowStateIds).length > 0;
   // A aba da fila já diz a etapa: o selo de estado só aparece em "Atribuídos", onde os estados variam.
   const showState = inFlow && ticket.bucket === "atribuidos";
+  const meta = [shortGroupName(ticket.group), ticket.requesterName].filter(Boolean).join(" · ");
   return (
-    <li className={cn("rounded-lg border border-s-4 bg-card px-4 py-3", FLOW_BADGE[ticket.stateColor].border)}>
-      <div className="flex flex-col gap-2.5 md:flex-row md:items-center md:gap-4">
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex items-center gap-2">
-            <Link
-              href={href}
-              className="min-w-0 truncate rounded-sm text-sm font-semibold text-foreground hover:underline md:text-base focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-              title={ticket.title}
-            >
-              {ticket.title}
-            </Link>
-            {ticket.urgent && (
-              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-xs font-medium text-foreground">
-                <Flag className="size-3 text-destructive" aria-hidden />
-                {ticket.priorityLabel}
-              </span>
-            )}
-          </div>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-            <span className="tabular-nums">#{ticket.number}</span>
-            <span aria-hidden>·</span>
-            <span>{shortGroupName(ticket.group)}</span>
-            {ticket.requesterName && (
-              <>
-                <span aria-hidden>·</span>
-                <span className="truncate">{ticket.requesterName}</span>
-              </>
-            )}
-            <span aria-hidden>·</span>
-            <AgeBadge ms={ticket.ageMs} />
-            {showState && <StateBadge label={ticket.stateLabel} tone="open" color={ticket.stateColor} />}
-            {ticket.ownerId !== null && <span>Com {ticket.ownerName ?? "um agente"}</span>}
-            <TagChips tags={ticket.tags} as="span" className="contents" stateLabel={ticket.stateLabel} />
-          </div>
-        </div>
-        <div className="md:shrink-0">
-          {inFlow ? (
-            <DecisionActions
-              ticketId={ticket.id}
-              title={ticket.title}
-              bucket={ticket.bucket}
-              detailHref={href}
-              flowStateIds={flowStateIds}
-              options={options}
-              suggestedId={suggestedId}
-            />
-          ) : (
-            <QuickAssign ticketId={ticket.id} options={options} suggestedId={suggestedId} />
-          )}
-        </div>
+    <li className="flex flex-col gap-2 px-4 py-3 md:flex-row md:items-center md:gap-4">
+      <div className="min-w-0 flex-1 space-y-0.5">
+        <Link
+          href={href}
+          className="flex min-w-0 items-center gap-1.5 rounded-sm text-sm font-medium text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          title={ticket.title}
+        >
+          {ticket.urgent && <Flag className="size-3.5 shrink-0 text-destructive" aria-label={`Prioridade ${ticket.priorityLabel}`} />}
+          <span className="truncate">{ticket.title}</span>
+        </Link>
+        <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
+          {meta && <span className="truncate">{meta}</span>}
+          {meta && <span aria-hidden>·</span>}
+          <AgeBadge ms={ticket.ageMs} />
+          {ticket.ownerId !== null && <span>· com {ticket.ownerName ?? "um agente"}</span>}
+          {showState && <StateBadge label={ticket.stateLabel} tone="open" color={ticket.stateColor} />}
+        </p>
+      </div>
+      <div className="md:shrink-0">
+        {inFlow ? (
+          <DecisionActions
+            ticketId={ticket.id}
+            title={ticket.title}
+            bucket={ticket.bucket}
+            detailHref={href}
+            flowStateIds={flowStateIds}
+            options={options}
+            suggestedId={suggestedId}
+          />
+        ) : (
+          <QuickAssign ticketId={ticket.id} options={options} suggestedId={suggestedId} />
+        )}
       </div>
     </li>
   );

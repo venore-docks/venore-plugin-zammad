@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { UserCheck, UserRound } from "lucide-react";
+import { UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, cn } from "@venore/plugin-sdk/ui";
 import type { AgentControls } from "../../../../contracts/types";
@@ -53,22 +53,13 @@ export function AllocationForm({ ticketId, controls, children }: { ticketId: num
     allocate();
   }
 
+  // Sem cartão próprio: vive dentro do bloco de atendimento (attendance-controls.tsx) — em destaque quando o
+  // chamado está na fila (é o próximo passo), recolhido em "Mais opções" quando já tem responsável.
   return (
-    <section
-      className={cn("space-y-4 rounded-lg border p-4 @md:p-5", unassigned ? "border-warning-border bg-warning-soft" : "bg-card")}
-      aria-label="Responsável"
-    >
-      <div className="flex items-center gap-3">
-        <span className={cn("grid size-10 shrink-0 place-items-center rounded-full", unassigned ? "bg-warning/20 text-foreground" : "bg-primary/10 text-primary")}>
-          <UserRound className="size-5" aria-hidden />
-        </span>
-        <div className="min-w-0">
-          <p className="text-xs font-medium text-muted-foreground">Responsável</p>
-          <p className="truncate text-base font-semibold text-foreground">{ownerName ?? "Ninguém — na fila"}</p>
-        </div>
-      </div>
-
-      {unassigned && <p className="text-sm text-foreground">Este chamado está na fila. Escolha quem vai atendê-lo.</p>}
+    <div className="space-y-2" role="group" aria-label="Responsável">
+      <p className={cn("text-sm", unassigned ? "text-foreground" : "text-muted-foreground")}>
+        {unassigned ? "Este chamado está na fila. Escolha quem vai atendê-lo." : `Responsável: ${ownerName}`}
+      </p>
 
       {controls.assignees.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nenhum agente do Zammad atende o setor deste chamado.</p>
@@ -76,7 +67,7 @@ export function AllocationForm({ ticketId, controls, children }: { ticketId: num
         <div className="space-y-2">
           <div className="flex flex-col gap-3 @md:flex-row @md:items-center">
             <Select value={ownerValue} onValueChange={choose} disabled={busy}>
-              <SelectTrigger className="h-11 w-full @md:flex-1" aria-label="Novo responsável pelo chamado">
+              <SelectTrigger className="h-10 w-full @md:flex-1" aria-label="Novo responsável pelo chamado">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -90,7 +81,7 @@ export function AllocationForm({ ticketId, controls, children }: { ticketId: num
               </SelectContent>
             </Select>
             {!confirmingReturn && (
-              <Button size="lg" disabled={busy || unchanged} onClick={submit}>
+              <Button className="h-10" variant={unassigned ? "default" : "outline"} disabled={busy || unchanged} onClick={submit}>
                 <UserCheck className="size-4" />
                 {busy ? "Salvando…" : returning ? "Devolver à fila" : unassigned ? "Atribuir" : "Realocar"}
               </Button>
@@ -98,7 +89,7 @@ export function AllocationForm({ ticketId, controls, children }: { ticketId: num
           </div>
 
           {confirmingReturn && (
-            <div className="space-y-3 rounded-md border border-warning-border bg-warning-soft p-3" role="alertdialog" aria-label="Confirmar devolução à fila">
+            <div className="space-y-3 rounded-md border p-3" role="alertdialog" aria-label="Confirmar devolução à fila">
               <p className="text-sm text-foreground">
                 Devolver à fila? {ownerName} deixa de ser responsável e o chamado fica sem ninguém até você alocá-lo de novo.
               </p>
@@ -116,6 +107,6 @@ export function AllocationForm({ ticketId, controls, children }: { ticketId: num
           {children}
         </div>
       )}
-    </section>
+    </div>
   );
 }

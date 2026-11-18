@@ -40,15 +40,8 @@ export async function MyTicketsView({ surfaceKey, query }: { surfaceKey: Surface
 
   const result = await listMyTickets();
   const filter = parseMineFilter(query?.filtro);
-  const actions = (
-    <Button asChild>
-      <Link href={surface.newTicket}>
-        <Plus className="size-4" />
-        Abrir chamado
-      </Link>
-    </Button>
-  );
 
+  // "Abrir chamado" vem da moldura (botão de contorno no canto do título).
   return (
     <ColaboraFrame
       surfaceKey={surfaceKey}
@@ -56,7 +49,6 @@ export async function MyTicketsView({ surfaceKey, query }: { surfaceKey: Surface
       active="mine"
       title="Meus chamados"
       subtitle="Acompanhe os seus pedidos e converse com a equipe de cada setor."
-      actions={surfaceKey === "portal" ? actions : undefined}
     >
       {!result.success ? (
         <BlockedNotice title="Meus chamados" message={result.error.message} />
@@ -87,23 +79,24 @@ function MineList({ tickets, filter, surface }: { tickets: TicketSummary[]; filt
 
   return (
     <div className="space-y-6">
-      <nav aria-label="Filtrar chamados" className="-mx-1 overflow-x-auto px-1 pb-1">
-        <ul className="flex w-max min-w-full gap-2">
+      {/* Filtros como segmentos discretos; o único número com cor é "Aguardando você" (pede ação). */}
+      <nav aria-label="Filtrar chamados" className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <ul className="inline-flex w-max gap-1 rounded-md border bg-card p-1 text-sm">
           {MINE_FILTERS.map((item) => {
             const active = item === filter;
+            const pending = item === "aguardando" && counts.aguardando > 0;
             return (
               <li key={item}>
                 <Link
                   href={item === "todos" ? surface.mine : `${surface.mine}?filtro=${item}`}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "inline-flex min-h-10 items-center gap-2 rounded-full border px-4 py-2 text-sm whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                    active ? "border-primary bg-primary font-medium text-primary-foreground" : "bg-background text-foreground hover:border-primary/60 hover:bg-primary/5",
-                    !active && item === "aguardando" && counts.aguardando > 0 && "border-warning-border bg-warning-soft",
+                    "inline-flex min-h-9 items-center gap-1.5 rounded px-3 whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                    active ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   {FILTER_LABEL[item]}
-                  <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium tabular-nums", active ? "bg-primary-foreground/20" : "bg-muted text-muted-foreground")}>{counts[item]}</span>
+                  <span className={cn("text-xs tabular-nums", pending ? "font-semibold text-warning" : "text-muted-foreground")}>{counts[item]}</span>
                 </Link>
               </li>
             );
@@ -115,7 +108,7 @@ function MineList({ tickets, filter, surface }: { tickets: TicketSummary[]; filt
         <EmptyState icon={EMPTY_BY_FILTER[filter].icon} title={EMPTY_BY_FILTER[filter].title} description={EMPTY_BY_FILTER[filter].description} />
       ) : filter === "todos" ? (
         <div className="space-y-8">
-          <TicketGroup title="A equipe respondeu — sua vez" tickets={visible.filter((t) => !t.closed && t.awaitingYou)} hrefFor={surface.detail} waiting />
+          <TicketGroup title="Esperam a sua resposta" tickets={visible.filter((t) => !t.closed && t.awaitingYou)} hrefFor={surface.detail} waiting />
           <TicketGroup title="Em andamento" tickets={visible.filter((t) => !t.awaitingYou && !t.closed)} hrefFor={surface.detail} />
           <TicketGroup title="Encerrados" tickets={visible.filter((t) => t.closed)} hrefFor={surface.detail} muted />
         </div>

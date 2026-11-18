@@ -1,7 +1,6 @@
-import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRight, CircleAlert, CircleCheck, Layers, Smartphone, Type, Users } from "lucide-react";
-import { AdminStatTile, Card, CardContent, CardHeader, CardTitle } from "@venore/plugin-sdk/ui";
+import { ChevronDown, CircleAlert, CircleCheck } from "lucide-react";
+import { Button, Card, CardContent } from "@venore/plugin-sdk/ui";
 import { getAdminOverviewHandler } from "../../features/admin-overview/handler";
 import { ADMIN_BASE, MAX_HINTS, buildHints, type AdminHint } from "../../shared/admin-hints";
 import { AdminShell, LoadError, SectionHeader, guardAdmin } from "./admin-shell";
@@ -11,19 +10,18 @@ function formatDateTime(iso: string): string {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(iso));
 }
 
-const HINT_STYLE: Record<AdminHint["tone"], string> = {
-  destructive: "bg-destructive/10 text-destructive",
-  warning: "bg-warning/10 text-warning",
-  info: "bg-primary/10 text-primary",
-};
+// Rótulo do botão de cada próximo passo, pelo destino.
+function hintAction(href: string): string {
+  if (href.startsWith(`${ADMIN_BASE}/setores/`)) return "Configurar setor";
+  if (href.startsWith(`${ADMIN_BASE}/grupos/`)) return "Abrir grupo";
+  if (href === `${ADMIN_BASE}/grupos`) return "Criar grupo";
+  if (href === `${ADMIN_BASE}/app`) return "Nomear o app";
+  return "Ver";
+}
 
-const SHORTCUTS: { href: string; title: string; description: string; icon: ReactNode }[] = [
-  { href: `${ADMIN_BASE}/setores`, title: "Setores", description: "Nomes, etapas, ajudas e quem enxerga cada fluxo.", icon: <Layers className="size-5" aria-hidden /> },
-  { href: `${ADMIN_BASE}/grupos`, title: "Grupos de pessoas", description: "Monte grupos por setor e libere os fluxos de cada um.", icon: <Users className="size-5" aria-hidden /> },
-  { href: `${ADMIN_BASE}/app`, title: "App", description: "Nome, ícone e instalação no celular.", icon: <Smartphone className="size-5" aria-hidden /> },
-  { href: `${ADMIN_BASE}/textos`, title: "Textos", description: "A mensagem de abertura do assistente.", icon: <Type className="size-5" aria-hidden /> },
-];
-
+// Visão geral do admin (regra de design do core, `.claude/rules/ui-design.md`): "Próximos passos" primeiro (é o
+// que guia o admin), os números numa frase, a conexão numa linha quando está saudável (detalhes recolhidos) e
+// em cartão no topo quando não está. Sem atalhos: as abas do admin já levam a cada seção.
 export default async function ColaboraAdminOverviewPage() {
   const denied = await guardAdmin();
   if (denied) return denied;
@@ -47,98 +45,68 @@ export default async function ColaboraAdminOverviewPage() {
     appName: overview.appName,
     unsupportedCount: overview.unsupported.length,
   });
-  const shownHints = hints.slice(0, MAX_HINTS);
+  // A conexão e as regras não suportadas têm bloco próprio: não repetem nos próximos passos.
+  const steps = hints.filter((hint) => hint.id !== "no-connection" && hint.id !== "connection-error" && hint.id !== "unsupported-rules");
+  const shownSteps = steps.slice(0, MAX_HINTS);
 
   const healthy = connection.configured && !connection.error;
   const staff = overview.staff;
+  const summary = [
+    `${activeSectors.length} ${activeSectors.length === 1 ? "setor ativo" : "setores ativos"}${overview.sectors.length > 0 ? ` de ${overview.sectors.length}` : ""}`,
+    `${overview.peopleGroups.length} ${overview.peopleGroups.length === 1 ? "grupo de pessoas" : "grupos de pessoas"}`,
+    staff ? `${staff.agents} ${staff.agents === 1 ? "agente" : "agentes"} e ${staff.managers + staff.admins} ${staff.managers + staff.admins === 1 ? "gestor" : "gestores"}` : null,
+  ].filter(Boolean);
 
   return (
     <AdminShell>
-      <section className="space-y-4">
-        <SectionHeader title="Visão geral" description="Como está a conexão com o Zammad e o que vale ajustar agora." actions={connection.configured ? <ReloadSchemaButton /> : undefined} />
+      <SectionHeader title="Visão geral" description={summary.join(" · ")} />
 
+      {!healthy && (
         <Card>
-          <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-start">
-            <span
-              className={`flex size-10 shrink-0 items-center justify-center rounded-full ${healthy ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}
-            >
-              {healthy ? <CircleCheck className="size-5" aria-hidden /> : <CircleAlert className="size-5" aria-hidden />}
-            </span>
-            <div className="min-w-0 flex-1 space-y-3">
-              <div>
-                <p className="text-base font-medium text-foreground">
-                  {!connection.configured ? "Zammad não configurado" : connection.error ? "Problema na conexão com o Zammad" : "Conectado ao Zammad"}
-                </p>
-                <p className="mt-0.5 text-sm break-words text-muted-foreground">
-                  {!connection.configured
-                    ? "Defina as variáveis ZAMMAD_URL e ZAMMAD_API_TOKEN no projeto e faça um novo deploy."
-                    : connection.error
-                      ? connection.error
-                      : "O token está válido e os campos dos setores foram lidos."}
-                </p>
-              </div>
-              {connection.configured && (
-                <dl className="grid gap-3 text-sm sm:grid-cols-3">
-                  <div className="min-w-0">
-                    <dt className="text-xs font-medium text-muted-foreground">Endereço</dt>
-                    <dd className="truncate text-foreground">{connection.baseUrl}</dd>
-                  </div>
-                  <div className="min-w-0">
-                    <dt className="text-xs font-medium text-muted-foreground">Dono do token</dt>
-                    <dd className="truncate text-foreground">{connection.tokenOwner ? `${connection.tokenOwner.name} (${connection.tokenOwner.email})` : "Não identificado"}</dd>
-                  </div>
-                  <div className="min-w-0">
-                    <dt className="text-xs font-medium text-muted-foreground">Última leitura dos campos</dt>
-                    <dd className="text-foreground">{overview.schemaFetchedAt ? formatDateTime(overview.schemaFetchedAt) : "Ainda não lido"}</dd>
-                  </div>
-                </dl>
-              )}
-              {connection.configured && <p className="text-xs text-muted-foreground">Os campos se atualizam sozinhos a cada 5 minutos. Mudou algo no Zammad e quer ver agora? Use “Recarregar do Zammad”.</p>}
+          <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-start">
+            <CircleAlert className="size-5 shrink-0 text-destructive" aria-hidden />
+            <div className="min-w-0 flex-1 space-y-1">
+              <p className="text-base font-medium text-foreground">{!connection.configured ? "Zammad não configurado" : "Problema na conexão com o Zammad"}</p>
+              <p className="text-sm break-words text-muted-foreground">
+                {!connection.configured ? "Defina as variáveis ZAMMAD_URL e ZAMMAD_API_TOKEN no projeto e faça um novo deploy." : connection.error}
+              </p>
             </div>
+            {connection.configured && <ReloadSchemaButton />}
           </CardContent>
         </Card>
-
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <AdminStatTile label="Setores ativos" value={activeSectors.length} hint={overview.sectors.length > 0 ? `de ${overview.sectors.length} no Zammad` : undefined} />
-          <AdminStatTile label="Grupos de pessoas" value={overview.peopleGroups.length} hint={`${overview.peopleGroups.reduce((total, group) => total + group.memberCount, 0)} participações`} />
-          <AdminStatTile
-            label="Agentes e gestores"
-            value={staff ? staff.agents + staff.managers + staff.admins : "—"}
-            hint={staff ? `${staff.agents} agentes · ${staff.managers} gestores` : "Não foi possível ler a equipe"}
-          />
-          <AdminStatTile label="Regras não suportadas" value={overview.unsupported.length} hint={overview.unsupported.length === 0 ? "Tudo aplicado" : "Veja abaixo"} />
-        </div>
-      </section>
+      )}
 
       <section className="space-y-3">
-        <SectionHeader title="Próximos passos" />
-        <Card>
-          <CardContent className="p-0">
-            {shownHints.length === 0 ? (
-              <p className="flex items-center gap-2 px-4 py-4 text-sm text-foreground">
-                <CircleCheck className="size-4 shrink-0 text-success" aria-hidden />
-                Tudo em ordem por aqui. Nada pendente.
-              </p>
-            ) : (
-              <ul className="divide-y">
-                {shownHints.map((hint) => (
-                  <li key={hint.id}>
-                    <HintRow hint={hint} />
-                  </li>
-                ))}
-              </ul>
-            )}
-            {hints.length > shownHints.length && <p className="border-t px-4 py-3 text-xs text-muted-foreground">E mais {hints.length - shownHints.length} pendências menores.</p>}
-          </CardContent>
-        </Card>
+        <h3 className="text-sm font-semibold text-foreground">
+          Próximos passos {steps.length > 0 && <span className="font-normal text-muted-foreground">({steps.length})</span>}
+        </h3>
+        {shownSteps.length === 0 ? (
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <CircleCheck className="size-4 shrink-0 text-success" aria-hidden />
+            Tudo em ordem por aqui. Nada pendente.
+          </p>
+        ) : (
+          <ul className="divide-y overflow-hidden rounded-lg border bg-card">
+            {shownSteps.map((hint) => (
+              <li key={hint.id}>
+                <StepRow hint={hint} />
+              </li>
+            ))}
+            {steps.length > shownSteps.length && <li className="px-4 py-3 text-xs text-muted-foreground">E mais {steps.length - shownSteps.length} pendências menores.</li>}
+          </ul>
+        )}
       </section>
 
       {overview.unsupported.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Regras do Zammad que o portal não sabe aplicar</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <details className="group rounded-lg border bg-card">
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+            <CircleAlert className="size-4 shrink-0 text-warning" aria-hidden />
+            <span className="flex-1">
+              {overview.unsupported.length} {overview.unsupported.length === 1 ? "regra do Zammad" : "regras do Zammad"} que o portal não sabe aplicar
+            </span>
+            <ChevronDown className="size-4 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
+          </summary>
+          <div className="space-y-2 border-t px-4 py-3">
             <p className="text-sm text-muted-foreground">O formulário pode divergir do Zammad nestes pontos. Simplifique a regra lá ou peça suporte ao plugin.</p>
             <ul className="list-disc space-y-1 ps-5 text-xs text-muted-foreground">
               {overview.unsupported.map((message) => (
@@ -148,53 +116,55 @@ export default async function ColaboraAdminOverviewPage() {
               ))}
             </ul>
             {overview.skippedFields.length > 0 && <p className="text-xs text-muted-foreground">Campos de tipo não suportado (ficam fora do formulário): {overview.skippedFields.join(", ")}.</p>}
-          </CardContent>
-        </Card>
+          </div>
+        </details>
       )}
 
-      <section className="space-y-3">
-        <SectionHeader title="Atalhos" />
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {SHORTCUTS.map((shortcut) => (
-            <Link
-              key={shortcut.href}
-              href={shortcut.href}
-              className="group flex flex-col gap-3 rounded-lg bg-card p-4 text-card-foreground ring-1 ring-foreground/10 transition-colors outline-none hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50"
-            >
-              <span className="flex size-9 items-center justify-center rounded-md bg-primary/10 text-primary">{shortcut.icon}</span>
-              <span className="space-y-1">
-                <span className="flex items-center gap-1 text-sm font-medium text-foreground">
-                  {shortcut.title}
-                  <ArrowRight className="size-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5 rtl:rotate-180" aria-hidden />
-                </span>
-                <span className="block text-xs text-muted-foreground">{shortcut.description}</span>
-              </span>
-            </Link>
-          ))}
-        </div>
-      </section>
+      {healthy && (
+        <details className="group rounded-lg border bg-card">
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+            <span aria-hidden className="size-2 shrink-0 rounded-full bg-success" />
+            <span className="min-w-0 flex-1 truncate">
+              Conectado ao Zammad
+              {overview.schemaFetchedAt && <span className="text-muted-foreground"> · campos lidos em {formatDateTime(overview.schemaFetchedAt)}</span>}
+            </span>
+            <span className="text-xs text-muted-foreground group-open:hidden">Detalhes</span>
+            <ChevronDown className="size-4 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
+          </summary>
+          <div className="space-y-3 border-t px-4 py-3">
+            <dl className="grid gap-3 text-sm sm:grid-cols-2">
+              <div className="min-w-0">
+                <dt className="text-xs text-muted-foreground">Endereço</dt>
+                <dd className="truncate text-foreground">{connection.baseUrl}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-xs text-muted-foreground">Dono do token</dt>
+                <dd className="truncate text-foreground">{connection.tokenOwner ? `${connection.tokenOwner.name} (${connection.tokenOwner.email})` : "Não identificado"}</dd>
+              </div>
+            </dl>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">Os campos se atualizam sozinhos a cada 5 minutos.</p>
+              <ReloadSchemaButton />
+            </div>
+          </div>
+        </details>
+      )}
     </AdminShell>
   );
 }
 
-function HintRow({ hint }: { hint: AdminHint }) {
-  const body = (
-    <>
-      <span className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full ${HINT_STYLE[hint.tone]}`}>
-        <CircleAlert className="size-4" aria-hidden />
-      </span>
+function StepRow({ hint }: { hint: AdminHint }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3 px-4 py-3">
       <span className="min-w-0 flex-1 space-y-0.5">
         <span className="block text-sm font-medium text-foreground">{hint.title}</span>
         <span className="block text-xs break-words text-muted-foreground">{hint.description}</span>
       </span>
-      {hint.href && <ArrowRight className="mt-1.5 size-4 shrink-0 text-muted-foreground rtl:rotate-180" aria-hidden />}
-    </>
-  );
-  const base = "flex items-start gap-3 px-4 py-3";
-  if (!hint.href) return <div className={base}>{body}</div>;
-  return (
-    <Link href={hint.href} className={`${base} outline-none transition-colors hover:bg-muted/40 focus-visible:bg-muted/40`}>
-      {body}
-    </Link>
+      {hint.href && (
+        <Button asChild variant="outline" size="sm">
+          <Link href={hint.href}>{hintAction(hint.href)}</Link>
+        </Button>
+      )}
+    </div>
   );
 }

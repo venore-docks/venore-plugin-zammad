@@ -6,7 +6,8 @@ import { FLOW_BADGE } from "./palette";
 
 // Cada estado tem uma cor SEMÂNTICA (tokens do tema, ver palette.ts): informação = novo, primária = em
 // andamento, alerta = em análise/aguardando, sucesso = autorizado/concluído, perigo = não autorizado,
-// neutro = finalizado. A bolinha reforça a cor sem depender só do texto. `tone` (legado) vira cor quando
+// neutro = finalizado. Regra de design (core `.claude/rules/ui-design.md`): o selo é NEUTRO e só a bolinha
+// leva a cor — cor forte fica para o que pede ação (ver `AwaitingBadge`). `tone` (legado) vira cor quando
 // `color` não vem.
 const TONE_COLOR: Record<TicketStateTone, TicketStateColor> = { new: "info", open: "primary", pending: "warning", closed: "neutral" };
 
@@ -14,19 +15,29 @@ function colorOf(tone: TicketStateTone, color?: TicketStateColor): TicketStateCo
   return color ?? TONE_COLOR[tone];
 }
 
-export function toneBar(tone: TicketStateTone, color?: TicketStateColor): string {
-  return FLOW_BADGE[colorOf(tone, color)].bar;
-}
-
 export function StateBadge({ label, tone, color }: { label: string; tone: TicketStateTone; color?: TicketStateColor }) {
   const classes = FLOW_BADGE[colorOf(tone, color)];
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium text-foreground", classes.badge)}>
-      <span aria-hidden className={cn("size-1.5 rounded-full", classes.dot)} />
+    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border bg-card px-2.5 py-0.5 text-xs font-medium whitespace-nowrap text-foreground">
+      <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", classes.dot)} />
       {label}
     </span>
   );
 }
+
+// O único selo com fundo colorido: algo espera a pessoa que está olhando.
+export function AwaitingBadge({ label = "Aguardando você" }: { label?: string }) {
+  return (
+    <span className="inline-flex shrink-0 items-center rounded-full border border-warning-border bg-warning-soft px-2.5 py-0.5 text-xs font-medium whitespace-nowrap text-foreground">
+      {label}
+    </span>
+  );
+}
+
+// Lista padrão (regra de design): um cartão, linhas separadas por divisórias.
+export const LIST_CLASS = "divide-y overflow-hidden rounded-lg border bg-card";
+export const ROW_LINK_CLASS =
+  "group flex min-h-14 items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none";
 
 const DATE_TIME = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" });
 

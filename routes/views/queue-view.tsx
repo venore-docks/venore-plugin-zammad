@@ -7,7 +7,7 @@ import { QUEUE_BUCKETS, bucketParam, defaultBucket, parseBucket, pendingDecision
 import { describeTags } from "../../shared/tag-labels";
 import { FLOW_BADGE } from "../public/palette";
 import { surfaceFor, type SurfaceKey } from "../../shared/routes";
-import { BlockedNotice } from "../public/shared";
+import { BlockedNotice, LIST_CLASS } from "../public/shared";
 import { enterSurface } from "./context";
 import { QueueRow } from "./dashboards/manager/queue-row";
 import { ColaboraFrame } from "./frame";
@@ -24,8 +24,9 @@ function Chip({ href, active, children }: { href: string; active: boolean; child
       href={href}
       aria-current={active ? "true" : undefined}
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-        active ? "border-primary bg-primary font-medium text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
+        // Etapas como segmentos discretos (regra de design: nada de pílula cheia na cor primária).
+        "inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        active ? "border-foreground/30 bg-muted font-medium text-foreground" : "bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
       )}
     >
       {children}
@@ -190,7 +191,7 @@ export async function QueueView({ surfaceKey, query }: { surfaceKey: SurfaceKey;
                   }
                 />
               ) : (
-                <ul className="grid gap-3">
+                <ul className={LIST_CLASS}>
                   {sorted.map((ticket) => (
                     <QueueRow
                       key={ticket.id}

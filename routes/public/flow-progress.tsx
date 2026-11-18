@@ -1,11 +1,10 @@
-import { Check } from "lucide-react";
 import { cn } from "@venore/plugin-sdk/ui";
 import type { FlowStepKey } from "../../contracts/types";
 import { FLOW_STEPS } from "../../shared/flow";
-import { FLOW_BADGE } from "./palette";
 
-// Linha do tempo do fluxo da FEM no cabeçalho do chamado: passos feitos, o atual (na cor dele) e os que
-// faltam. Caminho muda nos desvios (não autorizado; reavaliação).
+// Etapas do fluxo da FEM no cabeçalho do chamado: barra fina e neutra (feito = escuro, falta = muted) com
+// "Etapa N de M" ao lado. O estado em si já está no selo; o nome de cada etapa aparece no `title`. O caminho
+// muda nos desvios (não autorizado; reavaliação).
 const MAIN: FlowStepKey[] = ["novo", "em_analise", "autorizado", "em_andamento", "concluido", "finalizado"];
 
 function pathFor(step: FlowStepKey): FlowStepKey[] {
@@ -17,30 +16,27 @@ function pathFor(step: FlowStepKey): FlowStepKey[] {
 export function FlowProgress({ step }: { step: FlowStepKey }) {
   const path = pathFor(step);
   const current = path.indexOf(step);
+  const label = `Etapa ${current + 1} de ${path.length}`;
   return (
-    <ol aria-label="Etapas do chamado" className="flex flex-wrap items-center gap-x-1 gap-y-2 text-xs">
-      {path.map((key, index) => {
-        const info = FLOW_STEPS[key];
-        const done = index < current;
-        const active = index === current;
-        const tone = FLOW_BADGE[info.color];
-        return (
-          <li key={key} className="flex items-center gap-1" aria-current={active ? "step" : undefined}>
-            {index > 0 && <span aria-hidden className={cn("h-px w-3 sm:w-5", done || active ? "bg-foreground/40" : "bg-border")} />}
-            <span
-              className={cn(
-                "inline-flex items-center gap-1 rounded-full border px-2 py-0.5",
-                active ? cn("font-semibold text-foreground", tone.badge) : done ? "border-border text-foreground/80" : "border-dashed border-border text-muted-foreground",
-              )}
-            >
-              {done && <Check aria-hidden className="size-3 text-success" />}
-              {active && <span aria-hidden className={cn("size-1.5 rounded-full", tone.dot)} />}
-              {info.label}
-              {done && <span className="sr-only"> (concluída)</span>}
+    <div className="flex items-center gap-3">
+      <ol aria-label={`${label}: ${FLOW_STEPS[step].label}`} className="flex flex-1 gap-1">
+        {path.map((key, index) => (
+          <li
+            key={key}
+            title={FLOW_STEPS[key].label}
+            aria-current={index === current ? "step" : undefined}
+            className={cn("h-1 flex-1 rounded-full", index <= current ? "bg-foreground/60" : "bg-muted")}
+          >
+            <span className="sr-only">
+              {FLOW_STEPS[key].label}
+              {index < current ? " (concluída)" : index === current ? " (atual)" : ""}
             </span>
           </li>
-        );
-      })}
-    </ol>
+        ))}
+      </ol>
+      <span aria-hidden className="shrink-0 text-xs text-muted-foreground tabular-nums">
+        {label}
+      </span>
+    </div>
   );
 }

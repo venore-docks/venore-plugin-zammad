@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { cn } from "@venore/plugin-sdk/ui";
+import { ArrowLeft, Plus } from "lucide-react";
+import { Button, cn } from "@venore/plugin-sdk/ui";
 import type { AppViewer } from "../../index";
 import { surfaceFor, type SurfaceKey } from "../../shared/routes";
 import { AppShell } from "../app/shell";
@@ -46,26 +46,41 @@ export function ColaboraFrame({ surfaceKey, viewer, active, title, subtitle, bac
     );
   }
 
-  const items = viewer ? navItemsFor(surface, viewer) : [];
+  // Portal (regra de design do core, `.claude/rules/ui-design.md`): título sem rótulo em maiúsculas, abas
+  // sublinhadas (indicador por sombra interna — `border-b-2 -mb-px` num container com overflow cria barra de
+  // rolagem), contador discreto. "Abrir chamado" não é aba: vira botão de contorno no canto do título, fora do
+  // Início (que já tem o próprio chamado à ação) e da própria tela de abertura.
+  const items = viewer ? navItemsFor(surface, viewer).filter((item) => item.key !== "new") : [];
+  const newTicketAction =
+    viewer && actions === undefined && active !== null && active !== "home" && active !== "new" ? (
+      <Button asChild variant="outline" size="sm">
+        <Link href={surface.newTicket}>
+          <Plus className="size-4" />
+          Abrir chamado
+        </Link>
+      </Button>
+    ) : null;
   return (
     <div className="w-full max-w-5xl space-y-6 pt-2 pb-8">
       <header className="space-y-5">
         {backHref && (
           <Link href={backHref} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="size-4" />
+            <ArrowLeft className="size-4 rtl:rotate-180" />
             Voltar
           </Link>
         )}
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="min-w-0 space-y-1">
-            <p className="text-xs font-semibold tracking-widest text-primary uppercase">Colabora</p>
-            <h1 className="text-2xl font-semibold tracking-tight break-words text-foreground sm:text-3xl">{title}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight break-words text-foreground">{title}</h1>
             {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
           </div>
-          {actions}
+          {actions ?? newTicketAction}
         </div>
         {items.length > 0 && (
-          <nav aria-label="Navegação do Colabora" className="-mx-1 flex flex-wrap gap-1.5 border-b pb-3">
+          <nav
+            aria-label="Navegação do Colabora"
+            className="flex gap-6 overflow-x-auto border-b text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
             {items.map((item) => {
               const isActive = item.key === active;
               const count = counts?.[item.key] ?? 0;
@@ -75,19 +90,12 @@ export function ColaboraFrame({ surfaceKey, viewer, active, title, subtitle, bac
                   href={item.href}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                    isActive
-                      ? "bg-primary font-medium text-primary-foreground"
-                      : item.key === "new"
-                        ? "border border-primary/40 text-primary hover:bg-primary/10"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    "inline-flex shrink-0 items-center gap-1.5 rounded-sm pb-2.5 whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                    isActive ? "font-medium text-foreground shadow-[inset_0_-2px_0_var(--color-primary)]" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  <item.icon className="size-4" />
                   {item.label}
-                  {count > 0 && (
-                    <span className={cn("rounded-full px-1.5 text-xs font-semibold", isActive ? "bg-primary-foreground/20" : "bg-primary/15 text-primary")}>{count}</span>
-                  )}
+                  {count > 0 && <span className="text-xs text-muted-foreground tabular-nums">{count}</span>}
                 </Link>
               );
             })}
