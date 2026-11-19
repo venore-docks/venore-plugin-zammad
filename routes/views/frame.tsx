@@ -48,11 +48,12 @@ export function ColaboraFrame({ surfaceKey, viewer, active, title, subtitle, bac
 
   // Portal (regra de design do core, `.claude/rules/ui-design.md`): título sem rótulo em maiúsculas, abas
   // sublinhadas (indicador por sombra interna — `border-b-2 -mb-px` num container com overflow cria barra de
-  // rolagem), contador discreto. "Abrir chamado" não é aba: vira botão de contorno no canto do título, fora do
-  // Início (que já tem o próprio chamado à ação) e da própria tela de abertura.
+  // rolagem), contador discreto. "Abrir chamado" não é aba: vira botão de contorno no canto do título, em TODAS as
+  // telas (inclusive o chamado), menos a própria tela de abertura e o Início do colaborador — lá a lista de setores
+  // já é o "abrir chamado". O Início da equipe (gestor/agente) não tem esse atalho, então o botão aparece.
   const items = viewer ? navItemsFor(surface, viewer).filter((item) => item.key !== "new") : [];
   const newTicketAction =
-    viewer && actions === undefined && active !== null && active !== "home" && active !== "new" ? (
+    viewer && actions === undefined && active !== "new" && !(active === "home" && !viewer.isStaff) ? (
       <Button asChild variant="outline" size="sm">
         <Link href={surface.newTicket}>
           <Plus className="size-4" />
