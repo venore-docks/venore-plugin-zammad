@@ -1,5 +1,7 @@
 import { beginOperation, endOperation } from "@venore/plugin-sdk/observability";
-import { UNASSIGNED_OWNER_ID, canAllocate, canEditTicket, canWorkTicket } from "../../shared/access-rules";
+import { UNASSIGNED_OWNER_ID, canAllocate, canEditTicket, canSetEstimate, canWorkTicket } from "../../shared/access-rules";
+import { ESTIMATE_FIELD, estimateOptions, parseEstimate } from "../../shared/estimate";
+import { loadSchema } from "../../shared/schema";
 import { composeReplyBody } from "../../shared/answers";
 import { FLOW_STEPS, canMoveTo, flowStepOf, staffActionFor, validateReason } from "../../shared/flow";
 import { assigneesFor } from "../../shared/directory";
@@ -80,6 +82,23 @@ export async function agentUpdateTicket(requester: Requester, input: AgentUpdate
       }
       body.priority_id = input.priorityId;
       changed.push("priority");
+    }
+  }
+
+  // Tempo previsto: só o gestor/admin do setor (no Zammad, os fluxos 613/614 fazem o mesmo na tela dele; a API
+  // não os aplica, então a regra é repetida aqui). Opções = as do campo do Zammad.
+  if (input.estimate !== undefined) {
+    if (!canSetEstimate(mode, role)) return finish(failure("forbidden_estimate", "Só o administrador do setor define o tempo previsto."));
+    const schema = await loadSchema();
+    const choices = schema.success ? estimateOptions(schema.data.attributes) : null;
+    if (!choices) return finish(failure("estimate_unavailable", "O Zammad não tem o campo de tempo previsto."));
+    const parsed = parseEstimate(choices, input.estimate);
+    if (!parsed.ok) return finish(failure("invalid_estimate", "Tempo previsto inválido."));
+    const current = (ticket as unknown as Record<string, unknown>)[ESTIMATE_FIELD];
+    const currentValue = current === null || current === undefined || current === "" ? null : String(current);
+    if (parsed.value !== currentValue) {
+      body[ESTIMATE_FIELD] = parsed.value ?? "";
+      changed.push("estimate");
     }
   }
 

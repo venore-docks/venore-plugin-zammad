@@ -35,6 +35,13 @@ export function TicketProperties({ ticket, surfaceKey, readOnly }: { ticket: Tic
           )}
           <span>
             {people.join(" · ")} · aberto em {formatDateTime(ticket.createdAt)}
+            {/* Tempo previsto (definido pelo gestor): todos veem. */}
+            {ticket.estimate?.label && (
+              <>
+                {" · "}
+                <span className="text-foreground">tempo previsto: {ticket.estimate.label}</span>
+              </>
+            )}
           </span>
         </p>
         {ticket.flowStep && <FlowProgress step={ticket.flowStep} />}
@@ -56,9 +63,10 @@ export function TicketProperties({ ticket, surfaceKey, readOnly }: { ticket: Tic
 
       {agent && (
         <AttendanceControls
-          key={`att-${ticket.id}-${agent.stateId}-${agent.priorityId}-${agent.ownerId}`}
+          key={`att-${ticket.id}-${agent.stateId}-${agent.priorityId}-${agent.ownerId}-${ticket.estimate?.value ?? ""}`}
           ticketId={ticket.id}
           controls={agent}
+          currentEstimate={ticket.estimate?.value ?? ""}
           allocation={agent.canAllocate ? <AllocationControls ticketId={ticket.id} controls={agent} /> : null}
         />
       )}

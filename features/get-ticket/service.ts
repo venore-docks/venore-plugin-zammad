@@ -13,7 +13,9 @@ import {
   type FlowStep,
 } from "../../shared/flow";
 import type { ZammadArticle, ZammadExpandedTicket } from "../../contracts/zammad";
-import { canAllocate, canEditTicket, canWorkTicket, isUnassigned, type StaffRole, type ViewerMode } from "../../shared/access-rules";
+import { canAllocate, canCommentTicket, canEditTicket, canSetEstimate, canWorkTicket, isUnassigned, type StaffRole, type ViewerMode } from "../../shared/access-rules";
+import { ESTIMATE_FIELD, estimateLabel, estimateOptions, type EstimateOption } from "../../shared/estimate";
+import { loadSchema } from "../../shared/schema";
 import { assigneesFor } from "../../shared/directory";
 import { resolveAvatars } from "../../shared/avatars";
 import { articleToText, cleanSenderName, extractFormAnswers, extractReplyQuote, makeExcerpt } from "../../shared/html-text";
@@ -86,7 +88,13 @@ function linkQuotes(messages: TicketMessage[]): void {
   }
 }
 
-async function buildAgentControls(ticket: ZammadExpandedTicket, requester: Requester, mode: ViewerMode, role: StaffRole): Promise<AgentControls | null> {
+async function buildAgentControls(
+  ticket: ZammadExpandedTicket,
+  requester: Requester,
+  mode: ViewerMode,
+  role: StaffRole,
+  estimateChoices: EstimateOption[] | null,
+): Promise<AgentControls | null> {
   if (mode !== "agent") return null;
   const meId = requester.zammadUser.id;
   const allocate = canAllocate(mode, role);
@@ -124,6 +132,9 @@ async function buildAgentControls(ticket: ZammadExpandedTicket, requester: Reque
     inFlow: step !== null,
     flowActions,
     flowHint,
+    canComment: canCommentTicket(mode, role, ticket.owner_id, meId),
+    canSetEstimate: estimateChoices !== null && canSetEstimate(mode, role),
+    estimateOptions: estimateChoices ?? [],
   };
 }
 
@@ -146,10 +157,17 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
   linkQuotes(messages);
 
   const meId = requester.zammadUser.id;
+  // Tempo previsto: opções do campo do Zammad (schema em cache). Sem o campo, a função some.
+  const schema = await loadSchema();
+  const estimateChoices = schema.success ? estimateOptions(schema.data.attributes) : null;
+  const estimateValue = (ticket as unknown as Record<string, unknown>)[ESTIMATE_FIELD];
+  const estimate = estimateChoices
+    ? { value: estimateValue === null || estimateValue === undefined || estimateValue === "" ? null : String(estimateValue), label: estimateLabel(estimateChoices, estimateValue) }
+    : null;
   const [requesterPerson, ownerPerson, agent, canClose, tags] = await Promise.all([
     ticket.customer_id === meId ? Promise.resolve(null) : getPerson(ticket.customer_id),
     ticket.owner_id && ticket.owner_id !== meId ? getPerson(ticket.owner_id) : Promise.resolve(null),
-    buildAgentControls(ticket, requester, mode, role),
+    buildAgentControls(ticket, requester, mode, role, estimateChoices),
     canManageTicketState(requester),
     // Tags são da equipe (marcas internas do fluxo): o solicitante não as vê.
     mode === "agent" ? loadTicketTags(requester, [ticket]).then((found) => found.get(ticket.id) ?? []) : Promise.resolve([] as string[]),
@@ -197,6 +215,7 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
       assignedToMe: ticket.owner_id === meId,
       agent,
       tags,
+      estimate,
       messages,
     },
   };

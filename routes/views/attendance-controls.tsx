@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight, CircleCheck, Hourglass, PlayCircle } from "lucide-react";
+import { CircleCheck, Hourglass, PlayCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -29,6 +29,9 @@ import { tomorrowAtNineLocal } from "../../shared/agent-stats";
 import { validatePending } from "../../shared/ticket-options";
 import { agentUpdateTicketAction } from "../public/actions";
 
+// Valor do Select para "sem previsão" (o Select não aceita string vazia como item).
+const NO_ESTIMATE = "__none__";
+
 function asOption(state: AgentStateOption) {
   return { id: state.id, name: "", label: state.label, tone: state.tone, needsPending: state.needsPending };
 }
@@ -36,28 +39,41 @@ function asOption(state: AgentStateOption) {
 // ATENDIMENTO (quem atende o chamado ou o supervisiona), num bloco só. Regra de design:
 //   Próximo passo  a dica do fluxo + os botões do passo (1º cheio, demais em contorno). Chamado na fila e
 //                  pessoa que aloca: escolher o responsável É o próximo passo (`allocation` vem em destaque).
-//   Mais opções    recolhido: realocar, prioridade e estado manual (com data nos "pendente").
+//   Ajustes        à vista no mesmo bloco: realocar, prioridade, tempo previsto (gestor) e estado manual.
 // `allocation` é o formulário de alocação (componente de servidor, com a dica do menos carregado), ou null.
-export function AttendanceControls({ ticketId, controls, allocation }: { ticketId: number; controls: AgentControls; allocation: React.ReactNode }) {
+export function AttendanceControls({
+  ticketId,
+  controls,
+  allocation,
+  currentEstimate,
+}: {
+  ticketId: number;
+  controls: AgentControls;
+  allocation: React.ReactNode;
+  // Valor salvo do tempo previsto ("" = não definido).
+  currentEstimate: string;
+}) {
   const router = useRouter();
   const [stateId, setStateId] = useState(controls.stateId);
   const [priorityId, setPriorityId] = useState(controls.priorityId);
+  const [estimate, setEstimate] = useState(currentEstimate);
   const [pendingTime, setPendingTime] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, startTransition] = useTransition();
 
-  if (!controls.canEdit && !allocation) return null;
+  if (!controls.canEdit && !allocation && !controls.canSetEstimate) return null;
 
   const allocationFirst = Boolean(allocation) && controls.ownerId === null;
   const state = controls.states.find((candidate) => candidate.id === stateId);
-  const dirty = stateId !== controls.stateId || priorityId !== controls.priorityId;
+  const estimateChanged = controls.canSetEstimate && estimate !== currentEstimate;
+  const dirty = stateId !== controls.stateId || priorityId !== controls.priorityId || estimateChanged;
 
   // Atalhos: só os que fazem sentido a partir do estado atual.
   const inProgress = controls.states.find((candidate) => candidate.tone === "open");
   const pendingState = controls.states.find((candidate) => candidate.needsPending && /retorno/i.test(candidate.label)) ?? controls.states.find((candidate) => candidate.needsPending);
   const closedState = controls.states.find((candidate) => candidate.tone === "closed");
 
-  function send(update: { stateId?: number; pendingTime?: string; priorityId?: number }, done: string) {
+  function send(update: { stateId?: number; pendingTime?: string; priorityId?: number; estimate?: string }, done: string) {
     startTransition(async () => {
       const result = await agentUpdateTicketAction({ ticketId, ...update });
       if (!result.ok) {
@@ -81,6 +97,7 @@ export function AttendanceControls({ ticketId, controls, allocation }: { ticketI
         stateId: stateId !== controls.stateId ? stateId : undefined,
         pendingTime: state?.needsPending && stateId !== controls.stateId ? pendingTime : undefined,
         priorityId: priorityId !== controls.priorityId ? priorityId : undefined,
+        estimate: estimateChanged ? estimate : undefined,
       },
       "Alterações salvas.",
     );
@@ -158,67 +175,79 @@ export function AttendanceControls({ ticketId, controls, allocation }: { ticketI
         </div>
       )}
 
-      {(controls.canEdit || (allocation && !allocationFirst)) && (
-        <details className={hasNextStep ? "group border-t pt-3" : "group"}>
-          <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-sm text-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-details-marker]:hidden">
-            <ChevronRight className="size-4 transition-transform group-open:rotate-90 rtl:rotate-180 rtl:group-open:rotate-90" aria-hidden />
-            Mais opções
-          </summary>
-          <div className="mt-4 space-y-4">
-            {!allocationFirst && allocation}
+      {/* Ajustes à vista, no mesmo bloco (sem "Mais opções"): responsável (quando já tem), prioridade, tempo
+          previsto (só gestor) e estado manual. Um só "Salvar alterações" para os campos. */}
+      {!allocationFirst && allocation && <div className={hasNextStep || hasFlow || hasQuick ? "border-t pt-4" : undefined}>{allocation}</div>}
+      {(controls.canEdit || controls.canSetEstimate) && (
+        <div className={hasNextStep || hasFlow || hasQuick || (allocation && !allocationFirst) ? "space-y-3 border-t pt-4" : "space-y-3"}>
+          <div className="grid gap-3 @md:grid-cols-2">
             {controls.canEdit && (
-              <>
-                <div className="grid gap-3 @md:grid-cols-2">
-                  <label className="space-y-1.5 text-sm">
-                    <span className="text-muted-foreground">Prioridade</span>
-                    <Select value={String(priorityId)} onValueChange={(value) => setPriorityId(Number(value))}>
-                      <SelectTrigger className="h-10 w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {controls.priorities.map((option) => (
-                          <SelectItem key={option.id} value={String(option.id)}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </label>
-                  {canChangeState && (
-                    <label className="space-y-1.5 text-sm">
-                      <span className="text-muted-foreground">Mudar estado manualmente</span>
-                      <Select value={String(stateId)} onValueChange={(value) => setStateId(Number(value))}>
-                        <SelectTrigger className="h-10 w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {controls.states.map((option) => (
-                            <SelectItem key={option.id} value={String(option.id)}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </label>
-                  )}
-                </div>
-
-                {state?.needsPending && stateId !== controls.stateId && (
-                  <label className="block space-y-1.5 text-sm">
-                    <span className="text-muted-foreground">Até quando? (o chamado volta a aparecer nessa data)</span>
-                    <Input type="datetime-local" className="h-10" min={localNow()} value={pendingTime} onChange={(event) => setPendingTime(event.target.value)} />
-                  </label>
-                )}
-
-                {dirty && (
-                  <Button variant="outline" className="h-10 w-full @md:w-auto" disabled={busy} onClick={save}>
-                    {busy ? "Salvando…" : "Salvar alterações"}
-                  </Button>
-                )}
-              </>
+              <label className="space-y-1.5 text-sm">
+                <span className="text-muted-foreground">Prioridade</span>
+                <Select value={String(priorityId)} onValueChange={(value) => setPriorityId(Number(value))}>
+                  <SelectTrigger className="h-10 w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {controls.priorities.map((option) => (
+                      <SelectItem key={option.id} value={String(option.id)}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+            )}
+            {controls.canSetEstimate && (
+              <label className="space-y-1.5 text-sm">
+                <span className="text-muted-foreground">Tempo previsto</span>
+                <Select value={estimate || NO_ESTIMATE} onValueChange={(value) => setEstimate(value === NO_ESTIMATE ? "" : value)}>
+                  <SelectTrigger className="h-10 w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_ESTIMATE}>Não definido</SelectItem>
+                    {controls.estimateOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+            )}
+            {controls.canEdit && canChangeState && (
+              <label className="space-y-1.5 text-sm">
+                <span className="text-muted-foreground">Mudar estado manualmente</span>
+                <Select value={String(stateId)} onValueChange={(value) => setStateId(Number(value))}>
+                  <SelectTrigger className="h-10 w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {controls.states.map((option) => (
+                      <SelectItem key={option.id} value={String(option.id)}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
             )}
           </div>
-        </details>
+
+          {state?.needsPending && stateId !== controls.stateId && (
+            <label className="block space-y-1.5 text-sm">
+              <span className="text-muted-foreground">Até quando? (o chamado volta a aparecer nessa data)</span>
+              <Input type="datetime-local" className="h-10" min={localNow()} value={pendingTime} onChange={(event) => setPendingTime(event.target.value)} />
+            </label>
+          )}
+
+          {dirty && (
+            <Button variant="outline" className="h-10 w-full @md:w-auto" disabled={busy} onClick={save}>
+              {busy ? "Salvando…" : "Salvar alterações"}
+            </Button>
+          )}
+        </div>
       )}
 
       {error && (

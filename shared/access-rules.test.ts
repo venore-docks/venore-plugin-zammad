@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canAllocate, canEditTicket, canSeeQueue, canWorkTicket, isSupervisor, isUnassigned, staffRoleOf, viewerMode, type StaffRole } from "./access-rules";
+import { canAllocate, canCommentTicket, canEditTicket, canSeeQueue, canSetEstimate, canWorkTicket, isSupervisor, isUnassigned, staffRoleOf, viewerMode, type StaffRole } from "./access-rules";
 
 const base = { customerId: 10, ownerId: 20, meId: 99, role: "customer" as StaffRole, asAgent: true };
 
@@ -26,6 +26,22 @@ describe("staffRoleOf (papéis reais do Zammad da FEM)", () => {
 
   it("`report` sozinho (sem ticket.agent) não faz ninguém gestor", () => {
     expect(staffRoleOf([["report"]])).toBe("customer");
+  });
+});
+
+describe("comentar e tempo previsto", () => {
+  it("gestor comenta nos chamados dos agentes dele; agente só no que está com ele", () => {
+    expect(canCommentTicket("agent", "manager", 77, 20)).toBe(true);
+    expect(canCommentTicket("agent", "agent", 20, 20)).toBe(true);
+    expect(canCommentTicket("agent", "agent", 77, 20)).toBe(false);
+    expect(canCommentTicket("customer", "manager", 77, 20)).toBe(false);
+  });
+
+  it("só o gestor/admin define o tempo previsto", () => {
+    expect(canSetEstimate("agent", "manager")).toBe(true);
+    expect(canSetEstimate("agent", "admin")).toBe(true);
+    expect(canSetEstimate("agent", "agent")).toBe(false);
+    expect(canSetEstimate("customer", "manager")).toBe(false);
   });
 });
 

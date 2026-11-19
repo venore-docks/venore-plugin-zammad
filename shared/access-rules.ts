@@ -77,6 +77,17 @@ export function canEditTicket(mode: ViewerMode | null, role: StaffRole, ownerId:
   return canWorkTicket(mode, ownerId, meId) || canAllocate(mode, role);
 }
 
+// Escrever no chamado (resposta ao solicitante ou nota interna): quem atende OU o gestor do setor, que acompanha
+// e orienta os chamados dos seus agentes (e os da fila) sem precisar assumi-los.
+export function canCommentTicket(mode: ViewerMode | null, role: StaffRole, ownerId: number | null | undefined, meId: number): boolean {
+  return canWorkTicket(mode, ownerId, meId) || canAllocate(mode, role);
+}
+
+// Tempo previsto: só o gestor/administrador do setor define (o agente e o solicitante só veem).
+export function canSetEstimate(mode: ViewerMode | null, role: StaffRole): boolean {
+  return canAllocate(mode, role);
+}
+
 export function canSeeQueue(role: StaffRole): boolean {
   return isSupervisor(role);
 }

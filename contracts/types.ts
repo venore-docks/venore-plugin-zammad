@@ -147,9 +147,19 @@ export type AgentControls = {
   flowActions: StaffFlowAction[];
   // Dica do passo atual para a equipe (ex.: "Atribua um responsável: o chamado vai para Em andamento").
   flowHint: string | null;
+  // Escreve no chamado (resposta ou nota interna): quem atende OU o gestor do setor (acompanha os agentes).
+  canComment: boolean;
+  // Define o tempo previsto (só gestor/admin do setor). As opções vêm do campo do Zammad.
+  canSetEstimate: boolean;
+  estimateOptions: { value: string; label: string }[];
 };
 
+// Tempo previsto do chamado (campo `tempo_previsto` do Zammad). null = o Zammad não tem o campo.
+export type TicketEstimate = { value: string | null; label: string | null };
+
 export type TicketDetail = {
+  // Tempo previsto: visto por todos (solicitante, agente, gestor); só o gestor edita.
+  estimate: TicketEstimate | null;
   id: number;
   number: string;
   title: string;

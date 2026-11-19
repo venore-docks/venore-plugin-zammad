@@ -1,5 +1,5 @@
 import { beginOperation, endOperation } from "@venore/plugin-sdk/observability";
-import { canWorkTicket } from "../../shared/access-rules";
+import { canCommentTicket } from "../../shared/access-rules";
 import { composeReplyBody, validateAttachments, validateReply } from "../../shared/answers";
 import { articleVisibleText, cleanSenderName, makeExcerpt } from "../../shared/html-text";
 import { loadArticles, loadTicketForViewer, resolveStateId } from "../../shared/own-ticket";
@@ -28,8 +28,9 @@ export async function replyTicket(requester: Requester, input: ReplyTicketInput)
   const { ticket, mode } = viewed.data;
   const meId = requester.zammadUser.id;
   const agentMode = mode === "agent";
-  if (agentMode && !canWorkTicket(mode, ticket.owner_id, meId)) {
-    return finish(failure("not_owner", "Assuma o chamado para responder."));
+  // Responde ou escreve nota: quem atende o chamado OU o gestor do setor (acompanha e orienta os agentes).
+  if (agentMode && !canCommentTicket(mode, viewed.data.role, ticket.owner_id, meId)) {
+    return finish(failure("not_owner", "Só quem atende o chamado ou o gestor do setor escreve aqui."));
   }
   // Fluxo da FEM: em Concluído/Não autorizado o solicitante responde pelos botões (customer-respond); em
   // Finalizado não reabre. Uma mensagem solta em Concluído cairia no gatilho de reserva "pede ajustes".

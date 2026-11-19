@@ -4,9 +4,10 @@ import { cn } from "@venore/plugin-sdk/ui";
 import type { TicketSummary } from "../../../../contracts/types";
 import { isStale, isUrgentPriority, waitingLabel } from "../../../../shared/agent-stats";
 import { LIST_CLASS, ROW_LINK_CLASS, StateBadge } from "../../../public/shared";
+import { TagInline } from "../../../public/tag-chips";
 
 // Linha de chamado do agente (regra de design: um sinal por item). Título (com bandeira se urgente) e
-// solicitante · setor · tempo; o tempo só ganha cor quando passou do prazo de retorno. Tags e número ficam no
+// solicitante · setor · tempo (+ tags discretas); o tempo só ganha cor quando passou do prazo de retorno. Número fica no
 // detalhe. Usada no dashboard e em "Atribuídos a mim".
 export function AgentTicketRow({ ticket, href, now }: { ticket: TicketSummary; href: string; now: Date }) {
   const urgent = isUrgentPriority(ticket.priorityLabel);
@@ -19,12 +20,16 @@ export function AgentTicketRow({ ticket, href, now }: { ticket: TicketSummary; h
             {urgent && <Flag className="size-3.5 shrink-0 text-destructive" aria-label={`Prioridade ${ticket.priorityLabel}`} />}
             <span className="truncate">{ticket.title}</span>
           </span>
-          <span className="block truncate text-xs text-muted-foreground">
-            {ticket.requesterName ? `${ticket.requesterName} · ` : ""}
-            {ticket.group} ·{" "}
-            <span className={cn(stale && "font-medium text-warning")}>
-              {ticket.awaitingYou ? `esperando ${waitingLabel(ticket.updatedAt, now)}` : `atualizado ${waitingLabel(ticket.updatedAt, now)}`}
+          <span className="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-xs text-muted-foreground">
+            <span className="truncate">
+              {ticket.requesterName ? `${ticket.requesterName} · ` : ""}
+              {ticket.group} ·{" "}
+              <span className={cn(stale && "font-medium text-warning")}>
+                {ticket.awaitingYou ? `esperando ${waitingLabel(ticket.updatedAt, now)}` : `atualizado ${waitingLabel(ticket.updatedAt, now)}`}
+              </span>
             </span>
+            {(ticket.tags?.length ?? 0) > 0 && <span aria-hidden>·</span>}
+            <TagInline tags={ticket.tags} stateLabel={ticket.stateLabel} />
           </span>
         </span>
         <span className="hidden sm:block">

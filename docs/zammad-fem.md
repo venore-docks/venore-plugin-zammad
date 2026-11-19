@@ -68,6 +68,8 @@ Só valem na **tela do Zammad**; a API ignora. Ordem: prioridade crescente, o ú
 | 610 | Prioridade sugerida - Mostrar para clientes na criação | criação | |
 | 611 | Prioridade - Somente leitura para todos | edição | |
 | 612 | Prioridade - Editável para agentes e administradores | edição | |
+| 613 | Tempo previsto - Somente leitura para todos | edição | Tempo previsto → somente leitura |
+| 614 | Tempo previsto - Editável para administradores | edição | Função é as 4 `- Administrador` (+ Cliente não é Usuário atual) → remover somente leitura |
 | 700–730 | Formulário - Manutenção / Marketing / Tecnologia / Recursos Humanos | | campos específicos de cada setor (ex.: "Local de uso") — **conferir se mexem em Estado/Responsável** |
 
 Pegadinhas que custaram tempo:
@@ -83,6 +85,9 @@ Pegadinhas que custaram tempo:
 - `prioridade_sugerida` ("Prioridade sugerida", seleção baixa/normal/alta/urgente, padrão normal): cliente
   vê e preenche na criação; somente leitura depois (611). O portal pergunta automaticamente.
 - `prioridade_cliente` ("Prioridade inicial"): antigo, abandonado — o portal nunca pergunta.
+- `tempo_previsto` ("Tempo previsto", seleção 1 h … 2 semanas, sem padrão): não aparece na criação; na edição
+  aparece para cliente, agente e administrador, editável só pelo administrador (fluxos 613/614). Testado na UI
+  em 19/11/2026.
 - `Data sugerida para atendimento`, `Local de uso` (Manutenção) e outros campos por setor.
 
 ### 1.6 Gatilhos (Administração → Gatilho)
@@ -136,7 +141,7 @@ estado" só se sustenta se ninguém mandar. Pelo mesmo motivo o plugin valida as
 
 ---
 
-## 3. O que o plugin faz (v1.2.0)
+## 3. O que o plugin faz (v1.5.0)
 
 ### 3.1 Fluxo (`shared/flow.ts`, testado em `flow.test.ts`)
 Estados por nome → `FlowStep`; cores semânticas; ações do cliente (palavras); transições da equipe
@@ -174,7 +179,16 @@ comportamento genérico antigo (encerrar/reabrir), para outros Zammads.
 mostra o pai para navegar. Soma-se aos grupos de pessoas do plugin (os dois filtros valem). Admin do
 Colabora continua vendo tudo (prévia). Testado em `group-audience.test.ts`.
 
-### 3.4 Papéis
+### 3.4 Tempo previsto e comentário do gestor (v1.5.0)
+- **Tempo previsto** (`shared/estimate.ts`): opções lidas do campo `tempo_previsto` do Zammad; todos veem
+  "tempo previsto: X" no chamado; só o gestor/admin do setor edita (seletor no bloco de atendimento, validado
+  no servidor por `canSetEstimate`). Sem o campo no Zammad, a função some.
+- **Gestor comenta** nos chamados dos agentes dele (e nos da fila): resposta ao solicitante (e-mail) ou nota
+  interna, sem precisar assumir o chamado (`canCommentTicket`).
+- Bloco de atendimento sem "Mais opções": responsável, prioridade, tempo previsto e estado manual à vista.
+- Tags discretas (bolinha + texto neutro) nas linhas da fila e de "Atribuídos a mim".
+
+### 3.5 Papéis
 Gestor = papel com `report` **ou** nome `<Setor> - Administrador` (`SECTOR_MANAGER_ROLE`). Gestor que abriu
 chamado em grupo que ele não "possui" (full/change) vê o chamado como solicitante (`supervisesGroup`).
 

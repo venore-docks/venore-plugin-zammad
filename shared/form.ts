@@ -35,8 +35,9 @@ export type BuildOptions = {
 // equipe. A prioridade nativa é do gestor; a SUGESTÃO do solicitante é o campo customizado
 // `prioridade_sugerida` (o Zammad não deixa cliente ver a prioridade nativa na criação), que o wizard pergunta
 // normalmente e os gatilhos "Sincronizar Prioridade - …" copiam para a nativa na criação.
-// `prioridade_cliente` é o atributo antigo "Prioridade inicial" do Zammad da FEM (abandonado).
-export const NEVER_ASKED: ReadonlySet<string> = new Set(["priority_id", "prioridade_cliente", "state_id", "owner_id", "customer_id", "group_id", "title"]);
+// `prioridade_cliente` é o atributo antigo "Prioridade inicial" do Zammad da FEM (abandonado). `tempo_previsto`
+// é definido pelo gestor depois da análise (nunca na abertura).
+export const NEVER_ASKED: ReadonlySet<string> = new Set(["priority_id", "prioridade_cliente", "tempo_previsto", "state_id", "owner_id", "customer_id", "group_id", "title"]);
 
 export type BuiltForms ={ sectors: SectorForm[]; unsupported: string[]; skippedFields: string[] };
 

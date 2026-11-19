@@ -12,6 +12,8 @@ export type AgentUpdateInput = {
   stateId?: number;
   pendingTime?: string | null;
   reason?: string | null;
+  // Tempo previsto (chave de uma opção do campo `tempo_previsto`); "" ou null limpa. Só gestor/admin do setor.
+  estimate?: string | null;
   priorityId?: number;
   ownerId?: number | null;
 };

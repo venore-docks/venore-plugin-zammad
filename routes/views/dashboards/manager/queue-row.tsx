@@ -5,6 +5,7 @@ import type { AssigneeOption, QueueRow as QueueRowData } from "../../../../featu
 import { ageTone, formatAge, shortGroupName } from "../../../../shared/manager-stats";
 import type { FlowStepKey } from "../../../../contracts/types";
 import { StateBadge } from "../../../public/shared";
+import { TagInline } from "../../../public/tag-chips";
 import { DecisionActions } from "./decision-actions";
 import { QuickAssign } from "./quick-assign";
 
@@ -23,7 +24,7 @@ export function AgeBadge({ ms }: { ms: number }) {
 
 // Uma linha da fila (regra de design: um sinal por item). Título (bandeira se urgente) + setor · solicitante ·
 // idade (· responsável), e UMA ação: "Analisar"/"Atribuir"/"Abrir" (fluxo da FEM) ou a alocação rápida (Zammad
-// fora do fluxo). Número e tags ficam no detalhe. Serve à home, à fila e ao app. Vai dentro de `LIST_CLASS`.
+// fora do fluxo). Número fica no detalhe; tags aparecem discretas na linha de metadados. Serve à home, à fila e ao app. Vai dentro de `LIST_CLASS`.
 export function QueueRow({
   ticket,
   href,
@@ -58,6 +59,8 @@ export function QueueRow({
           <AgeBadge ms={ticket.ageMs} />
           {ticket.ownerId !== null && <span>· com {ticket.ownerName ?? "um agente"}</span>}
           {showState && <StateBadge label={ticket.stateLabel} tone="open" color={ticket.stateColor} />}
+          {ticket.tags.length > 0 && <span aria-hidden>·</span>}
+          <TagInline tags={ticket.tags} stateLabel={ticket.stateLabel} />
         </p>
       </div>
       <div className="md:shrink-0">
