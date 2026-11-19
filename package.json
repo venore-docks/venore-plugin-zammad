@@ -1,6 +1,6 @@
 {
   "name": "@venore/plugin-colabora",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Abertura de chamados no Zammad em passos guiados, com os campos de cada setor lidos do próprio Zammad (plugin do Venore Docks).",
   "private": true,
   "type": "module",

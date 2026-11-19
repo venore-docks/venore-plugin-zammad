@@ -66,6 +66,10 @@ export async function createTicket(requester: Requester, input: CreateTicketInpu
       body: composeBody(input.description, fields, input.answers, `Aberto pelo ${brand.siteName}.`),
       content_type: "text/html",
       type: "web",
+      // Quem abre é sempre o SOLICITANTE, mesmo sendo da equipe. Sem isto, o Zammad trata a mensagem de um
+      // agente/gestor como resposta de agente e tira o chamado de "Novo" para o estado padrão de acompanhamento
+      // (na FEM, "Em andamento"), sem responsável e sem passar pela análise do gestor.
+      sender: "Customer",
       internal: false,
       attachments: input.attachments.map((file) => ({
         filename: file.filename,
