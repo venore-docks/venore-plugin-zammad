@@ -2,6 +2,9 @@ import { beginOperation, endOperation } from "@venore/plugin-sdk/observability";
 import { UNASSIGNED_OWNER_ID, canAllocate, canEditTicket, canSetEstimate, canWorkTicket } from "../../shared/access-rules";
 import { ESTIMATE_FIELD, estimateOptions, parseEstimate } from "../../shared/estimate";
 import { loadSchema } from "../../shared/schema";
+import { childrenBlockMessage, openChildren } from "../../shared/children";
+import { loadLinkedTickets } from "../../shared/ticket-links";
+import { describeState } from "../../shared/ticket-state";
 import { composeReplyBody } from "../../shared/answers";
 import { FLOW_STEPS, canMoveTo, flowStepOf, staffActionFor, validateReason } from "../../shared/flow";
 import { assigneesFor } from "../../shared/directory";
@@ -59,6 +62,12 @@ export async function agentUpdateTicket(requester: Requester, input: AgentUpdate
         const actor = { supervisor: canAllocate(mode, role), worker: canWorkTicket(mode, ticket.owner_id, meId) };
         if (!targetStep || !canMoveTo(currentStep, targetStep, actor)) {
           return finish(failure("forbidden_transition", `Você não pode levar este chamado de “${FLOW_STEPS[currentStep].label}” para “${state.label}”.`));
+        }
+        // Pai não é concluído com chamado filho aberto (regra da FEM; a tela já esconde o botão).
+        if (targetStep === "concluido") {
+          const { children } = await loadLinkedTickets(requester, ticket.id);
+          const open = openChildren(children.map((child) => ({ closed: describeState(child.state ?? "").closed })));
+          if (open > 0) return finish(failure("children_open", childrenBlockMessage(open)));
         }
         const action = staffActionFor(targetStep);
         const reasonError = validateReason(input.reason, action?.reason === "required");

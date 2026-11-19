@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { isPluginActive } from "@venore/plugin-sdk";
-import { agentUpdateTicket, changeTicketState, createTicket, customerRespond, getTicket, replyTicket, searchViewAsTargets, startViewAs, stopViewAs } from "../../index";
-import type { AgentUpdateInput, AnswerValue, CreatedTicket, CustomerRespondInput, TicketAttachment, ViewAsPerson } from "../../index";
+import { agentUpdateTicket, changeTicketState, createChildTicket, createTicket, customerRespond, getTicket, replyTicket, searchViewAsTargets, startViewAs, stopViewAs } from "../../index";
+import type { AgentUpdateInput, AnswerValue, CreateChildTicketInput, CreatedTicket, CustomerRespondInput, TicketAttachment, ViewAsPerson } from "../../index";
 import { APP_SURFACE, PORTAL_SURFACE } from "../../shared/routes";
 
 // Toda action passa pelo handler do barrel (autorização + conta no Zammad lá dentro). Servem às DUAS
@@ -121,6 +121,23 @@ export async function ticketPreviewAction(ticketId: number): Promise<ZammadActio
       attachments: ticket.messages.reduce((total, message) => total + message.attachments.length, 0),
     },
   };
+}
+
+// Chamado filho (subtarefa no mesmo setor ou pedido a outro setor), vinculado ao chamado atual.
+export async function createChildTicketAction(input: CreateChildTicketInput): Promise<ZammadActionResult<{ id: number; number: string }>> {
+  if (!(await isPluginActive("colabora"))) return { ok: false, error: DISABLED };
+  const result = await createChildTicket({
+    parentId: Number(input.parentId),
+    mode: input.mode,
+    groupId: input.groupId ? Number(input.groupId) : null,
+    ownerId: input.ownerId ? Number(input.ownerId) : null,
+    title: String(input.title ?? ""),
+    description: String(input.description ?? ""),
+  });
+  if (!result.success) return { ok: false, error: result.error.message };
+  revalidateTicket(Number(input.parentId));
+  revalidateTicket(result.data.id);
+  return { ok: true, data: result.data };
 }
 
 // Decisão do solicitante no fluxo da FEM (aprovar, pedir ajustes, rejeitar, não resolvido, reenviar).

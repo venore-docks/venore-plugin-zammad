@@ -152,6 +152,23 @@ export type AgentControls = {
   // Define o tempo previsto (só gestor/admin do setor). As opções vêm do campo do Zammad.
   canSetEstimate: boolean;
   estimateOptions: { value: string; label: string }[];
+  // Chamado filho: quem atende ou o gestor cria. `childGroups` = setores para "pedir a outro setor";
+  // subtarefa usa `assignees` (gestor escolhe o agente; o agente fica com ela).
+  canCreateChild: boolean;
+  childGroups: { id: number; label: string }[];
+};
+
+// Chamado vinculado (pai ou filho), com o mínimo para a lista.
+export type LinkedTicket = {
+  id: number;
+  number: string;
+  title: string;
+  group: string;
+  stateLabel: string;
+  stateTone: TicketStateTone;
+  stateColor: TicketStateColor;
+  closed: boolean;
+  ownerName: string | null;
 };
 
 // Tempo previsto do chamado (campo `tempo_previsto` do Zammad). null = o Zammad não tem o campo.
@@ -160,6 +177,10 @@ export type TicketEstimate = { value: string | null; label: string | null };
 export type TicketDetail = {
   // Tempo previsto: visto por todos (solicitante, agente, gestor); só o gestor edita.
   estimate: TicketEstimate | null;
+  // Vínculos (só na visão da equipe): chamado pai e chamados filhos. `openChildren` bloqueia concluir o pai.
+  parent: LinkedTicket | null;
+  children: LinkedTicket[];
+  openChildren: number;
   id: number;
   number: string;
   title: string;

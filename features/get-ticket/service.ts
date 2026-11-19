@@ -1,4 +1,6 @@
-import type { AgentControls, CustomerActionOption, StaffFlowAction, TicketAttachmentInfo, TicketMessage } from "../../contracts/types";
+import type { AgentControls, CustomerActionOption, LinkedTicket, StaffFlowAction, TicketAttachmentInfo, TicketMessage } from "../../contracts/types";
+import { childGroupOptions, childrenBlockMessage, openChildren } from "../../shared/children";
+import { loadLinkedTickets } from "../../shared/ticket-links";
 import {
   CUSTOMER_ACTIONS,
   FLOW_STEPS,
@@ -20,7 +22,7 @@ import { assigneesFor } from "../../shared/directory";
 import { resolveAvatars } from "../../shared/avatars";
 import { articleToText, cleanSenderName, extractFormAnswers, extractReplyQuote, makeExcerpt } from "../../shared/html-text";
 import { canManageTicketState, loadAgentOptions, loadArticles, loadTicketForViewer } from "../../shared/own-ticket";
-import { getPerson } from "../../shared/people";
+import { getPeople, getPerson } from "../../shared/people";
 import { loadTicketTags } from "../../shared/ticket-tags";
 import type { Requester } from "../../shared/requester";
 import { describeState, isAwaitingYou, isCustomerWaiting } from "../../shared/ticket-state";
@@ -94,6 +96,7 @@ async function buildAgentControls(
   mode: ViewerMode,
   role: StaffRole,
   estimateChoices: EstimateOption[] | null,
+  extra: { openChildren: number; childGroups: { id: number; label: string }[] },
 ): Promise<AgentControls | null> {
   if (mode !== "agent") return null;
   const meId = requester.zammadUser.id;
@@ -117,6 +120,13 @@ async function buildAgentControls(
       return state ? [{ stateId: state.id, label: action.label, prompt: action.prompt, color: action.color, reason: action.reason, done: action.done }] : [];
     });
     flowHint = staffHintFor(step, { ...actor, hasOwner: !isUnassigned(ticket.owner_id) });
+    // Filho aberto bloqueia concluir o pai (o servidor também recusa, em agent-update-ticket).
+    if (extra.openChildren > 0) {
+      const blocked = (stateName: string) => flowStepOf(stateName) === "concluido";
+      states = states.filter((state) => state.id === ticket.state_id || !blocked(state.name));
+      flowActions = flowActions.filter((action) => !blocked(allStates.find((state) => state.id === action.stateId)?.name ?? ""));
+      if (step === "em_andamento") flowHint = childrenBlockMessage(extra.openChildren);
+    }
   }
 
   return {
@@ -135,6 +145,23 @@ async function buildAgentControls(
     canComment: canCommentTicket(mode, role, ticket.owner_id, meId),
     canSetEstimate: estimateChoices !== null && canSetEstimate(mode, role),
     estimateOptions: estimateChoices ?? [],
+    canCreateChild: work || allocate,
+    childGroups: work || allocate ? extra.childGroups : [],
+  };
+}
+
+function toLinked(ticket: ZammadExpandedTicket, ownerNames: Map<number, string>): LinkedTicket {
+  const state = describeState(ticket.state ?? "");
+  return {
+    id: ticket.id,
+    number: String(ticket.number),
+    title: ticket.title,
+    group: ticket.group,
+    stateLabel: state.label,
+    stateTone: state.tone,
+    stateColor: state.color,
+    closed: state.closed,
+    ownerName: isUnassigned(ticket.owner_id) ? null : (ownerNames.get(ticket.owner_id as number) ?? null),
   };
 }
 
@@ -164,10 +191,21 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
   const estimate = estimateChoices
     ? { value: estimateValue === null || estimateValue === undefined || estimateValue === "" ? null : String(estimateValue), label: estimateLabel(estimateChoices, estimateValue) }
     : null;
+  // Vínculos pai/filho: só na visão da equipe (os filhos são internos; o solicitante do pai não os vê).
+  const links = mode === "agent" ? await loadLinkedTickets(requester, ticket.id) : { parent: null, children: [] };
+  const linkedOwners = await getPeople(
+    [links.parent, ...links.children].flatMap((linked) => (linked && !isUnassigned(linked.owner_id) ? [linked.owner_id as number] : [])),
+  );
+  const ownerNames = new Map([...linkedOwners].map(([id, person]) => [id, person.name]));
+  const children = links.children.map((child) => toLinked(child, ownerNames));
+  const parentLinked = links.parent ? toLinked(links.parent, ownerNames) : null;
+  const open = openChildren(children);
+  const childGroups = schema.success ? childGroupOptions(schema.data.groups, ticket.group_id) : [];
+
   const [requesterPerson, ownerPerson, agent, canClose, tags] = await Promise.all([
     ticket.customer_id === meId ? Promise.resolve(null) : getPerson(ticket.customer_id),
     ticket.owner_id && ticket.owner_id !== meId ? getPerson(ticket.owner_id) : Promise.resolve(null),
-    buildAgentControls(ticket, requester, mode, role, estimateChoices),
+    buildAgentControls(ticket, requester, mode, role, estimateChoices, { openChildren: open, childGroups }),
     canManageTicketState(requester),
     // Tags são da equipe (marcas internas do fluxo): o solicitante não as vê.
     mode === "agent" ? loadTicketTags(requester, [ticket]).then((found) => found.get(ticket.id) ?? []) : Promise.resolve([] as string[]),
@@ -216,6 +254,9 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
       agent,
       tags,
       estimate,
+      parent: parentLinked,
+      children,
+      openChildren: open,
       messages,
     },
   };

@@ -141,7 +141,7 @@ estado" só se sustenta se ninguém mandar. Pelo mesmo motivo o plugin valida as
 
 ---
 
-## 3. O que o plugin faz (v1.5.0)
+## 3. O que o plugin faz (v1.6.0)
 
 ### 3.1 Fluxo (`shared/flow.ts`, testado em `flow.test.ts`)
 Estados por nome → `FlowStep`; cores semânticas; ações do cliente (palavras); transições da equipe
@@ -188,7 +188,16 @@ Colabora continua vendo tudo (prévia). Testado em `group-audience.test.ts`.
 - Bloco de atendimento sem "Mais opções": responsável, prioridade, tempo previsto e estado manual à vista.
 - Tags discretas (bolinha + texto neutro) nas linhas da fila e de "Atribuídos a mim".
 
-### 3.5 Papéis
+### 3.5 Chamados filhos (v1.6.0)
+- Na tela do chamado (equipe), "Criar chamado filho": **subtarefa no meu setor** (nasce Autorizado com
+  responsável — o gestor escolhe o agente, o agente fica com ela; o gatilho leva a Em andamento) ou **pedir a
+  outro setor** (nasce Novo na fila do gestor de lá). Quem pode: quem atende o pai ou o gestor do setor.
+- O **solicitante do filho é quem o criou** (filho interno; o solicitante do pai não vê os filhos).
+- Vínculo pelo Zammad (`POST /links/add`, pai/filho); o plugin confere a direção depois de vincular e inverte
+  se precisar. O pai lista os filhos (estado e responsável); o filho mostra "Faz parte de #N".
+- **O pai não pode ser concluído com filho aberto** (estado não fechado): o botão some e o servidor recusa.
+
+### 3.6 Papéis
 Gestor = papel com `report` **ou** nome `<Setor> - Administrador` (`SECTOR_MANAGER_ROLE`). Gestor que abriu
 chamado em grupo que ele não "possui" (full/change) vê o chamado como solicitante (`supervisesGroup`).
 

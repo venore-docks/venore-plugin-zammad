@@ -9,6 +9,7 @@ import { TagChips } from "../public/tag-chips";
 import { TicketStateButton } from "../public/ticket-actions";
 import { AllocationControls } from "./allocation-controls";
 import { AttendanceControls } from "./attendance-controls";
+import { ChildTickets, ParentLink } from "./child-tickets";
 
 // Propriedades do chamado. No portal em desktop vão para a BARRA CONTEXTUAL (ticket-sidebar.tsx); no celular e
 // no app ficam acima da conversa (ticket-view.tsx). Regra de design: uma linha de status (estado, pessoas, data)
@@ -45,6 +46,7 @@ export function TicketProperties({ ticket, surfaceKey, readOnly }: { ticket: Tic
           </span>
         </p>
         {ticket.flowStep && <FlowProgress step={ticket.flowStep} />}
+        {ticket.parent && <ParentLink parent={ticket.parent} surfaceKey={surfaceKey} />}
         {agent && <TagChips tags={ticket.tags} stateLabel={ticket.stateLabel} />}
         {/* Fora do fluxo da FEM: colaborador da equipe vendo o PRÓPRIO pedido encerra/reabre como antes. */}
         {!agent && !ticket.flowStep && ticket.canClose && <TicketStateButton ticketId={ticket.id} closed={ticket.closed} />}
@@ -70,6 +72,8 @@ export function TicketProperties({ ticket, surfaceKey, readOnly }: { ticket: Tic
           allocation={agent.canAllocate ? <AllocationControls ticketId={ticket.id} controls={agent} /> : null}
         />
       )}
+
+      {agent && !readOnly && <ChildTickets ticket={ticket} surfaceKey={surfaceKey} />}
     </div>
   );
 }
