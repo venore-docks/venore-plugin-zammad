@@ -23,9 +23,11 @@ import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, Select
 import type { AnswerValue, CreatedTicket, SectorForm, WizardData, WizardField, WizardStep } from "../../contracts/types";
 import {
   DESCRIPTION_MIN,
+  SECTOR_REQUIRED_MESSAGE,
   TITLE_MAX,
   displayAnswer,
   formatBytes,
+  hasSubsectors,
   isEmptyAnswer,
   localNow,
   validateAttachments,
@@ -73,9 +75,16 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
   const paths = surface === "app" ? APP_SURFACE : PORTAL_SURFACE;
   const sectors = data.sectors;
   const byId = useMemo(() => new Map(sectors.map((sector) => [sector.groupId, sector])), [sectors]);
-  const initialSector = initialGroupId ? byId.get(initialGroupId) : undefined;
+  // Pai "aberto" (o que mostra a escolha do assunto) de um setor: ele mesmo, se tiver subdivisões; senão o pai.
+  const parentOf = (sector: SectorForm | undefined): number | null =>
+    sector && sector.parentId !== null && byId.has(sector.parentId) ? sector.parentId : null;
+  const requested = initialGroupId ? byId.get(initialGroupId) : undefined;
+  // `?setor=<pai com subdivisões>` (atalho da Home) abre a escolha do assunto; nunca pula direto para as perguntas.
+  const requestedIsParent = requested ? hasSubsectors(sectors, requested.groupId) : false;
+  const initialSector = requestedIsParent ? undefined : requested;
 
   const [groupId, setGroupId] = useState<number | null>(initialSector?.groupId ?? null);
+  const [parentId, setParentId] = useState<number | null>(requestedIsParent ? (requested?.groupId ?? null) : parentOf(initialSector));
   const [answers, setAnswers] = useState<Answers>(() => initialAnswers(initialSector));
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -121,10 +130,21 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
   }
 
   // `advance`: a escolha é final (setor sem subdivisões, ou um assunto da subdivisão) → segue direto para a
-  // próxima etapa, sem a pessoa ter de descer até "Continuar". Setor com subdivisões só abre a sub-escolha.
+  // próxima etapa, sem a pessoa ter de descer até "Continuar". Setor com subdivisões só abre a sub-escolha e
+  // NÃO conta como escolhido: o chamado vai para um subgrupo (o servidor também recusa o pai).
   function chooseSector(id: number, advance: boolean) {
+    if (hasSubsectors(sectors, id)) {
+      if (id !== parentId) {
+        setParentId(id);
+        setGroupId(null);
+        setAnswers({});
+      }
+      setErrors({});
+      return;
+    }
     if (id !== groupId) {
       setGroupId(id);
+      setParentId(parentOf(byId.get(id)));
       setAnswers(initialAnswers(byId.get(id)));
       setErrors({});
     }
@@ -133,7 +153,7 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
 
   function validateCurrent(): boolean {
     let next: Record<string, string> = {};
-    if (current.kind === "sector" && !sector) next = { sector: "Escolha o setor para continuar." };
+    if (current.kind === "sector" && !sector) next = { sector: SECTOR_REQUIRED_MESSAGE };
     if (current.kind === "fields") next = validateFields(current.step.fields, answers);
     if (current.kind === "details") {
       const titleError = validateTitle(title);
@@ -171,6 +191,7 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
   function restart() {
     setCreated(null);
     setGroupId(null);
+    setParentId(null);
     setAnswers({});
     setTitle("");
     setDescription("");
@@ -213,7 +234,14 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
         </div>
 
         {current.kind === "sector" && (
-          <SectorStep intro={data.intro ?? DEFAULT_INTRO} sectors={sectors} selectedId={groupId} onSelect={chooseSector} error={errors.sector} />
+          <SectorStep
+            intro={data.intro ?? DEFAULT_INTRO}
+            sectors={sectors}
+            selectedId={groupId}
+            openParentId={parentId}
+            onSelect={chooseSector}
+            error={errors.sector}
+          />
         )}
 
         {current.kind === "fields" && (
@@ -328,12 +356,15 @@ function SectorStep({
   intro,
   sectors,
   selectedId,
+  openParentId,
   onSelect,
   error,
 }: {
   intro: string;
   sectors: SectorForm[];
   selectedId: number | null;
+  /** Setor com subdivisões aberto (mostra "Qual é o assunto…"); null = nenhum. */
+  openParentId: number | null;
   onSelect: (id: number, advance: boolean) => void;
   error?: string;
 }) {
@@ -345,9 +376,9 @@ function SectorStep({
   // O setor já escolhido (ou pai do escolhido) nunca some da lista ao filtrar.
   const topLevel = searchable && search.trim() ? allTopLevel.filter((sector) => matchesSearch(`${sector.label} ${sector.description ?? ""}`, search)) : allTopLevel;
   const childrenOf = (id: number) => sectors.filter((sector) => sector.parentId === id);
-  const selected = sectors.find((sector) => sector.groupId === selectedId);
-  // Pai "aberto": o escolhido, ou o pai do subgrupo escolhido.
-  const openParentId = selected ? (selected.parentId !== null && ids.has(selected.parentId) ? selected.parentId : selected.groupId) : null;
+  // Cartão marcado na grade: o pai aberto (com subdivisões) ou o setor escolhido (sem subdivisões).
+  const activeTopId = openParentId ?? selectedId;
+  // Só os subgrupos: o pai não é opção ("Outro assunto" saiu — todo chamado desses setores vai para um assunto).
   const subOptions = openParentId !== null ? childrenOf(openParentId) : [];
   const parent = openParentId !== null ? sectors.find((sector) => sector.groupId === openParentId) : undefined;
 
@@ -383,7 +414,7 @@ function SectorStep({
       )}
       <div className="grid gap-3">
         {topLevel.map((sector) => {
-          const active = openParentId === sector.groupId;
+          const active = activeTopId === sector.groupId;
           const hasChildren = childrenOf(sector.groupId).length > 0;
           const accent = accentFor(sector.groupId);
           return (
@@ -422,9 +453,9 @@ function SectorStep({
         <div ref={subRef} className={cn("scroll-mt-24 space-y-3 rounded-lg border p-4", accentFor(parent.groupId).soft, accentFor(parent.groupId).border)}>
           <p className="text-sm font-medium text-foreground">Qual é o assunto em {parent.label}?</p>
           <div className="flex flex-wrap gap-2">
-            {[parent, ...subOptions].map((option) => (
+            {subOptions.map((option) => (
               <OptionChip key={option.groupId} selected={selectedId === option.groupId} onClick={() => onSelect(option.groupId, true)}>
-                {option.groupId === parent.groupId ? "Outro assunto" : option.label}
+                {option.label}
               </OptionChip>
             ))}
           </div>

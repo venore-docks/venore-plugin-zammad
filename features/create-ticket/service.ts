@@ -2,6 +2,7 @@ import { getBrandConfig } from "@venore/plugin-sdk/brand";
 import { beginOperation, endOperation } from "@venore/plugin-sdk/observability";
 import {
   composeBody,
+  hasSubsectors,
   toZammadValues,
   validateAttachments,
   validateDescription,
@@ -39,6 +40,10 @@ export async function createTicket(requester: Requester, input: CreateTicketInpu
   const { sectors } = buildSectorForms(schema.data, config, { roleIds: requester.zammadUser.role_ids, viewer });
   const sector = sectors.find((candidate) => candidate.groupId === input.groupId);
   if (!sector) return finish(failure("sector_unavailable", "Este setor não recebe chamados por aqui. Escolha outro."));
+  // Setor com subdivisões exige o assunto (subgrupo): o navegador não pode mandar o chamado para o pai.
+  if (hasSubsectors(sectors, sector.groupId)) {
+    return finish(failure("subsector_required", `Escolha o assunto em ${sector.label} para continuar.`));
+  }
 
   const fields = sector.steps.flatMap((step) => step.fields);
   const titleError = validateTitle(input.title);

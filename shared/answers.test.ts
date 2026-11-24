@@ -4,6 +4,7 @@ import { FEM_SCHEMA } from "./__fixtures__/fem-schema";
 import {
   composeBody,
   displayAnswer,
+  hasSubsectors,
   localNow,
   toZammadValues,
   validateAttachments,
@@ -89,5 +90,34 @@ describe("conversão para o Zammad", () => {
     expect(body).toContain("<strong>Materiais desejados</strong>: banner, postagem");
     expect(body).toContain("<strong>O orçamento da produção/impressão do material, precisa ser orçado previamente?</strong>: não");
     expect(body).toContain("<em>Aberto pelo Portal.</em>");
+  });
+});
+
+describe("hasSubsectors", () => {
+  // Recorte dos setores ativos da FEM: Tecnologia (2) e RH (11) têm subgrupos; Manutenção (1) e Marketing (6) não.
+  const sectors = [
+    { groupId: 1, parentId: null },
+    { groupId: 2, parentId: null },
+    { groupId: 19, parentId: 2 },
+    { groupId: 20, parentId: 2 },
+    { groupId: 21, parentId: 2 },
+    { groupId: 6, parentId: null },
+    { groupId: 11, parentId: null },
+    { groupId: 14, parentId: 11 },
+  ];
+
+  it("setor com subgrupos exige o assunto", () => {
+    expect(hasSubsectors(sectors, 2)).toBe(true);
+    expect(hasSubsectors(sectors, 11)).toBe(true);
+  });
+
+  it("setor sem subgrupos e o próprio subgrupo seguem direto", () => {
+    expect(hasSubsectors(sectors, 1)).toBe(false);
+    expect(hasSubsectors(sectors, 6)).toBe(false);
+    expect(hasSubsectors(sectors, 19)).toBe(false);
+  });
+
+  it("subgrupo fora da lista da pessoa não conta: o pai volta a receber direto", () => {
+    expect(hasSubsectors(sectors.filter((sector) => sector.parentId !== 11), 11)).toBe(false);
   });
 });

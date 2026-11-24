@@ -18,6 +18,15 @@ export const ATTACHMENT_LIMITS: AttachmentLimits = { maxFiles: 5, maxTotalBytes:
 
 export type Answers = Record<string, AnswerValue | null | undefined>;
 
+// Setor com subdivisões (subgrupos liberados para a pessoa, ex.: Tecnologia → Suporte) não recebe chamado
+// direto: a pessoa escolhe o assunto. Vale no wizard (bloqueia "Continuar") e no servidor (recusa o envio).
+// `sectors` = a lista já filtrada para quem pede (ativos e da audiência dela), igual nos dois lados.
+export const SECTOR_REQUIRED_MESSAGE = "Escolha o setor para continuar.";
+
+export function hasSubsectors(sectors: readonly { groupId: number; parentId: number | null }[], groupId: number): boolean {
+  return sectors.some((sector) => sector.parentId === groupId);
+}
+
 export function isEmptyAnswer(value: AnswerValue | null | undefined): boolean {
   if (value === undefined || value === null) return true;
   if (typeof value === "string") return value.trim().length === 0;
