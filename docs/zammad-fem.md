@@ -141,7 +141,7 @@ estado" só se sustenta se ninguém mandar. Pelo mesmo motivo o plugin valida as
 
 ---
 
-## 3. O que o plugin faz (v1.6.0)
+## 3. O que o plugin faz (v1.8.0)
 
 ### 3.1 Fluxo (`shared/flow.ts`, testado em `flow.test.ts`)
 Estados por nome → `FlowStep`; cores semânticas; ações do cliente (palavras); transições da equipe
@@ -188,7 +188,7 @@ Colabora continua vendo tudo (prévia). Testado em `group-audience.test.ts`.
 - Bloco de atendimento sem "Mais opções": responsável, prioridade, tempo previsto e estado manual à vista.
 - Tags discretas (bolinha + texto neutro) nas linhas da fila e de "Atribuídos a mim".
 
-### 3.5 Chamados filhos (v1.6.0)
+### 3.5 Chamados filhos (v1.6.0; campos do setor na v1.8.0)
 - Na tela do chamado (equipe), "Criar chamado filho": **subtarefa no meu setor** (nasce Autorizado com
   responsável — o gestor escolhe o agente, o agente fica com ela; o gatilho leva a Em andamento) ou **pedir a
   outro setor** (nasce Novo na fila do gestor de lá). Quem pode: quem atende o pai ou o gestor do setor.
@@ -196,6 +196,22 @@ Colabora continua vendo tudo (prévia). Testado em `group-audience.test.ts`.
 - Vínculo pelo Zammad (`POST /links/add`, pai/filho); o plugin confere a direção depois de vincular e inverte
   se precisar. O pai lista os filhos (estado e responsável); o filho mostra "Faz parte de #N".
 - **O pai não pode ser concluído com filho aberto** (estado não fechado): o botão some e o servidor recusa.
+- **Campos do setor de destino (v1.8.0).** O Zammad exige os campos customizados de cada setor (ex.: "Missing
+  required value for field 'local_fisico'"). Nada é fixo no plugin: ao escolher o modo/setor, o diálogo busca o
+  formulário (`get-child-form`), montado do schema + Core Workflows como na abertura (`shared/child-form.ts`), com
+  papel **`ticket.agent`** (o filho é criado em nome de um agente/gestor), setores ocultos no wizard incluídos e
+  **sem** a audiência do solicitante final. `NEVER_ASKED` continua fora.
+- **Valores herdados**: campo do formulário com valor no pai já vem preenchido (ex.: Local de uso). Só entra valor
+  que passa na validação (opção existente, data dentro da janela); data e hora do Zammad (UTC) vira UTC-3;
+  Sim/Não nunca é herdado.
+- **Servidor remonta o formulário** na criação (`shared/child-target.ts`, mesma checagem de permissão do
+  `get-child-form`), valida com `validateFields` (`"<rótulo>": erro`) e manda `toZammadValues` no payload; o artigo
+  começa por "Chamado filho de #N — título" seguido do texto e do resumo das respostas (`composeBody`).
+- **Pedir a outro setor só para setor folha**: setor com subgrupos ativos sai da lista e é recusado com "Escolha o
+  assunto em <setor> para continuar." (como na abertura).
+- Testes: `shared/child-form.test.ts` e `features/create-child-ticket/service.test.ts`, sobre
+  `__fixtures__/fem-schema-children.ts` — recorte **derivado** (subgrupos de Tecnologia e Recursos Humanos
+  modelados; ids inventados). Trocar pelo export real do Zammad assim que possível.
 
 ### 3.6 Papéis
 Gestor = papel com `report` **ou** nome `<Setor> - Administrador` (`SECTOR_MANAGER_ROLE`). Gestor que abriu

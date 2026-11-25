@@ -1,4 +1,5 @@
 import type { OperationResult } from "@venore/plugin-sdk";
+import type { AnswerValue } from "../../contracts/types";
 import type { ChildMode } from "../../shared/children";
 
 // Chamado filho a partir de um chamado que a pessoa atende ou supervisiona.
@@ -11,5 +12,7 @@ export type CreateChildTicketInput = {
   ownerId?: number | null;
   title: string;
   description: string;
+  // Respostas dos campos do setor de destino (get-child-form). O servidor remonta o formulário e revalida.
+  answers?: Record<string, AnswerValue | null>;
 };
 export type CreateChildTicketResult = OperationResult<{ id: number; number: string }>;

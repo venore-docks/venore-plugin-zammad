@@ -11,12 +11,16 @@ const groups: ZammadGroup[] = [
 ];
 
 describe("chamados filhos", () => {
-  it("setores para pedir: ativos, sem o setor do pai, com o caminho legível", () => {
+  it("setores para pedir: ativos, folha, sem o setor do pai, com o caminho legível", () => {
     expect(childGroupOptions(groups, 1)).toEqual([
-      { id: 3, label: "Recursos Humanos" },
       { id: 31, label: "Recursos Humanos › Benefícios" },
       { id: 4, label: "Tecnologia" },
     ]);
+  });
+
+  it("setor cujos subgrupos estão inativos volta a ser folha", () => {
+    const withInactive: ZammadGroup[] = [...groups, { id: 41, name: "Tecnologia::Antigo", parent_id: 4, active: false }];
+    expect(childGroupOptions(withInactive, 1).map((group) => group.id)).toContain(4);
   });
 
   it("conta só os filhos abertos e explica o bloqueio", () => {

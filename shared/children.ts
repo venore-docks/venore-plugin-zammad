@@ -14,11 +14,13 @@ export function isChildMode(value: unknown): value is ChildMode {
   return value === "subtask" || value === "sector";
 }
 
-// Setores para "pedir a outro setor": grupos ativos, com o nome completo legível ("Recursos Humanos › Benefícios"),
+// Setores para "pedir a outro setor": grupos ativos e FOLHA (setor com subgrupos não recebe chamado direto: o
+// filho vai para o assunto, como na abertura), com o nome completo legível ("Recursos Humanos › Benefícios"),
 // exceto o próprio grupo do pai (para o mesmo setor existe a subtarefa).
 export function childGroupOptions(groups: readonly ZammadGroup[], parentGroupId: number): { id: number; label: string }[] {
+  const parents = new Set(groups.filter((group) => group.active && group.parent_id !== null).map((group) => group.parent_id));
   return groups
-    .filter((group) => group.active && group.id !== parentGroupId)
+    .filter((group) => group.active && group.id !== parentGroupId && !parents.has(group.id))
     .map((group) => ({ id: group.id, label: group.name.split("::").map((part) => part.trim()).join(" › ") }))
     .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
 }

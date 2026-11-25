@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { isPluginActive } from "@venore/plugin-sdk";
-import { agentUpdateTicket, changeTicketState, createChildTicket, createTicket, customerRespond, getTicket, replyTicket, searchViewAsTargets, startViewAs, stopViewAs } from "../../index";
-import type { AgentUpdateInput, AnswerValue, CreateChildTicketInput, CreatedTicket, CustomerRespondInput, TicketAttachment, ViewAsPerson } from "../../index";
+import { agentUpdateTicket, changeTicketState, createChildTicket, createTicket, getChildForm, customerRespond, getTicket, replyTicket, searchViewAsTargets, startViewAs, stopViewAs } from "../../index";
+import type { AgentUpdateInput, AnswerValue, ChildFormData, CreateChildTicketInput, GetChildFormInput, CreatedTicket, CustomerRespondInput, TicketAttachment, ViewAsPerson } from "../../index";
 import { APP_SURFACE, PORTAL_SURFACE } from "../../shared/routes";
 
 // Toda action passa pelo handler do barrel (autorização + conta no Zammad lá dentro). Servem às DUAS
@@ -133,10 +133,23 @@ export async function createChildTicketAction(input: CreateChildTicketInput): Pr
     ownerId: input.ownerId ? Number(input.ownerId) : null,
     title: String(input.title ?? ""),
     description: String(input.description ?? ""),
+    answers: input.answers && typeof input.answers === "object" && !Array.isArray(input.answers) ? input.answers : {},
   });
   if (!result.success) return { ok: false, error: result.error.message };
   revalidateTicket(Number(input.parentId));
   revalidateTicket(result.data.id);
+  return { ok: true, data: result.data };
+}
+
+// Campos do setor que vai receber o chamado filho (do Zammad), já com os valores herdados do pai.
+export async function getChildFormAction(input: GetChildFormInput): Promise<ZammadActionResult<ChildFormData>> {
+  if (!(await isPluginActive("colabora"))) return { ok: false, error: DISABLED };
+  const result = await getChildForm({
+    parentId: Number(input.parentId),
+    mode: input.mode,
+    groupId: input.groupId ? Number(input.groupId) : null,
+  });
+  if (!result.success) return { ok: false, error: result.error.message };
   return { ok: true, data: result.data };
 }
 

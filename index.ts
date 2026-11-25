@@ -8,6 +8,7 @@ export { replyTicketHandler as replyTicket } from "./features/reply-ticket/handl
 export { changeTicketStateHandler as changeTicketState } from "./features/change-ticket-state/handler";
 export { customerRespondHandler as customerRespond } from "./features/customer-respond/handler";
 export { createChildTicketHandler as createChildTicket } from "./features/create-child-ticket/handler";
+export { getChildFormHandler as getChildForm } from "./features/get-child-form/handler";
 export { downloadAttachmentHandler as downloadAttachment } from "./features/download-attachment/handler";
 export { listAgentTicketsHandler as listAgentTickets } from "./features/list-agent-tickets/handler";
 export { agentUpdateTicketHandler as agentUpdateTicket } from "./features/agent-update-ticket/handler";
@@ -62,6 +63,7 @@ export type { ReplyTicketInput, ReplyTicketResult } from "./features/reply-ticke
 export type { ChangeTicketStateInput, ChangeTicketStateResult } from "./features/change-ticket-state/types";
 export type { CustomerRespondInput, CustomerRespondResult } from "./features/customer-respond/types";
 export type { CreateChildTicketInput, CreateChildTicketResult } from "./features/create-child-ticket/types";
+export type { ChildFormData, GetChildFormInput, GetChildFormResult } from "./features/get-child-form/types";
 export type { ListAgentTicketsInput, ListAgentTicketsResult } from "./features/list-agent-tickets/types";
 export type { GetTeamOverviewResult, TeamMember, TeamOverview } from "./features/get-team-overview/types";
 export type { AppViewer, GetAppViewerResult } from "./features/get-app-viewer/types";

@@ -1,13 +1,13 @@
+import { getBrandConfig } from "@venore/plugin-sdk/brand";
 import { beginOperation, endOperation } from "@venore/plugin-sdk/observability";
-import { canAllocate, canWorkTicket } from "../../shared/access-rules";
-import { escapeHtml, validateDescription, validateTitle } from "../../shared/answers";
-import { childGroupOptions, childOrigin, isChildMode } from "../../shared/children";
+import { composeBody, escapeHtml, toZammadValues, validateDescription, validateFields, validateTitle } from "../../shared/answers";
+import { resolveChildTarget } from "../../shared/child-target";
+import { childOrigin } from "../../shared/children";
 import { assigneesFor } from "../../shared/directory";
 import { flowStepOf } from "../../shared/flow";
-import { loadAgentOptions, loadTicketForViewer } from "../../shared/own-ticket";
+import { loadAgentOptions } from "../../shared/own-ticket";
 import type { Requester } from "../../shared/requester";
 import { failure } from "../../shared/results";
-import { loadSchema } from "../../shared/schema";
 import { linkChild } from "../../shared/ticket-links";
 import { zammadRequest } from "../../shared/zammad-client";
 import type { CreateChildTicketInput, CreateChildTicketResult } from "./types";
@@ -15,11 +15,13 @@ import type { CreateChildTicketInput, CreateChildTicketResult } from "./types";
 type CreatedTicketResponse = { id: number; number: string | number };
 
 // Cria um chamado filho e o vincula ao pai (docs/zammad-fem.md). Regras:
-//   - quem pode: quem atende o pai (agente) ou o gestor do setor dele;
+//   - quem pode: quem atende o pai (agente) ou o gestor do setor dele (resolveChildTarget);
 //   - o solicitante do filho é QUEM CRIOU (filho interno da equipe);
 //   - subtarefa: mesmo setor, nasce Autorizado com responsável (gestor escolhe um agente do setor; agente fica
 //     com ele mesmo) — o gatilho "Administrador atribui agente" leva a Em andamento;
-//   - outro setor: nasce Novo no setor escolhido (fila do gestor de lá);
+//   - outro setor: nasce Novo no setor escolhido (folha; fila do gestor de lá);
+//   - os campos customizados do setor de destino vêm do Zammad (schema + Core Workflows) e são remontados AQUI,
+//     nunca a partir da lista do navegador; o Zammad recusa o chamado sem os obrigatórios;
 //   - a mensagem de abertura vai como do solicitante (`sender: Customer`), senão o Zammad a trata como resposta
 //     de agente e tira o chamado de Novo.
 export async function createChildTicket(requester: Requester, input: CreateChildTicketInput): Promise<CreateChildTicketResult> {
@@ -29,23 +31,27 @@ export async function createChildTicket(requester: Requester, input: CreateChild
     return result;
   };
 
-  if (!isChildMode(input.mode)) return finish(failure("invalid_mode", "Escolha subtarefa ou outro setor."));
   const titleError = validateTitle(input.title);
   if (titleError) return finish(failure("invalid_title", titleError));
   const descriptionError = validateDescription(input.description);
   if (descriptionError) return finish(failure("invalid_description", descriptionError));
 
-  const viewed = await loadTicketForViewer(requester, input.parentId, true);
-  if (!viewed.success) return finish(viewed);
-  const { ticket: parent, mode, role } = viewed.data;
+  const target = await resolveChildTarget(requester, input);
+  if (!target.success) return finish(target);
+  const { parent, supervisor, groupId, form } = target.data;
   const meId = requester.zammadUser.id;
-  const supervisor = canAllocate(mode, role);
-  const worker = canWorkTicket(mode, parent.owner_id, meId);
-  if (!supervisor && !worker) return finish(failure("forbidden_child", "Só quem atende este chamado ou o gestor do setor cria chamados filhos."));
 
-  const payload: Record<string, unknown> = { title: input.title.trim(), customer_id: meId };
+  const answers = input.answers ?? {};
+  const fieldErrors = validateFields(form.fields, answers);
+  const firstError = Object.entries(fieldErrors)[0];
+  if (firstError) {
+    const label = form.fields.find((field) => field.name === firstError[0])?.label ?? firstError[0];
+    return finish(failure("invalid_answer", `"${label}": ${firstError[1]}`));
+  }
+
+  const title = input.title.trim();
+  const payload: Record<string, unknown> = { title, customer_id: meId, group_id: groupId, ...toZammadValues(form.fields, answers) };
   if (input.mode === "subtask") {
-    payload.group_id = parent.group_id;
     let ownerId = meId;
     if (supervisor && input.ownerId) {
       const assignees = await assigneesFor(parent.group_id);
@@ -59,25 +65,15 @@ export async function createChildTicket(requester: Requester, input: CreateChild
     const options = await loadAgentOptions();
     const authorized = options.success ? options.data.states.find((state) => flowStepOf(state.name) === "autorizado") : undefined;
     if (authorized) payload.state_id = authorized.id;
-  } else {
-    const schema = await loadSchema();
-    if (!schema.success) return finish(schema);
-    const allowed = childGroupOptions(schema.data.groups, parent.group_id);
-    if (!input.groupId || !allowed.some((group) => group.id === input.groupId)) {
-      return finish(failure("invalid_group", "Escolha o setor que vai receber o chamado."));
-    }
-    payload.group_id = input.groupId;
   }
 
+  // Primeira linha: de onde o filho veio. Depois, a descrição e o resumo das respostas (mesmo formato da abertura,
+  // que o portal extrai com extractFormAnswers).
+  const brand = await getBrandConfig();
   const origin = childOrigin({ number: String(parent.number), title: parent.title });
-  const paragraphs = input.description
-    .trim()
-    .split(/\n{2,}/)
-    .map((block) => `<p>${escapeHtml(block).replace(/\n/g, "<br>")}</p>`)
-    .join("");
   payload.article = {
-    subject: input.title.trim(),
-    body: `<p><em>${escapeHtml(origin)}</em></p>${paragraphs}`,
+    subject: title,
+    body: `<p><em>${escapeHtml(origin)}</em></p>${composeBody(input.description, form.fields, answers, `Aberto pelo ${brand.siteName}.`)}`,
     content_type: "text/html",
     type: "web",
     sender: "Customer",
