@@ -50,7 +50,7 @@ function SectorChip({ href, active, children }: { href: string; active: boolean;
   );
 }
 
-// Fila do gestor, por ETAPA do fluxo (Novo, Em análise, Reavaliação, Autorizado, Não autorizado, Atribuídos), nos
+// Fila do gestor, por ETAPA do fluxo (uma aba por estado: Novo … Finalizado — ver shared/queue-buckets.ts), nos
 // setores do gestor/admin. Cada card traz as decisões da etapa (analisar, autorizar, não autorizar, atribuir).
 // O agente comum NÃO vê a fila. Filtros por URL: ?etapa=<etapa>&setor=<id do grupo>&ordem=idade|prioridade.
 export async function QueueView({ surfaceKey, query }: { surfaceKey: SurfaceKey; query?: ViewQuery }) {

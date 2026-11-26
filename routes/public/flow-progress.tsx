@@ -5,11 +5,11 @@ import { FLOW_STEPS } from "../../shared/flow";
 // Etapas do fluxo da FEM no cabeçalho do chamado: barra fina e neutra (feito = escuro, falta = muted) com
 // "Etapa N de M" ao lado. O estado em si já está no selo; o nome de cada etapa aparece no `title`. O caminho
 // muda nos desvios (não autorizado; reavaliação).
-const MAIN: FlowStepKey[] = ["novo", "em_analise", "autorizado", "em_andamento", "concluido", "finalizado"];
+const MAIN: FlowStepKey[] = ["novo", "em_analise", "autorizado", "atribuido", "em_andamento", "concluido", "finalizado"];
 
 function pathFor(step: FlowStepKey): FlowStepKey[] {
   if (step === "nao_autorizado") return ["novo", "em_analise", "nao_autorizado"];
-  if (step === "reavaliacao") return ["novo", "reavaliacao", "autorizado", "em_andamento", "concluido", "finalizado"];
+  if (step === "reavaliacao") return ["novo", "reavaliacao", "autorizado", "atribuido", "em_andamento", "concluido", "finalizado"];
   return MAIN;
 }
 

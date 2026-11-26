@@ -4,7 +4,6 @@ import { cn } from "@venore/plugin-sdk/ui";
 import type { AssigneeOption, QueueRow as QueueRowData } from "../../../../features/get-manager-dashboard/types";
 import { ageTone, formatAge, shortGroupName } from "../../../../shared/manager-stats";
 import type { FlowStepKey } from "../../../../contracts/types";
-import { StateBadge } from "../../../public/shared";
 import { TagInline } from "../../../public/tag-chips";
 import { DecisionActions } from "./decision-actions";
 import { QuickAssign } from "./quick-assign";
@@ -39,8 +38,6 @@ export function QueueRow({
   flowStateIds?: Partial<Record<FlowStepKey, number>>;
 }) {
   const inFlow = ticket.step !== null && Object.keys(flowStateIds).length > 0;
-  // A aba da fila já diz a etapa: o selo de estado só aparece em "Atribuídos", onde os estados variam.
-  const showState = inFlow && ticket.bucket === "atribuidos";
   const meta = [shortGroupName(ticket.group), ticket.requesterName].filter(Boolean).join(" · ");
   return (
     <li className="flex flex-col gap-2 px-4 py-3 md:flex-row md:items-center md:gap-4">
@@ -58,7 +55,6 @@ export function QueueRow({
           {meta && <span aria-hidden>·</span>}
           <AgeBadge ms={ticket.ageMs} />
           {ticket.ownerId !== null && <span>· com {ticket.ownerName ?? "um agente"}</span>}
-          {showState && <StateBadge label={ticket.stateLabel} tone="open" color={ticket.stateColor} />}
           {ticket.tags.length > 0 && <span aria-hidden>·</span>}
           <TagInline tags={ticket.tags} stateLabel={ticket.stateLabel} />
         </p>

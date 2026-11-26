@@ -10,12 +10,15 @@ import {
   isCustomerAction,
   staffActionsFor,
   staffHintFor,
+  stepAfterOwnerChange,
   validateReason,
 } from "./flow";
 import { describeState } from "./ticket-state";
 
 describe("flowStepOf (estados do Zammad da FEM, por nome)", () => {
-  it("reconhece os oito estados, sem depender de acento ou caixa", () => {
+  it("reconhece os nove estados, sem depender de acento ou caixa", () => {
+    expect(flowStepOf("Atribuído")).toBe("atribuido");
+    expect(flowStepOf("atribuida")).toBe("atribuido");
     expect(flowStepOf("Novo")).toBe("novo");
     expect(flowStepOf("Nova")).toBe("novo");
     expect(flowStepOf("Em análise")).toBe("em_analise");
@@ -105,6 +108,25 @@ describe("equipe (espelha os Core Workflows 600–607)", () => {
     expect(allowedTargets("finalizado", gestor)).toEqual([]);
   });
 
+  it("Atribuído: o agente só inicia o atendimento (não conclui direto); o gestor não muda o estado", () => {
+    expect(allowedTargets("atribuido", agente)).toEqual(["em_andamento"]);
+    expect(canMoveTo("atribuido", "concluido", agente)).toBe(false);
+    expect(allowedTargets("atribuido", gestor)).toEqual([]);
+    expect(staffActionsFor("atribuido", agente)).toMatchObject([{ target: "em_andamento", label: "Iniciar atendimento" }]);
+    expect(staffActionsFor("concluido", agente)).toMatchObject([{ target: "em_andamento", label: "Voltar para em andamento" }]);
+    expect(staffHintFor("atribuido", { ...agente, hasOwner: true })).toMatch(/Iniciar atendimento/);
+    expect(staffHintFor("atribuido", { ...gestor, hasOwner: true })).toMatch(/Aguardando o responsável/);
+  });
+
+  it("dar responsável a Autorizado leva a Atribuído; devolver Atribuído à fila volta a Autorizado", () => {
+    expect(stepAfterOwnerChange("autorizado", true)).toBe("atribuido");
+    expect(stepAfterOwnerChange("atribuido", false)).toBe("autorizado");
+    expect(stepAfterOwnerChange("atribuido", true)).toBeNull();
+    expect(stepAfterOwnerChange("em_andamento", true)).toBeNull();
+    expect(stepAfterOwnerChange("em_andamento", false)).toBeNull();
+    expect(stepAfterOwnerChange(null, true)).toBeNull();
+  });
+
   it("agente só alterna entre Em andamento e Concluído", () => {
     expect(allowedTargets("em_andamento", agente)).toEqual(["concluido"]);
     expect(allowedTargets("concluido", agente)).toEqual(["em_andamento"]);
@@ -125,7 +147,7 @@ describe("equipe (espelha os Core Workflows 600–607)", () => {
   });
 
   it("dica: autorizado sem responsável pede atribuição", () => {
-    expect(staffHintFor("autorizado", { ...gestor, hasOwner: false })).toMatch(/Atribua/);
+    expect(staffHintFor("autorizado", { ...gestor, hasOwner: false })).toMatch(/Atribua.*Atribuído/);
     expect(staffHintFor("autorizado", { ...gestor, hasOwner: true })).toBeNull();
   });
 });

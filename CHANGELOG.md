@@ -2,6 +2,24 @@
 
 Versões anteriores: ver o histórico do git (tags `vX.Y.Z`).
 
+## v1.9.0
+
+### Novidades
+- **Estado Atribuído**, entre Autorizado e Em andamento. Atribuir um responsável a um chamado Autorizado o leva a
+  Atribuído; o agente passa a Em andamento com **"Iniciar atendimento"** (de Atribuído ele não conclui direto).
+  Devolver à fila um Atribuído volta a Autorizado. A subtarefa (chamado filho) nasce Atribuída. **Exige configurar o
+  Zammad** (estado, gatilho de atribuição e avisos — `docs/zammad-fem.md` §1 e §4); sem o estado no Zammad, o
+  comportamento antigo continua (atribuir leva a Em andamento).
+- **Histórico do chamado** na visão da equipe: abertura e cada mudança de estado, responsável, setor, prioridade e
+  tempo previsto, com data, hora e quem mudou. Lido do histórico do Zammad (`GET /ticket_history/:id`).
+
+### Mudanças
+- **Fila com todos os estados**: uma aba por estado, na ordem do fluxo — agora também Atribuído, Em andamento,
+  Concluído e Finalizado (a aba "Atribuídos", que juntava os estados com agente, saiu; `?etapa=atribuidos` abre Em
+  andamento).
+- **Repositório renomeado** para `venore-plugin-colabora` (antes `venore-plugin-zammad`); README e CLAUDE.md
+  descrevem o Zammad como motor do Colabora. O nome do pacote (`@venore/plugin-colabora`) não muda.
+
 ## v1.8.0
 
 ### Novidades

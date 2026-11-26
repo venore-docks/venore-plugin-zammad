@@ -1,8 +1,25 @@
-# @venore/plugin-colabora — Chamados
+# Colabora — chamados do Venore Docks
 
-Plugin do [Venore Docks](https://github.com/venore-docks/venore-docks) que abre e acompanha chamados
-no [Zammad](https://zammad.org) **sem o colaborador nunca ver o Zammad**: o Zammad fica "headless" (só
-o motor e a fila da equipe) e toda a experiência do solicitante acontece no portal.
+Repositório `venore-docks/venore-plugin-colabora` (antes `venore-plugin-zammad`), pacote `@venore/plugin-colabora`.
+
+Plugin do [Venore Docks](https://github.com/venore-docks/venore-docks) que abre e acompanha chamados **sem o
+colaborador nunca ver o sistema de atendimento por trás**: toda a experiência (solicitante, agente e gestor)
+acontece no portal e no app.
+
+## Motor: Zammad
+
+O Colabora usa o [Zammad](https://zammad.org) como **motor**, em modo "headless":
+
+- **O Zammad guarda e decide**: chamados, artigos e anexos, grupos (setores), funções, estados, gatilhos e
+  agendador, campos customizados e Core Workflows. O formulário de cada setor é lido do Zammad, não fica no
+  plugin.
+- **O Colabora é a interface**: telas, fluxo guiado, validação no servidor, fila do gestor, histórico do chamado e
+  as regras que a API do Zammad não aplica sozinha (as transições de estado da equipe, por exemplo).
+- A conexão é por token de API (`ZAMMAD_URL`, `ZAMMAD_API_TOKEN`), sempre em nome da pessoa (`X-On-Behalf-Of`).
+- A configuração do Zammad que o fluxo exige (estados, funções, gatilhos, fluxos) está em
+  [`docs/zammad-fem.md`](docs/zammad-fem.md).
+
+O repositório mudou de nome para refletir isso: o produto é o Colabora; o Zammad é o motor.
 
 ## Telas
 
@@ -14,7 +31,7 @@ As mesmas telas existem no portal (`/colabora/...`, dentro da casca do site) e n
 | `/colabora/novo` | todos | Abertura guiada (Setor → Detalhes → Pedido → Revisão). `?setor=<id do grupo>` já começa no setor. |
 | `/colabora/meus` | todos | Os chamados da pessoa ("sua vez", "em andamento", "encerrados"). |
 | `/colabora/atribuidos` | agente+ | O que está com ele, com filtros e ações rápidas. |
-| `/colabora/fila` | gestor+ | Sem responsável nos setores que gerencia; filtros `?setor=` e `?ordem=idade\|prioridade`; alocação na linha. |
+| `/colabora/fila` | gestor+ | Os chamados dos setores que gerencia, uma aba por estado (Novo … Finalizado); filtros `?etapa=`, `?setor=` e `?ordem=idade\|prioridade`; decisão e alocação na linha. |
 | `/colabora/equipe`, `/colabora/equipe/:id` | gestor+ | Cartões por agente (setores, carga) e a lista de cada um. |
 | `/colabora/chamado/:id` | conforme o papel | A conversa (responder, citar, anexos); para quem atende: estado, prioridade e ações rápidas; para gestor: alocação. |
 | `/admin/colabora` | admin do plugin | A administração (veja abaixo). |

@@ -1,4 +1,6 @@
-import type { AgentControls, CustomerActionOption, LinkedTicket, StaffFlowAction, TicketAttachmentInfo, TicketMessage } from "../../contracts/types";
+import { toTicketHistory, type RawHistory } from "../../shared/ticket-history";
+import { zammadRequest } from "../../shared/zammad-client";
+import type { AgentControls, CustomerActionOption, LinkedTicket, StaffFlowAction, TicketAttachmentInfo, TicketHistoryEntry, TicketMessage } from "../../contracts/types";
 import { childGroupOptions, childrenBlockMessage, openChildren } from "../../shared/children";
 import { loadLinkedTickets } from "../../shared/ticket-links";
 import {
@@ -202,13 +204,15 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
   const open = openChildren(children);
   const childGroups = schema.success ? childGroupOptions(schema.data.groups, ticket.group_id) : [];
 
-  const [requesterPerson, ownerPerson, agent, canClose, tags] = await Promise.all([
+  const [requesterPerson, ownerPerson, agent, canClose, tags, history] = await Promise.all([
     ticket.customer_id === meId ? Promise.resolve(null) : getPerson(ticket.customer_id),
     ticket.owner_id && ticket.owner_id !== meId ? getPerson(ticket.owner_id) : Promise.resolve(null),
     buildAgentControls(ticket, requester, mode, role, estimateChoices, { openChildren: open, childGroups }),
     canManageTicketState(requester),
     // Tags são da equipe (marcas internas do fluxo): o solicitante não as vê.
     mode === "agent" ? loadTicketTags(requester, [ticket]).then((found) => found.get(ticket.id) ?? []) : Promise.resolve([] as string[]),
+    // Histórico do Zammad (exige papel de agente): só na visão da equipe.
+    mode === "agent" ? loadHistory(requester, ticket.id, estimateChoices) : Promise.resolve(null),
   ]);
   const unassigned = !ticket.owner_id || ticket.owner_id === 1;
   // Quem ABRIU o chamado decide sobre a entrega, mesmo sendo da equipe (gestor/agente que abriu o próprio
@@ -225,6 +229,7 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
   return {
     success: true,
     data: {
+      history,
       id: ticket.id,
       number: String(ticket.number),
       title: ticket.title,
@@ -260,4 +265,12 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
       messages,
     },
   };
+}
+
+// Histórico do chamado (ver shared/ticket-history.ts). Falha de leitura não derruba a tela: a seção some.
+async function loadHistory(requester: Requester, ticketId: number, estimateChoices: EstimateOption[] | null): Promise<TicketHistoryEntry[] | null> {
+  const result = await zammadRequest<RawHistory>(`ticket_history/${ticketId}`, { onBehalfOf: requester.email });
+  if (!result.success) return null;
+  const estimateLabels = Object.fromEntries((estimateChoices ?? []).map((option) => [option.value, option.label]));
+  return toTicketHistory(result.data, { estimateField: ESTIMATE_FIELD, estimateLabels });
 }

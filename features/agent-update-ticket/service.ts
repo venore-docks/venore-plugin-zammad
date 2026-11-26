@@ -6,7 +6,7 @@ import { childrenBlockMessage, openChildren } from "../../shared/children";
 import { loadLinkedTickets } from "../../shared/ticket-links";
 import { describeState } from "../../shared/ticket-state";
 import { composeReplyBody } from "../../shared/answers";
-import { FLOW_STEPS, canMoveTo, flowStepOf, staffActionFor, validateReason } from "../../shared/flow";
+import { FLOW_STEPS, canMoveTo, flowStepOf, staffActionFor, stepAfterOwnerChange, validateReason } from "../../shared/flow";
 import { assigneesFor } from "../../shared/directory";
 import { loadAgentOptions, loadTicketForViewer } from "../../shared/own-ticket";
 import type { Requester } from "../../shared/requester";
@@ -69,7 +69,7 @@ export async function agentUpdateTicket(requester: Requester, input: AgentUpdate
           const open = openChildren(children.map((child) => ({ closed: describeState(child.state ?? "").closed })));
           if (open > 0) return finish(failure("children_open", childrenBlockMessage(open)));
         }
-        const action = staffActionFor(targetStep);
+        const action = staffActionFor(targetStep, currentStep);
         const reasonError = validateReason(input.reason, action?.reason === "required");
         if (reasonError) return finish(failure("invalid_reason", reasonError));
         const reason = (input.reason ?? "").trim();
@@ -91,6 +91,22 @@ export async function agentUpdateTicket(requester: Requester, input: AgentUpdate
       }
       body.priority_id = input.priorityId;
       changed.push("priority");
+    }
+  }
+
+  // Atribuído (v1.9.0): quem recebe um chamado Autorizado ainda não começou — o chamado vai para Atribuído e só
+  // entra em Em andamento quando o agente inicia o atendimento. Devolver à fila um Atribuído volta a Autorizado.
+  // Sem o estado "Atribuído" no Zammad, nada muda aqui (o gatilho do Zammad segue levando a Em andamento).
+  if (changed.includes("owner")) {
+    const options = await loadAgentOptions();
+    if (options.success) {
+      const stateNow = typeof body.state_id === "number" ? options.data.states.find((state) => state.id === body.state_id)?.name : ticket.state;
+      const next = stepAfterOwnerChange(flowStepOf(stateNow), body.owner_id !== UNASSIGNED_OWNER_ID);
+      const nextState = next ? options.data.states.find((state) => flowStepOf(state.name) === next) : undefined;
+      if (nextState && nextState.id !== ticket.state_id) {
+        body.state_id = nextState.id;
+        if (!changed.includes("state")) changed.push("state");
+      }
     }
   }
 

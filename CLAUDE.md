@@ -1,7 +1,9 @@
 # @venore/plugin-colabora — instruções para o Claude
 
-Plugin do Venore Docks, instalado no core como dependência git (`@venore/plugin-colabora`). Este repo
-não roda sozinho: typecheck, lint e build rodam **a partir do core**. Visão geral: `README.md`.
+Plugin do Venore Docks, instalado no core como dependência git (`@venore/plugin-colabora`, repositório
+`venore-docks/venore-plugin-colabora`, antes `venore-plugin-zammad`). O **Zammad é o motor** (dados, regras,
+gatilhos); o Colabora é a interface. Este repo não roda sozinho: typecheck, lint e build rodam **a partir do
+core**. Visão geral: `README.md`.
 
 ## Regras de arquitetura
 
@@ -31,8 +33,10 @@ O Colabora é a referência dessa regra.
 
 ## Fluxo de atendimento da FEM (v1.1.0) — ler `docs/zammad-fem.md` antes de mexer
 
-- Estados reconhecidos **por nome** (`shared/flow.ts`): Novo → Em análise → Autorizado → Em andamento →
-  Concluído → Finalizado, com Não autorizado → Reavaliação. Fora deles, comportamento genérico antigo.
+- Estados reconhecidos **por nome** (`shared/flow.ts`): Novo → Em análise → Autorizado → Atribuído →
+  Em andamento → Concluído → Finalizado, com Não autorizado → Reavaliação. Atribuído (v1.9.0) é opcional no Zammad:
+  atribuir leva a ele (`stepAfterOwnerChange`) e o agente passa a Em andamento com "Iniciar atendimento".
+  Fora deles, comportamento genérico antigo.
 - **Cliente nunca manda `state_id`**: decide por botões que criam artigo `web`/`Customer`/público com a
   palavra de controle no ASSUNTO (`[APROVADO]` `[AJUSTAR]` `[REJEITADO]` `[NAO_RESOLVIDO]` `[REENVIAR]`);
   os gatilhos do Zammad mudam o estado (`features/customer-respond`). Mudar uma palavra = mudar o gatilho.

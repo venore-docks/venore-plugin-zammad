@@ -2,8 +2,9 @@ import type { ZammadGroup } from "../contracts/zammad";
 
 // Chamados filhos (vínculo pai/filho do Zammad). Puro: testado em children.test.ts.
 //
-//   subtarefa      no MESMO setor do pai: nasce Autorizado e com responsável (o gatilho "Administrador atribui
-//                  agente" leva a Em andamento). Gestor escolhe o agente; agente cria para si mesmo.
+//   subtarefa      no MESMO setor do pai, com responsável: nasce Atribuído (num Zammad sem esse estado, Autorizado,
+//                  e o gatilho "Administrador atribui agente" leva a Em andamento). Gestor escolhe o agente; agente
+//                  cria para si mesmo.
 //   outro setor    no grupo escolhido: nasce Novo e entra na fila do gestor de lá (análise normal).
 // O solicitante do filho é QUEM O CRIOU (o filho é interno da equipe; o solicitante do pai só acompanha o pai).
 // O pai não pode ser concluído com filho aberto (aberto = estado não fechado).

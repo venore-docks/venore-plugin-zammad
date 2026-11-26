@@ -62,17 +62,26 @@ function optionLabel(person: AssigneeOption, suggestedId: number | null): string
 // Botão da linha da fila: UM por linha, em contorno (regra de design). O título da linha abre o chamado.
 const ROW_BUTTON = "h-8 px-3 text-xs";
 
-// "Autorizar e atribuir": um só envio com Autorizado + responsável. O gatilho do Zammad
-// ("Administrador atribui agente") leva o chamado a Em andamento e avisa o solicitante.
+// Onde o chamado fica ao ganhar um responsável: Atribuído (o agente inicia o atendimento) ou, num Zammad sem esse
+// estado, Em andamento (gatilho "Administrador atribui agente").
+function afterAssign(flowStateIds: Partial<Record<FlowStepKey, number>>): { done: string; description: string } {
+  return flowStateIds.atribuido
+    ? { done: "Chamado atribuído. O agente inicia o atendimento.", description: "O chamado fica Atribuído até o agente iniciar o atendimento. O solicitante é avisado por e-mail." }
+    : { done: "Chamado atribuído. Está em andamento.", description: "O chamado vai para Em andamento com o agente escolhido. O solicitante é avisado por e-mail." };
+}
+
+// "Autorizar e atribuir": um só envio com Autorizado + responsável; o servidor leva a Atribuído (ver afterAssign).
 function AuthorizeAndAssign({
   ticketId,
   authorizedId,
   options,
   suggestedId,
   onDone,
+  doneMessage,
 }: {
   ticketId: number;
   authorizedId: number | undefined;
+  doneMessage: string;
   options: AssigneeOption[];
   suggestedId: number | null;
   onDone?: () => void;
@@ -98,7 +107,7 @@ function AuthorizeAndAssign({
       <Button
         className="h-10 sm:shrink-0"
         disabled={busy || !value}
-        onClick={() => send({ stateId: authorizedId, ownerId: Number(value) }, ticketId, "Autorizado e atribuído. O chamado está em andamento.", onDone)}
+        onClick={() => send({ stateId: authorizedId, ownerId: Number(value) }, ticketId, doneMessage, onDone)}
       >
         <UserCheck className="size-4" />
         {busy ? "Atribuindo…" : "Autorizar e atribuir"}
@@ -243,7 +252,7 @@ function AnalyzeDialog({ props }: { props: DecisionProps }) {
         ) : (
           <div className="space-y-3 border-t pt-4">
             <p className="text-sm text-muted-foreground">Atribuir já autoriza e coloca o chamado em andamento.</p>
-            <AuthorizeAndAssign ticketId={ticketId} authorizedId={authorizedId} options={options} suggestedId={suggestedId} onDone={close} />
+            <AuthorizeAndAssign ticketId={ticketId} authorizedId={authorizedId} options={options} suggestedId={suggestedId} onDone={close} doneMessage={afterAssign(flowStateIds).done} />
             <DialogFooter className="flex-row flex-wrap items-center gap-x-4 gap-y-2 pt-1 sm:justify-start">
               {authorizedId && (
                 <Button variant="outline" disabled={busy} onClick={() => send({ stateId: authorizedId }, ticketId, "Chamado autorizado. Agora atribua um responsável.", close)}>
@@ -268,9 +277,19 @@ function AnalyzeDialog({ props }: { props: DecisionProps }) {
   );
 }
 
-// "Atribuir" com confirmação: escolhe o agente num diálogo e confirma (etapa Autorizado). O gatilho do Zammad
-// leva o chamado a Em andamento e avisa o solicitante.
-function AssignDialog({ ticketId, options, suggestedId }: { ticketId: number; options: AssigneeOption[]; suggestedId: number | null }) {
+// "Atribuir" com confirmação: escolhe o agente num diálogo e confirma (etapa Autorizado). Ver afterAssign.
+function AssignDialog({
+  ticketId,
+  options,
+  suggestedId,
+  flowStateIds,
+}: {
+  ticketId: number;
+  options: AssigneeOption[];
+  suggestedId: number | null;
+  flowStateIds: Partial<Record<FlowStepKey, number>>;
+}) {
+  const after = afterAssign(flowStateIds);
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(suggestedId ? String(suggestedId) : "");
   const { busy, send } = useSend();
@@ -278,7 +297,7 @@ function AssignDialog({ ticketId, options, suggestedId }: { ticketId: number; op
 
   function confirm() {
     if (!value) return;
-    send({ ownerId: Number(value) }, ticketId, "Chamado atribuído. Está em andamento.", () => setOpen(false));
+    send({ ownerId: Number(value) }, ticketId, after.done, () => setOpen(false));
   }
 
   return (
@@ -289,7 +308,7 @@ function AssignDialog({ ticketId, options, suggestedId }: { ticketId: number; op
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Atribuir responsável</DialogTitle>
-          <DialogDescription>O chamado vai para Em andamento com o agente escolhido. O solicitante é avisado por e-mail.</DialogDescription>
+          <DialogDescription>{after.description}</DialogDescription>
         </DialogHeader>
         <Select value={value} onValueChange={setValue} disabled={busy}>
           <SelectTrigger className="h-10 w-full" aria-label="Agente">
@@ -321,7 +340,8 @@ function AssignDialog({ ticketId, options, suggestedId }: { ticketId: number; op
 //   Novo / Em análise / Reavaliação  Analisar (diálogo com resumo e todas as decisões)
 //   Autorizado                       Atribuir
 //   Não autorizado                   aguardando o solicitante (texto)
-//   Atribuídos                       Abrir
+//   Atribuído, Em andamento,
+//   Concluído, Finalizado            Abrir
 export function DecisionActions(props: DecisionProps) {
   const { bucket, options, suggestedId, detailHref, ticketId } = props;
 
@@ -330,7 +350,7 @@ export function DecisionActions(props: DecisionProps) {
     return options.length === 0 ? (
       <p className="text-xs text-muted-foreground">Nenhum agente atende este setor.</p>
     ) : (
-      <AssignDialog ticketId={ticketId} options={options} suggestedId={suggestedId} />
+      <AssignDialog ticketId={ticketId} options={options} suggestedId={suggestedId} flowStateIds={props.flowStateIds} />
     );
   }
   if (bucket === "nao_autorizado") return <p className="text-xs text-muted-foreground">Aguardando o solicitante reenviar.</p>;

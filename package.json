@@ -1,7 +1,11 @@
 {
   "name": "@venore/plugin-colabora",
-  "version": "1.8.0",
-  "description": "Abertura de chamados no Zammad em passos guiados, com os campos de cada setor lidos do próprio Zammad (plugin do Venore Docks).",
+  "version": "1.9.0",
+  "description": "Colabora: chamados do Venore Docks em passos guiados, com o Zammad como motor (campos, regras e fila lidos do próprio Zammad).",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/venore-docks/venore-plugin-colabora.git"
+  },
   "private": true,
   "type": "module",
   "exports": {

@@ -20,6 +20,7 @@ própria tela.
 | Novo | novo | padrão para novos tickets; fila do gestor (agentes não trabalham) |
 | Em análise | aberto | gestor analisando |
 | Autorizado | aberto | gestor autorizou; falta responsável |
+| **Atribuído** (v1.9.0) | aberto | tem responsável, que ainda não iniciou o atendimento; o agente passa para Em andamento |
 | Não autorizado | fechado | gestor negou (com motivo); cliente pode reenviar |
 | Reavaliação | aberto | cliente reenviou um "não autorizado"; gestor decide de novo |
 | Em andamento | aberto | padrão para acompanhamentos; responsável trabalhando |
@@ -27,7 +28,8 @@ própria tela.
 | Finalizado | fechado | padrão para fechados; cliente aprovou ou 48 h sem resposta |
 | mesclado | mesclado | do sistema |
 
-O plugin reconhece esses estados **por nome** (sem acento/caixa; "Nova" também vale). Renomear um estado
+O plugin reconhece esses estados **por nome** (sem acento/caixa; "Nova" e "Atribuída" também valem).
+**Atribuído é opcional**: sem ele no Zammad, atribuir leva direto a Em andamento, como antes da v1.9.0. Renomear um estado
 no Zammad quebra o fluxo no portal (o chamado cai no comportamento genérico).
 
 ### 1.2 Funções (Administração → Funções)
@@ -64,7 +66,7 @@ Só valem na **tela do Zammad**; a API ignora. Ordem: prioridade crescente, o ú
 | 521–524 | Grupo <Setor> visível para Função <Setor> - Cliente | criação | Grupo → adiciona o grupo do setor |
 | 600 | Estado - Somente leitura para todos | criação + edição | Estado → somente leitura |
 | 601, 603, 605, 607 | Estado - Habilitado para … - Administrador | criação + edição | Grupo é [setor] + Função é [Adm do setor] + Estado é [Novo, Em análise, Autorizado, Reavaliação] → remove somente leitura + fixa [Novo, Em análise, Autorizado, Não autorizado, Reavaliação] |
-| 602, 604, 606, 606 | Estado - Habilitado para … - Agente | criação + edição | … Função é [Agente do setor] + Estado é [Em andamento, Concluído] → remove somente leitura + fixa [Em andamento, Concluído] (renumerar um dos 606) |
+| 602, 604, 606, 606 | Estado - Habilitado para … - Agente | criação + edição | … Função é [Agente do setor] + Estado é [Em andamento, Concluído] → remove somente leitura + fixa [Em andamento, Concluído] (renumerar um dos 606). **v1.9.0**: incluir **Atribuído** em "Estado é" (o agente sai de Atribuído para Em andamento) |
 | 610 | Prioridade sugerida - Mostrar para clientes na criação | criação | |
 | 611 | Prioridade - Somente leitura para todos | edição | |
 | 612 | Prioridade - Editável para agentes e administradores | edição | |
@@ -102,7 +104,9 @@ Palavras de controle no **Assunto** do artigo do cliente (o plugin manda; ver §
 | … Cliente problema não resolvido (Concluído → Em andamento - tag não resolvido) | … `[NAO_RESOLVIDO]` | Em andamento; tag `nao-resolvido`; e-mail interno |
 | … Não autorizado (tag) | Modo especialista: Estado **foi alterado** + Estado é Não autorizado | tag `nao-autorizado` |
 | … Cliente reenvia (Não autorizado → Reavaliação - tag reenviado) | Tags contém `nao-autorizado`; Remetente é Cliente; Assunto contém `[REENVIAR]` | Reavaliação; remove `nao-autorizado`; adiciona `reenviado`; e-mail interno (opcional) |
-| … Administrador atribui agente (Autorizado → Em andamento) | Estado é Autorizado + Responsável definido | Em andamento; e-mail ao cliente "Seu chamado #… está em andamento" |
+| … Administrador atribui agente (Autorizado → **Atribuído**, v1.9.0) | Estado é Autorizado + Responsável definido | **Atribuído** (antes: Em andamento); e-mail ao cliente "Seu chamado #… foi atribuído" — **mudar no Zammad junto com o deploy da v1.9.0** |
+| Notificação - Chamado atribuído (v1.9.0, novo) | Modo especialista: Estado foi alterado + Estado é Atribuído | e-mail ao cliente "Seu chamado #… foi atribuído a #{ticket.owner.fullname}". Necessário porque o plugin já grava Atribuído no mesmo PUT da atribuição e o gatilho acima (Estado é Autorizado) não dispara |
+| Notificação - Chamado em andamento (v1.9.0, novo) | Modo especialista: Estado foi alterado + Estado é Em andamento + Estado anterior era Atribuído | e-mail ao cliente "Seu chamado #… está em andamento" (o aviso que antes saía na atribuição) |
 | Notificação - Chamado autorizado / concluído / em análise / não autorizado (avisa o cliente) | Modo especialista: Estado foi alterado + Estado é X (Não autorizado também exige **artigo público**) | e-mail público ao cliente (Não autorizado leva `Motivo: #{article.body_as_text}`) |
 | Sincronizar Prioridade - Baixa / Alta / Urgente | Na **criação**: Prioridade sugerida é X | Prioridade → X ("Normal" desligado: já é o padrão) |
 | auto reply (on new tickets) | padrão | ativo |
@@ -132,8 +136,10 @@ atual, Estado Em andamento/Concluído).
 | Cliente | Reenviar para análise (só em Não autorizado) | idem com `[REENVIAR]` (motivo obrigatório) |
 | Cliente | mensagem comum | só fora de Concluído/Não autorizado/Finalizado |
 | Gestor | Iniciar análise / Autorizar / Não autorizar | `PUT /tickets/:id` com `state_id`; em "Não autorizar" também `article` = nota **pública** com o motivo (o gatilho de aviso lê `#{article.body_as_text}`) |
-| Gestor | Atribuir responsável (em Autorizado) | `PUT owner_id` → o gatilho leva a Em andamento |
+| Gestor | Atribuir responsável (em Autorizado) | `PUT owner_id` + `state_id` = **Atribuído** no mesmo envio (v1.9.0; sem o estado no Zammad, só `owner_id` e o gatilho leva a Em andamento). Devolver à fila um Atribuído volta a Autorizado |
+| Agente (responsável) | **Iniciar atendimento** (em Atribuído, v1.9.0) | `PUT state_id` = Em andamento |
 | Agente (responsável) | Concluir (texto opcional) / Voltar para em andamento | `PUT state_id` (+ nota pública se houver texto) |
+| Equipe | Ver o histórico do chamado (v1.9.0) | `GET /ticket_history/:id` em nome da pessoa (exige papel de agente) |
 
 **O cliente NUNCA manda `state_id`.** O Zammad não protege o estado no servidor; a regra "cliente não muda
 estado" só se sustenta se ninguém mandar. Pelo mesmo motivo o plugin valida as transições da equipe
@@ -141,12 +147,14 @@ estado" só se sustenta se ninguém mandar. Pelo mesmo motivo o plugin valida as
 
 ---
 
-## 3. O que o plugin faz (v1.8.0)
+## 3. O que o plugin faz (v1.9.0)
 
 ### 3.1 Fluxo (`shared/flow.ts`, testado em `flow.test.ts`)
 Estados por nome → `FlowStep`; cores semânticas; ações do cliente (palavras); transições da equipe
 (gestor: Novo/Em análise/Autorizado/Reavaliação → Em análise, Autorizado, Não autorizado, Reavaliação;
-responsável: Em andamento ↔ Concluído); dicas por passo. Fora desses estados, o plugin segue o
+responsável: Atribuído → Em andamento ("Iniciar atendimento", v1.9.0), Em andamento ↔ Concluído); atribuir um
+Autorizado o leva a Atribuído e devolver um Atribuído à fila volta a Autorizado (`stepAfterOwnerChange`); dicas por
+passo. Fora desses estados, o plugin segue o
 comportamento genérico antigo (encerrar/reabrir), para outros Zammads.
 
 ### 3.2 Telas
@@ -156,11 +164,13 @@ comportamento genérico antigo (encerrar/reabrir), para outros Zammads.
   resposta some nesses passos (e em Finalizado aparece "Novo chamado").
 - **Equipe (app)**: "Próximo passo" com os botões do fluxo; dica do passo; seletor de estado só com os
   destinos permitidos; prioridade continua no seletor.
-- **Fila do gestor (v1.2.0)**: abas por etapa — Novo, Em análise, Reavaliação, Autorizado, Não autorizado e
-  Atribuídos (abertos dos agentes da equipe) — com filtro de setor secundário (`?etapa=&setor=&ordem=`).
+- **Fila do gestor (v1.2.0; todos os estados na v1.9.0)**: uma aba por estado, na ordem do fluxo — Novo, Em
+  análise, Reavaliação, Autorizado, Atribuído, Em andamento, Concluído, Não autorizado e Finalizado — com filtro de
+  setor secundário (`?etapa=&setor=&ordem=`; o antigo `?etapa=atribuidos` abre Em andamento). Finalizado mostra os
+  encerrados mais recentes (os 100 últimos de cada agente da equipe e da fila).
   Card de **Novo**: "Analisar" abre um diálogo com o resumo do pedido (respostas, texto, anexos) e as decisões
   Manter em análise / Autorizar / Não autorizar (motivo obrigatório) / **Autorizar e atribuir** (um só PUT com
-  `state_id` = Autorizado + `owner_id`; o gatilho "Administrador atribui agente" leva a Em andamento). Card de
+  `state_id` = Autorizado + `owner_id`; o servidor grava Atribuído no mesmo envio). Card de
   **Em análise / Reavaliação**: Continuar análise, Autorizar, Não autorizar e Autorizar e atribuir. Card de
   **Autorizado**: escolher agente + Atribuir. O número no menu "Fila" = decisões pendentes (Novo + Em análise +
   Reavaliação + Autorizado).
@@ -189,8 +199,9 @@ Colabora continua vendo tudo (prévia). Testado em `group-audience.test.ts`.
 - Tags discretas (bolinha + texto neutro) nas linhas da fila e de "Atribuídos a mim".
 
 ### 3.5 Chamados filhos (v1.6.0; campos do setor na v1.8.0)
-- Na tela do chamado (equipe), "Criar chamado filho": **subtarefa no meu setor** (nasce Autorizado com
-  responsável — o gestor escolhe o agente, o agente fica com ela; o gatilho leva a Em andamento) ou **pedir a
+- Na tela do chamado (equipe), "Criar chamado filho": **subtarefa no meu setor** (nasce Atribuído com
+  responsável — o gestor escolhe o agente, o agente fica com ela e inicia o atendimento; sem o estado Atribuído no
+  Zammad, nasce Autorizado e o gatilho leva a Em andamento) ou **pedir a
   outro setor** (nasce Novo na fila do gestor de lá). Quem pode: quem atende o pai ou o gestor do setor.
 - O **solicitante do filho é quem o criou** (filho interno; o solicitante do pai não vê os filhos).
 - Vínculo pelo Zammad (`POST /links/add`, pai/filho); o plugin confere a direção depois de vincular e inverte
@@ -217,6 +228,12 @@ Colabora continua vendo tudo (prévia). Testado em `group-audience.test.ts`.
 Gestor = papel com `report` **ou** nome `<Setor> - Administrador` (`SECTOR_MANAGER_ROLE`). Gestor que abriu
 chamado em grupo que ele não "possui" (full/change) vê o chamado como solicitante (`supervisesGroup`).
 
+### 3.7 Histórico do chamado (v1.9.0)
+Na visão da equipe, a seção recolhida **Histórico** lista a abertura e cada mudança de estado, responsável, setor,
+prioridade e tempo previsto, com data, hora (America/Sao_Paulo) e quem mudou ("Sistema" = gatilho/agendador). A fonte
+é o histórico do próprio Zammad (`GET /ticket_history/:id`; `shared/ticket-history.ts`), então o Colabora não grava
+nada à parte. O solicitante **não** vê o histórico: o Zammad só entrega o histórico a quem tem papel de agente.
+
 ---
 
 ## 4. Pendências
@@ -229,4 +246,9 @@ chamado em grupo que ele não "possui" (full/change) vê o chamado como solicita
 - Aviso aos administradores em chamado novo e em rejeição; links do portal nos e-mails.
 - Filtro no servidor para agente ver só Em andamento/Concluído (hoje ele já só vê os atribuídos a ele).
 - Subgrupos de Tecnologia; renumerar um dos fluxos 606.
+- **v1.9.0 — Atribuído**: criar o estado no Zammad, mudar o gatilho "Administrador atribui agente", criar os
+  avisos "Chamado atribuído" e "Chamado em andamento" e incluir Atribuído nos fluxos 602–606 (§1.1, §1.4, §1.6).
+  Até isso ser feito, o plugin segue o comportamento antigo (sem o estado, atribuir leva a Em andamento).
+- Histórico para o solicitante: o Zammad não o entrega a cliente; se for preciso, o Colabora teria de gravar as
+  mudanças à parte (ver o épico de prazos por etapa).
 - Revogar o token pessoal que foi colado no chat; produção com token de usuário técnico.

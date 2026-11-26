@@ -36,13 +36,15 @@ type Snapshot = {
   perMember: ZammadExpandedTicket[][];
 };
 
-// A fila e os abertos de cada agente da equipe: N+1 buscas no Zammad, todas em paralelo.
-async function loadSnapshot(requester: Requester): Promise<OperationResult<Snapshot>> {
+// A fila e os chamados de cada agente da equipe: N+1 buscas no Zammad, todas em paralelo. `includeClosed`: os de
+// cada agente vêm também encerrados (os 100 mais recentes de cada um) — a fila mostra a aba Finalizado.
+async function loadSnapshot(requester: Requester, options: { includeClosed?: boolean } = {}): Promise<OperationResult<Snapshot>> {
   const team = await teamFor(requester);
   const members = team.members.slice(0, MAX_MEMBERS).map((member) => ({ id: member.id, name: member.name }));
+  const byMember = options.includeClosed ? searchTicketsByOwner : searchOpenTicketsByOwner;
   const [queue, ...perMember] = await Promise.all([
     searchOpenTicketsByOwner(requester, UNASSIGNED_OWNER_ID),
-    ...members.map((member) => searchOpenTicketsByOwner(requester, member.id)),
+    ...members.map((member) => byMember(requester, member.id)),
   ]);
   if (!queue.success) return queue;
   return {
@@ -58,7 +60,8 @@ function toKpiTicket(ticket: ZammadExpandedTicket): KpiTicket {
 function loadsOf(snapshot: Snapshot): Map<number, { open: number; waiting: number }> {
   const loads = new Map<number, { open: number; waiting: number }>();
   snapshot.members.forEach((member, index) => {
-    const tickets = snapshot.perMember[index] ?? [];
+    // Carga = só os abertos (com includeClosed, a lista traz também os encerrados).
+    const tickets = (snapshot.perMember[index] ?? []).filter((ticket) => !describeState(ticket.state ?? "").closed);
     loads.set(member.id, { open: tickets.length, waiting: tickets.filter((ticket) => isCustomerWaiting(ticket)).length });
   });
   return loads;
@@ -69,7 +72,7 @@ async function toRows(requester: Requester, tickets: ZammadExpandedTicket[], now
   return tickets.flatMap((ticket) => {
     const state = describeState(ticket.state ?? "");
     const ownerId = isUnassigned(ticket.owner_id) ? null : ticket.owner_id;
-    const bucket = bucketOf(state.step, ownerId !== null);
+    const bucket = bucketOf(state.step, ownerId !== null, state.closed);
     if (!bucket) return [];
     return [
       {
@@ -131,20 +134,21 @@ export async function getManagerDashboard(requester: Requester): Promise<GetMana
   return { success: true, data: { kpis, agents, queueTop, allocation, flowStateIds: flowStateIdsOf(options) } };
 }
 
-// A fila do gestor por etapa: sem responsável (Novo, Em análise, Autorizado, Reavaliação), os "Não autorizado"
-// (fechados, à espera do solicitante) e os já atribuídos aos agentes da equipe.
+// A fila do gestor por etapa, com TODOS os estados: sem responsável (Novo, Em análise, Autorizado, Reavaliação), os
+// encerrados sem responsável (Não autorizado, à espera do solicitante; Finalizado) e os chamados dos agentes da
+// equipe, abertos e encerrados (Atribuído, Em andamento, Concluído, Finalizado).
 export async function getQueueBoard(requester: Requester): Promise<GetQueueBoardResult> {
   const [snapshot, unassignedAll, options] = await Promise.all([
-    loadSnapshot(requester),
+    loadSnapshot(requester, { includeClosed: true }),
     searchTicketsByOwner(requester, UNASSIGNED_OWNER_ID),
     loadAgentOptions(),
   ]);
   if (!snapshot.success) return snapshot;
   const { now, queue, perMember, members } = snapshot.data;
-  const denied = unassignedAll.success ? unassignedAll.data.filter((ticket) => flowStepOf(ticket.state) === "nao_autorizado") : [];
+  const closedUnassigned = unassignedAll.success ? unassignedAll.data.filter((ticket) => describeState(ticket.state ?? "").closed && flowStepOf(ticket.state) !== null) : [];
 
   const byId = new Map<number, ZammadExpandedTicket>();
-  for (const ticket of [...queue, ...denied, ...perMember.flat()]) byId.set(ticket.id, ticket);
+  for (const ticket of [...queue, ...closedUnassigned, ...perMember.flat()]) byId.set(ticket.id, ticket);
   const ownerNames = new Map(members.map((member) => [member.id, member.name]));
   const items = sortQueue(await toRows(requester, [...byId.values()], now, ownerNames), "idade");
 

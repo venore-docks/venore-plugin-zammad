@@ -46,7 +46,7 @@ export type TicketStateTone = "new" | "open" | "pending" | "closed";
 export type TicketStateColor = "neutral" | "info" | "primary" | "warning" | "success" | "danger";
 
 // Etapas do fluxo da FEM (ver shared/flow.ts). null = Zammad sem esses estados (comportamento genérico).
-export type FlowStepKey = "novo" | "em_analise" | "autorizado" | "nao_autorizado" | "reavaliacao" | "em_andamento" | "concluido" | "finalizado";
+export type FlowStepKey = "novo" | "em_analise" | "autorizado" | "atribuido" | "nao_autorizado" | "reavaliacao" | "em_andamento" | "concluido" | "finalizado";
 export type CustomerActionKey = "approve" | "adjust" | "reject" | "not_solved" | "resubmit";
 
 // Botão de decisão do SOLICITANTE (Concluído / Não autorizado): manda a palavra de controle no assunto.
@@ -174,7 +174,22 @@ export type LinkedTicket = {
 // Tempo previsto do chamado (campo `tempo_previsto` do Zammad). null = o Zammad não tem o campo.
 export type TicketEstimate = { value: string | null; label: string | null };
 
+// Uma mudança no histórico do chamado (só na visão da equipe; fonte: histórico do Zammad).
+export type TicketHistoryKind = "created" | "state" | "owner" | "group" | "priority" | "estimate";
+export type TicketHistoryEntry = {
+  at: string;
+  kind: TicketHistoryKind;
+  // Rótulos legíveis (estado pelo nome do fluxo, setor com "›"). null = vazio (ex.: sem responsável).
+  from: string | null;
+  to: string | null;
+  // Quem mudou ("Sistema" = gatilho/agendador do Zammad). null = desconhecido.
+  byName: string | null;
+};
+
 export type TicketDetail = {
+  // Histórico (abertura e mudanças de estado, responsável, setor, prioridade, tempo previsto). Só na visão da
+  // equipe; null quando o Zammad não o entrega (visão do solicitante, falha de leitura).
+  history: TicketHistoryEntry[] | null;
   // Tempo previsto: visto por todos (solicitante, agente, gestor); só o gestor edita.
   estimate: TicketEstimate | null;
   // Vínculos (só na visão da equipe): chamado pai e chamados filhos. `openChildren` bloqueia concluir o pai.

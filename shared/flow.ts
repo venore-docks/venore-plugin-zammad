@@ -1,15 +1,17 @@
 // Fluxo de atendimento da FEM (Zammad configurado à mão — ver docs/zammad-fem.md). Puro: testado em
 // flow.test.ts.
 //
-//   Novo → Em análise → Autorizado ─(gestor atribui agente; gatilho do Zammad)→ Em andamento → Concluído
+//   Novo → Em análise → Autorizado ─(gestor atribui agente)→ Atribuído ─(agente inicia)→ Em andamento → Concluído
 //                    ↘ Não autorizado ─(cliente reenvia)→ Reavaliação → Autorizado | Não autorizado
+//   Atribuído (v1.9.0) é opcional: num Zammad sem esse estado, atribuir leva direto a Em andamento (gatilho
+//   "Administrador atribui agente"), como antes.
 //   Concluído ─(cliente aprova | 48 h, agendador)→ Finalizado
 //   Concluído ─(cliente pede ajustes | não resolvido)→ Em andamento;  ─(cliente rejeita)→ Em análise
 //
 // Quem muda o quê (espelha os Core Workflows 600–607 do Zammad, que só valem na tela do Zammad — a API
 // não os aplica, então o plugin repete a regra no servidor):
 //   gestor (supervisor)  Novo/Em análise/Autorizado/Reavaliação → Em análise, Autorizado, Não autorizado, Reavaliação
-//   agente (responsável) Em andamento/Concluído → Em andamento, Concluído
+//   agente (responsável) Atribuído → Em andamento ("Iniciar atendimento"); Em andamento ↔ Concluído
 //   cliente              NUNCA muda estado: manda um artigo com a palavra de controle no ASSUNTO e os
 //                        gatilhos do Zammad fazem a transição (e as tags/avisos).
 //
@@ -29,6 +31,7 @@ export const FLOW_STEPS: Record<FlowStep, StepInfo> = {
   novo: { label: "Novo", color: "info", closed: false, hint: "Na fila do gestor do setor." },
   em_analise: { label: "Em análise", color: "warning", closed: false, hint: "O gestor está analisando o pedido." },
   autorizado: { label: "Autorizado", color: "success", closed: false, hint: "Autorizado. Aguardando um responsável." },
+  atribuido: { label: "Atribuído", color: "info", closed: false, hint: "Já tem um responsável, que vai iniciar o atendimento." },
   nao_autorizado: { label: "Não autorizado", color: "danger", closed: true, hint: "O gestor não autorizou o pedido." },
   reavaliacao: { label: "Reavaliação", color: "warning", closed: false, hint: "Reenviado: o gestor vai analisar de novo." },
   em_andamento: { label: "Em andamento", color: "primary", closed: false, hint: "Um responsável está trabalhando no pedido." },
@@ -41,6 +44,8 @@ const BY_NAME: Record<string, FlowStep> = {
   nova: "novo",
   "em analise": "em_analise",
   autorizado: "autorizado",
+  atribuido: "atribuido",
+  atribuida: "atribuido",
   "nao autorizado": "nao_autorizado",
   reavaliacao: "reavaliacao",
   "em andamento": "em_andamento",
@@ -155,15 +160,20 @@ export function customerReplyBlockedMessage(step: FlowStep | null): string {
 
 const SUPERVISOR_FROM: FlowStep[] = ["novo", "em_analise", "autorizado", "reavaliacao"];
 const SUPERVISOR_TO: FlowStep[] = ["em_analise", "autorizado", "nao_autorizado", "reavaliacao"];
-const WORKER_FROM: FlowStep[] = ["em_andamento", "concluido"];
-const WORKER_TO: FlowStep[] = ["em_andamento", "concluido"];
+// Responsável: de onde para onde. Atribuído só anda para Em andamento (o agente inicia o atendimento; concluir
+// direto pularia o tempo de atendimento).
+const WORKER_MOVES: Partial<Record<FlowStep, FlowStep[]>> = {
+  atribuido: ["em_andamento"],
+  em_andamento: ["concluido"],
+  concluido: ["em_andamento"],
+};
 
 export type FlowActor = { supervisor: boolean; worker: boolean };
 
 export function allowedTargets(current: FlowStep, actor: FlowActor): FlowStep[] {
   const targets = new Set<FlowStep>();
   if (actor.supervisor && SUPERVISOR_FROM.includes(current)) SUPERVISOR_TO.forEach((step) => targets.add(step));
-  if (actor.worker && WORKER_FROM.includes(current)) WORKER_TO.forEach((step) => targets.add(step));
+  if (actor.worker) (WORKER_MOVES[current] ?? []).forEach((step) => targets.add(step));
   targets.delete(current);
   return [...targets];
 }
@@ -172,10 +182,22 @@ export function canMoveTo(current: FlowStep, target: FlowStep, actor: FlowActor)
   return allowedTargets(current, actor).includes(target);
 }
 
+// Mudança de responsável no fluxo (regra do servidor, não um botão): dar um responsável a um chamado Autorizado o
+// leva a Atribuído; devolver à fila um chamado Atribuído o leva de volta a Autorizado. null = o estado não muda.
+// `step` é o passo em que o chamado fica depois do envio (o atual, ou o pedido no mesmo envio, ex.: "Autorizar e
+// atribuir").
+export function stepAfterOwnerChange(step: FlowStep | null, assigned: boolean): FlowStep | null {
+  if (assigned && step === "autorizado") return "atribuido";
+  if (!assigned && step === "atribuido") return "autorizado";
+  return null;
+}
+
 // Botões de atalho da equipe. `reason`: o texto vira artigo PÚBLICO junto da mudança (o aviso ao cliente
 // usa #{article.body_as_text}); "required" bloqueia o envio sem texto.
 export type StaffActionInfo = {
   target: FlowStep;
+  // Só a partir destes passos (ausente = de qualquer passo que permita ir ao alvo).
+  from?: FlowStep[];
   label: string;
   color: FlowColor;
   reason: "required" | "optional" | "none";
@@ -202,16 +224,17 @@ const STAFF_ACTIONS: StaffActionInfo[] = [
     prompt: "Quer dizer ao solicitante o que foi feito? (opcional)",
     done: "Chamado concluído. O solicitante vai conferir.",
   },
-  { target: "em_andamento", label: "Voltar para em andamento", color: "primary", reason: "none", prompt: "", done: "Chamado em andamento." },
+  { target: "em_andamento", from: ["atribuido"], label: "Iniciar atendimento", color: "primary", reason: "none", prompt: "", done: "Atendimento iniciado. O chamado está em andamento." },
+  { target: "em_andamento", from: ["concluido"], label: "Voltar para em andamento", color: "primary", reason: "none", prompt: "", done: "Chamado em andamento." },
 ];
 
 export function staffActionsFor(current: FlowStep, actor: FlowActor): StaffActionInfo[] {
   const targets = allowedTargets(current, actor);
-  return STAFF_ACTIONS.filter((action) => targets.includes(action.target));
+  return STAFF_ACTIONS.filter((action) => targets.includes(action.target) && (!action.from || action.from.includes(current)));
 }
 
-export function staffActionFor(target: FlowStep): StaffActionInfo | null {
-  return STAFF_ACTIONS.find((action) => action.target === target) ?? null;
+export function staffActionFor(target: FlowStep, current?: FlowStep): StaffActionInfo | null {
+  return STAFF_ACTIONS.find((action) => action.target === target && (!current || !action.from || action.from.includes(current))) ?? null;
 }
 
 // O chamado espera uma decisão do solicitante (aparece como "esperando você" nas listas dele).
@@ -223,7 +246,9 @@ export function customerMustDecide(step: FlowStep | null): boolean {
 export function staffHintFor(step: FlowStep, actor: FlowActor & { hasOwner: boolean }): string | null {
   if (actor.supervisor && step === "novo") return "Novo pedido: inicie a análise, autorize ou não autorize.";
   if (actor.supervisor && step === "reavaliacao") return "O solicitante reenviou o pedido. Leia a explicação e decida de novo.";
-  if (actor.supervisor && step === "autorizado" && !actor.hasOwner) return "Atribua um responsável: ao atribuir, o chamado passa para Em andamento.";
+  if (actor.supervisor && step === "autorizado" && !actor.hasOwner) return "Atribua um responsável: ao atribuir, o chamado passa para Atribuído.";
+  if (actor.worker && step === "atribuido") return "Este chamado é seu. Quando começar a trabalhar nele, toque em Iniciar atendimento.";
+  if (actor.supervisor && step === "atribuido") return "Aguardando o responsável iniciar o atendimento.";
   if (step === "concluido") return "Aguardando o solicitante aprovar ou pedir ajustes (finaliza sozinho em 48 h).";
   if (step === "nao_autorizado") return "Não autorizado. O solicitante pode reenviar com explicação.";
   return null;

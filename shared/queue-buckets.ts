@@ -1,38 +1,62 @@
 import type { FlowStepKey } from "../contracts/types";
 
-// Fila do gestor separada por etapa do fluxo da FEM. Puro: testado em queue-buckets.test.ts.
-//   novo / analise / autorizado / nao_autorizado / reavaliacao  = a decisão é do gestor (qualquer responsável)
-//   atribuidos                                               = já está com um agente (Em andamento, Concluído…)
-// Chamado fora do fluxo (Zammad sem esses estados) sem responsável cai em "novo"; com responsável, em "atribuidos".
+// Fila do gestor separada por etapa do fluxo da FEM: uma aba por estado, na ordem do fluxo (v1.9.0 — antes os
+// estados com agente ficavam juntos em "Atribuídos"). Puro: testado em queue-buckets.test.ts.
+//   novo / analise / reavaliacao / autorizado   a decisão é do gestor
+//   atribuido / andamento / concluido           com um agente (Atribuído espera o agente iniciar)
+//   nao_autorizado / finalizado                 encerrados (Não autorizado espera o solicitante reenviar)
+// Chamado fora do fluxo (Zammad sem esses estados): aberto sem responsável cai em "novo"; aberto com responsável,
+// em "andamento"; encerrado fica fora da fila.
 
-export type QueueBucket = "novo" | "analise" | "autorizado" | "nao_autorizado" | "reavaliacao" | "atribuidos";
+export type QueueBucket =
+  | "novo"
+  | "analise"
+  | "reavaliacao"
+  | "autorizado"
+  | "atribuido"
+  | "andamento"
+  | "concluido"
+  | "nao_autorizado"
+  | "finalizado";
 
 export const QUEUE_BUCKETS: { key: QueueBucket; label: string; hint: string }[] = [
   { key: "novo", label: "Novo", hint: "Pedidos que chegaram e ainda não foram analisados." },
   { key: "analise", label: "Em análise", hint: "Pedidos que você começou a analisar." },
   { key: "reavaliacao", label: "Reavaliação", hint: "Pedidos não autorizados que o solicitante reenviou." },
   { key: "autorizado", label: "Autorizado", hint: "Autorizados, esperando um responsável." },
+  { key: "atribuido", label: "Atribuído", hint: "Com um responsável, que ainda não iniciou o atendimento." },
+  { key: "andamento", label: "Em andamento", hint: "Um agente está trabalhando no pedido." },
+  { key: "concluido", label: "Concluído", hint: "Entregues, esperando o solicitante aprovar ou pedir ajustes." },
   { key: "nao_autorizado", label: "Não autorizado", hint: "Negados. O solicitante pode reenviar com explicação." },
-  { key: "atribuidos", label: "Atribuídos", hint: "Chamados que já estão com um agente." },
+  { key: "finalizado", label: "Finalizado", hint: "Encerrados recentemente (os mais novos de cada pessoa da equipe)." },
 ];
 
-const BY_STEP: Partial<Record<FlowStepKey, QueueBucket>> = {
+const BY_STEP: Record<FlowStepKey, QueueBucket> = {
   novo: "novo",
   em_analise: "analise",
-  autorizado: "autorizado",
-  nao_autorizado: "nao_autorizado",
   reavaliacao: "reavaliacao",
+  autorizado: "autorizado",
+  atribuido: "atribuido",
+  em_andamento: "andamento",
+  concluido: "concluido",
+  nao_autorizado: "nao_autorizado",
+  finalizado: "finalizado",
 };
 
-export function bucketOf(step: FlowStepKey | null, hasOwner: boolean): QueueBucket | null {
-  if (step && BY_STEP[step]) return BY_STEP[step] ?? null;
-  if (step === "finalizado") return null;
-  return hasOwner ? "atribuidos" : step === null ? "novo" : "atribuidos";
+// `closed`: só importa fora do fluxo (estado genérico encerrado fica fora da fila).
+export function bucketOf(step: FlowStepKey | null, hasOwner: boolean, closed = false): QueueBucket | null {
+  if (step) return BY_STEP[step];
+  if (closed) return null;
+  return hasOwner ? "andamento" : "novo";
 }
+
+// Endereços antigos: ?etapa=atribuidos (aba que juntava os estados com agente) abre "Em andamento".
+const LEGACY_PARAMS: Record<string, QueueBucket> = { atribuidos: "andamento", "nao-autorizado": "nao_autorizado" };
 
 export function parseBucket(value: string | string[] | undefined): QueueBucket | undefined {
   const raw = Array.isArray(value) ? value[0] : value;
-  const key = raw === "nao-autorizado" ? "nao_autorizado" : raw;
+  if (!raw) return undefined;
+  const key = LEGACY_PARAMS[raw] ?? raw;
   return QUEUE_BUCKETS.some((bucket) => bucket.key === key) ? (key as QueueBucket) : undefined;
 }
 
@@ -41,8 +65,12 @@ export function bucketParam(bucket: QueueBucket): string {
   return bucket.replace("_", "-");
 }
 
+export function emptyCounts(): Record<QueueBucket, number> {
+  return Object.fromEntries(QUEUE_BUCKETS.map((bucket) => [bucket.key, 0])) as Record<QueueBucket, number>;
+}
+
 export function countBuckets<T extends { bucket: QueueBucket }>(items: readonly T[]): Record<QueueBucket, number> {
-  const counts: Record<QueueBucket, number> = { novo: 0, analise: 0, autorizado: 0, nao_autorizado: 0, reavaliacao: 0, atribuidos: 0 };
+  const counts = emptyCounts();
   for (const item of items) counts[item.bucket] += 1;
   return counts;
 }

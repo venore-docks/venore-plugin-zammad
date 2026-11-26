@@ -10,6 +10,7 @@ import { TicketStateButton } from "../public/ticket-actions";
 import { AllocationControls } from "./allocation-controls";
 import { AttendanceControls } from "./attendance-controls";
 import { ChildTickets, ParentLink } from "./child-tickets";
+import { TicketHistory } from "./ticket-history";
 
 // Propriedades do chamado. No portal em desktop vão para a BARRA CONTEXTUAL (ticket-sidebar.tsx); no celular e
 // no app ficam acima da conversa (ticket-view.tsx). Regra de design: uma linha de status (estado, pessoas, data)
@@ -74,6 +75,8 @@ export function TicketProperties({ ticket, surfaceKey, readOnly }: { ticket: Tic
       )}
 
       {agent && !readOnly && <ChildTickets ticket={ticket} surfaceKey={surfaceKey} />}
+
+      {agent && <TicketHistory ticket={ticket} />}
     </div>
   );
 }

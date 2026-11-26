@@ -17,8 +17,9 @@ type CreatedTicketResponse = { id: number; number: string | number };
 // Cria um chamado filho e o vincula ao pai (docs/zammad-fem.md). Regras:
 //   - quem pode: quem atende o pai (agente) ou o gestor do setor dele (resolveChildTarget);
 //   - o solicitante do filho é QUEM CRIOU (filho interno da equipe);
-//   - subtarefa: mesmo setor, nasce Autorizado com responsável (gestor escolhe um agente do setor; agente fica
-//     com ele mesmo) — o gatilho "Administrador atribui agente" leva a Em andamento;
+//   - subtarefa: mesmo setor, com responsável (gestor escolhe um agente do setor; agente fica com ele mesmo).
+//     Nasce Atribuído — o responsável inicia o atendimento — ou, num Zammad sem esse estado, Autorizado (o
+//     gatilho "Administrador atribui agente" leva a Em andamento);
 //   - outro setor: nasce Novo no setor escolhido (folha; fila do gestor de lá);
 //   - os campos customizados do setor de destino vêm do Zammad (schema + Core Workflows) e são remontados AQUI,
 //     nunca a partir da lista do navegador; o Zammad recusa o chamado sem os obrigatórios;
@@ -61,10 +62,12 @@ export async function createChildTicket(requester: Requester, input: CreateChild
       ownerId = input.ownerId;
     }
     payload.owner_id = ownerId;
-    // Subtarefa já nasce autorizada (o pai foi autorizado). Fora do fluxo da FEM, fica no estado padrão.
+    // Subtarefa já nasce autorizada (o pai foi autorizado) e com responsável: Atribuído, se o Zammad tiver o
+    // estado; senão Autorizado. Fora do fluxo da FEM, fica no estado padrão.
     const options = await loadAgentOptions();
-    const authorized = options.success ? options.data.states.find((state) => flowStepOf(state.name) === "autorizado") : undefined;
-    if (authorized) payload.state_id = authorized.id;
+    const states = options.success ? options.data.states : [];
+    const initial = states.find((state) => flowStepOf(state.name) === "atribuido") ?? states.find((state) => flowStepOf(state.name) === "autorizado");
+    if (initial) payload.state_id = initial.id;
   }
 
   // Primeira linha: de onde o filho veio. Depois, a descrição e o resumo das respostas (mesmo formato da abertura,
