@@ -1,7 +1,7 @@
 # Prazos por etapa — plano
 
-Status: **decisões tomadas em 26/11/2026**; faltam confirmar os dois pontos marcados com ⚠. Os issues abaixo estão
-prontos para criar no GitHub (épico + 7).
+Status: **aprovado em 26/11/2026** (todas as decisões, inclusive as duas propostas abaixo). Os issues estão prontos
+para criar no GitHub (épico + 7).
 
 ## O pedido
 
@@ -24,27 +24,26 @@ como fonte (histórico de estados) e como carteiro (o e-mail do alerta).
 
 | Pergunta | Decisão |
 |---|---|
-| O que é "analisado" (para o prazo de Novo) | O gestor **clicar em Analisar**. Só sair de Novo não basta. ⚠ ver abaixo |
+| O que é "analisado" (para o prazo de Novo) | O gestor **clicar em Analisar**. Só sair de Novo não basta (ver abaixo) |
 | Tempo previsto conta em horário útil | Sim. Opções em horas = horas úteis; em dias/semanas = dias úteis (1 semana = 5 dias úteis de 10 h) |
-| Em andamento pausa esperando o solicitante | Sim. ⚠ ver abaixo |
+| Em andamento pausa esperando o solicitante | Sim (ver abaixo) |
 | Agente recebe o alerta de Atribuído | Sim (e o de Em andamento, que também é dele) |
 | E-mail | Sim, pelo Zammad: o Colabora marca o chamado e um gatilho do Zammad envia (prompt de configuração em `docs/zammad-prompt-alerta-prazos.md`) |
 | Feriados | Do **plugin Calendários**, não do Zammad |
 
-### ⚠ Como registrar o "Analisar"
+### Como registrar o "Analisar" (aprovado)
 
 Abrir uma tela não fica registrado em lugar nenhum. Proposta: ao clicar em **Analisar** (fila) num chamado Novo, o
 Colabora põe a tag **`analisado`** no chamado. O Zammad guarda no histórico quem pôs a tag e quando, e esse momento
 para o relógio de Novo. Na tela do chamado, que não tem o botão Analisar, vale o mesmo ao clicar em **Iniciar
-análise**, **Autorizar** ou **Não autorizar**, porque são decisões tomadas depois de ler o pedido. Confirme se é
-isso.
+análise**, **Autorizar** ou **Não autorizar**, porque são decisões tomadas depois de ler o pedido.
 
-### ⚠ Como saber que o chamado "espera o solicitante"
+### Como saber que o chamado "espera o solicitante" (aprovado)
 
 Proposta: um botão explícito na resposta do agente, **"Aguardar resposta do solicitante"**. Ele envia a mensagem e
 põe a tag `aguardando-solicitante`; a resposta do solicitante pelo portal tira a tag. O relógio fica parado entre as
 duas. Deduzir isso de "quem escreveu por último" pararia o relógio a cada atualização de andamento que o agente
-manda, então não recomendo. Confirme se é isso.
+manda, então não foi a escolha.
 
 ## Como vai funcionar
 
