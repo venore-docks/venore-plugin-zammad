@@ -55,6 +55,16 @@ export const FLOW_BADGE: Record<FlowTone, { dot: string; icon: string }> = {
   danger: { dot: "bg-destructive", icon: "text-destructive" },
 };
 
+// Faixa de cor na borda de início de um grupo de lista (a fila agrupada por etapa). Classes literais, só tokens.
+export const FLOW_EDGE: Record<FlowTone, string> = {
+  neutral: "border-s-2 border-s-muted-foreground/50",
+  info: "border-s-2 border-s-chart-2",
+  primary: "border-s-2 border-s-primary",
+  warning: "border-s-2 border-s-warning",
+  success: "border-s-2 border-s-success",
+  danger: "border-s-2 border-s-destructive",
+};
+
 // Cor estável por setor (não muda se a ordem da lista mudar). Subgrupos herdam a cor do pai.
 export function accentFor(rootGroupId: number): Accent {
   return ACCENTS[Math.abs(rootGroupId) % ACCENTS.length];

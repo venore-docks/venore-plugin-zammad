@@ -3,6 +3,7 @@ import { cn } from "@venore/plugin-sdk/ui";
 import { Button } from "@venore/plugin-sdk/ui";
 import type { TicketStateColor, TicketStateTone } from "../../contracts/types";
 import { FLOW_BADGE } from "./palette";
+import { Lock } from "lucide-react";
 
 // Cada estado tem uma cor SEMÂNTICA (tokens do tema, ver palette.ts): informação = novo, primária = em
 // andamento, alerta = em análise/aguardando, sucesso = autorizado/concluído, perigo = não autorizado,
@@ -19,8 +20,14 @@ export function StateBadge({ label, tone, color }: { label: string; tone: Ticket
   const classes = FLOW_BADGE[colorOf(tone, color)];
   return (
     <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border bg-card px-2.5 py-0.5 text-xs font-medium whitespace-nowrap text-foreground">
-      <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", classes.dot)} />
+      {/* Encerrado (só Finalizado, no fluxo da FEM) leva cadeado no lugar da bolinha: o resto está em aberto. */}
+      {tone === "closed" ? (
+        <Lock aria-hidden className="size-3 shrink-0 text-muted-foreground" />
+      ) : (
+        <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", classes.dot)} />
+      )}
       {label}
+      {tone === "closed" && <span className="sr-only"> (encerrado)</span>}
     </span>
   );
 }

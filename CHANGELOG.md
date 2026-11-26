@@ -2,6 +2,27 @@
 
 Versões anteriores: ver o histórico do git (tags `vX.Y.Z`).
 
+## v1.10.0
+
+### Novidades
+- **Fila: aba "Em aberto"**, a primeira e a padrão: todos os chamados abertos, agrupados por etapa (Novo, Em análise,
+  Autorizado, Não autorizado, Reavaliação, Atribuído, Em andamento, Concluído), cada etapa com subtítulo na sua cor, o
+  total e até 10 linhas, com o atalho "Ver todos os N" para a aba da etapa. Filtro de setor e ordem valem dentro de
+  cada etapa.
+- **Só Finalizado encerra de verdade.** Não autorizado e Concluído passam a contar como em aberto (listas, carga dos
+  agentes, regra do pai). O cabeçalho do chamado mostra o caminho completo com o cadeado no fim ("Etapa N de M · em
+  aberto" / "Encerrado"), e o selo de Finalizado ganha cadeado. O caminho após "Não autorizado" agora mostra
+  Reavaliação → Autorizado → … até Finalizado.
+
+### Desempenho
+- A leitura mais cara (fila e cada agente: 1 + N buscas no Zammad) fica em memória e é compartilhada por Fila, Início do
+  gestor, Equipe e carga por agente. Trocar de aba, setor ou ordem na Fila não volta ao Zammad. Fresca por 20 s
+  (`COLABORA_QUEUE_CACHE_SECONDS`, 0 desliga); depois entrega o antigo na hora e atualiza em segundo plano; toda
+  escrita do plugin no Zammad descarta o cache.
+
+### Atenção
+- Um chamado filho "Não autorizado" agora conta como filho em aberto e impede concluir o pai até ser resolvido.
+
 ## v1.9.1
 
 ### Correções

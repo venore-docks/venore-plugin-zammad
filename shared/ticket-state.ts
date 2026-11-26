@@ -26,6 +26,12 @@ export function describeState(state: string): DescribedState {
   return { label: state.charAt(0).toUpperCase() + state.slice(1), tone: "open", color: "primary", closed: false, step: null };
 }
 
+// "Não autorizado" está em aberto (o solicitante pode reenviar), mas não é trabalho do gestor: fica fora da fila de
+// decisões e dos números de "na fila".
+export function isWaitingOnRequester(ticket: { state?: string | null }): boolean {
+  return flowStepOf(ticket.state) === "nao_autorizado";
+}
+
 // O SOLICITANTE escreveu depois da última resposta da equipe (ou a equipe ainda não respondeu): na visão
 // do agente, o chamado espera resposta dele.
 export function isCustomerWaiting(ticket: { last_contact_agent_at?: string | null; last_contact_customer_at?: string | null }): boolean {

@@ -1,29 +1,24 @@
-import { UNASSIGNED_OWNER_ID, isSupervisor } from "../../shared/access-rules";
+import { isSupervisor } from "../../shared/access-rules";
 import { staffRoleFor, teamFor } from "../../shared/directory";
+import { loadManagerSnapshot } from "../../shared/manager-snapshot";
 import { shortGroupName } from "../../shared/manager-stats";
 import type { Requester } from "../../shared/requester";
 import { failure } from "../../shared/results";
 import { loadSchema } from "../../shared/schema";
-import { searchOpenTicketsByOwner } from "../../shared/ticket-search";
-import { isCustomerWaiting } from "../../shared/ticket-state";
+import { describeState, isCustomerWaiting, isWaitingOnRequester } from "../../shared/ticket-state";
 import type { GetTeamOverviewResult, TeamGroup, TeamMember } from "./types";
-
-const MAX_MEMBERS = 40;
 
 export async function getTeamOverview(requester: Requester): Promise<GetTeamOverviewResult> {
   if (!isSupervisor(await staffRoleFor(requester))) return failure("forbidden_team", "Só o gestor vê a equipe.");
   const [team, schema] = await Promise.all([teamFor(requester), loadSchema()]);
-  const members = team.members.slice(0, MAX_MEMBERS);
-
-  const [queue, ...perMember] = await Promise.all([
-    searchOpenTicketsByOwner(requester, UNASSIGNED_OWNER_ID),
-    ...members.map((member) => searchOpenTicketsByOwner(requester, member.id)),
-  ]);
-  if (!queue.success) return queue;
+  // A mesma leitura da Fila e do Início do gestor (em cache): não refaz as N+1 buscas no Zammad.
+  const snapshot = await loadManagerSnapshot(requester);
+  if (!snapshot.success) return snapshot;
+  const { members, unassigned, perMember } = snapshot.data;
+  const isOpen = (ticket: { state?: string | null }) => !describeState(ticket.state ?? "").closed;
 
   const overview: TeamMember[] = members.map((member, index) => {
-    const found = perMember[index];
-    const tickets = found.success ? found.data : [];
+    const tickets = (perMember[index] ?? []).filter(isOpen);
     return {
       id: member.id,
       name: member.name,
@@ -42,5 +37,5 @@ export async function getTeamOverview(requester: Requester): Promise<GetTeamOver
     .map((id) => ({ id, name: names.get(id) ?? `Setor #${id}` }))
     .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 
-  return { success: true, data: { members: overview, queue: queue.data.length, groupCount: team.groupIds.length, groups } };
+  return { success: true, data: { members: overview, queue: unassigned.filter((ticket) => isOpen(ticket) && !isWaitingOnRequester(ticket)).length, groupCount: team.groupIds.length, groups } };
 }

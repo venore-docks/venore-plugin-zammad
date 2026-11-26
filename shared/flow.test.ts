@@ -6,8 +6,10 @@ import {
   customerActionsFor,
   customerCanReply,
   customerMustDecide,
+  FLOW_STEPS,
   flowStepOf,
   isCustomerAction,
+  isFinalStep,
   staffActionsFor,
   staffHintFor,
   stepAfterOwnerChange,
@@ -40,8 +42,9 @@ describe("flowStepOf (estados do Zammad da FEM, por nome)", () => {
 });
 
 describe("describeState", () => {
-  it("usa o fluxo: Não autorizado e Finalizado são fechados; Concluído não", () => {
-    expect(describeState("Não autorizado")).toMatchObject({ closed: true, color: "danger", step: "nao_autorizado" });
+  it("usa o fluxo: só Finalizado é fechado; Não autorizado e Concluído seguem em aberto", () => {
+    expect(describeState("Não autorizado")).toMatchObject({ closed: false, tone: "open", color: "danger", step: "nao_autorizado" });
+    expect(describeState("Atribuído")).toMatchObject({ closed: false, step: "atribuido" });
     expect(describeState("Finalizado")).toMatchObject({ closed: true, color: "neutral", tone: "closed" });
     expect(describeState("Concluído")).toMatchObject({ closed: false, color: "success", tone: "open" });
     expect(describeState("Novo")).toMatchObject({ tone: "new", color: "info" });
@@ -50,6 +53,16 @@ describe("describeState", () => {
   it("fora do fluxo mantém o comportamento antigo", () => {
     expect(describeState("closed")).toMatchObject({ label: "Encerrado", closed: true, step: null });
     expect(describeState("new")).toMatchObject({ label: "Recebido", tone: "new", step: null });
+  });
+});
+
+describe("encerramento", () => {
+  it("Finalizado é o único passo que encerra", () => {
+    expect(Object.entries(FLOW_STEPS).filter(([, info]) => info.closed).map(([key]) => key)).toEqual(["finalizado"]);
+    expect(isFinalStep("finalizado")).toBe(true);
+    expect(isFinalStep("nao_autorizado")).toBe(false);
+    expect(isFinalStep("concluido")).toBe(false);
+    expect(isFinalStep(null)).toBe(false);
   });
 });
 

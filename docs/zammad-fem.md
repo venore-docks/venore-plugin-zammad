@@ -21,7 +21,7 @@ própria tela.
 | Em análise | aberto | gestor analisando |
 | Autorizado | aberto | gestor autorizou; falta responsável |
 | **Atribuído** (v1.9.0) | aberto | tem responsável, que ainda não iniciou o atendimento; o agente passa para Em andamento |
-| Não autorizado | fechado | gestor negou (com motivo); cliente pode reenviar |
+| Não autorizado | fechado | gestor negou (com motivo); cliente pode reenviar. **No Colabora conta como EM ABERTO** (v1.10.0): só Finalizado encerra de verdade |
 | Reavaliação | aberto | cliente reenviou um "não autorizado"; gestor decide de novo |
 | Em andamento | aberto | padrão para acompanhamentos; responsável trabalhando |
 | Concluído | aberto | entregue; aguardando o cliente (era "ação pendente", trocado para aberto) |
@@ -164,9 +164,13 @@ comportamento genérico antigo (encerrar/reabrir), para outros Zammads.
   resposta some nesses passos (e em Finalizado aparece "Novo chamado").
 - **Equipe (app)**: "Próximo passo" com os botões do fluxo; dica do passo; seletor de estado só com os
   destinos permitidos; prioridade continua no seletor.
-- **Fila do gestor (v1.2.0; todos os estados na v1.9.0)**: uma aba por estado, na ordem do fluxo — Novo, Em
-  análise, Reavaliação, Autorizado, Atribuído, Em andamento, Concluído, Não autorizado e Finalizado — com filtro de
-  setor secundário (`?etapa=&setor=&ordem=`; o antigo `?etapa=atribuidos` abre Em andamento). Finalizado mostra os
+- **Fila do gestor (v1.2.0; todos os estados na v1.9.0; "Em aberto" na v1.10.0)**: a primeira aba, **Em aberto**, é a
+  padrão e mostra TODOS os chamados abertos agrupados por etapa, na ordem do fluxo — Novo, Em análise, Autorizado, Não
+  autorizado, Reavaliação, Atribuído, Em andamento, Concluído — cada uma com subtítulo (bolinha e faixa na cor da etapa,
+  total e dica) e até 10 linhas, mais o atalho "Ver todos os N em <etapa>". Depois vêm as abas de cada etapa e
+  Finalizado, com filtro de setor secundário (`?etapa=&setor=&ordem=`; o antigo `?etapa=atribuidos` abre Em andamento).
+  Em "Em aberto" o setor e a ordem valem dentro de cada etapa e as linhas não trazem tags (cada tag é uma leitura no
+  Zammad); as tags aparecem nas abas de etapa. Finalizado mostra os
   50 encerrados mais recentes (v1.9.1: buscados só quando a aba é aberta; fora dela a aba aparece sem número).
   Solicitante e tags só são lidos para as linhas da aba aberta; 25 linhas por vez ("Mostrar mais", `?mais=`).
   Card de **Novo**: "Analisar" abre um diálogo com o resumo do pedido (respostas, texto, anexos) e as decisões
@@ -207,7 +211,8 @@ Colabora continua vendo tudo (prévia). Testado em `group-audience.test.ts`.
 - O **solicitante do filho é quem o criou** (filho interno; o solicitante do pai não vê os filhos).
 - Vínculo pelo Zammad (`POST /links/add`, pai/filho); o plugin confere a direção depois de vincular e inverte
   se precisar. O pai lista os filhos (estado e responsável); o filho mostra "Faz parte de #N".
-- **O pai não pode ser concluído com filho aberto** (estado não fechado): o botão some e o servidor recusa.
+- **O pai não pode ser concluído com filho aberto** (qualquer estado menos Finalizado — a partir da v1.10.0 isso inclui
+  Não autorizado e Concluído): o botão some e o servidor recusa.
 - **Campos do setor de destino (v1.8.0).** O Zammad exige os campos customizados de cada setor (ex.: "Missing
   required value for field 'local_fisico'"). Nada é fixo no plugin: ao escolher o modo/setor, o diálogo busca o
   formulário (`get-child-form`), montado do schema + Core Workflows como na abertura (`shared/child-form.ts`), com

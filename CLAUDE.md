@@ -30,6 +30,15 @@ O Colabora é a referência dessa regra.
 - **Datas e horas**: `datetime-local` não tem fuso, e o plugin fixa `-03:00` (`LOCAL_UTC_OFFSET`).
   Booleanos nunca vêm pré-marcados, para que a pessoa responda de fato.
 - **Settings são de leitura pública**: segredo nunca vai em setting, só em variável de ambiente.
+- **Só Finalizado encerra (v1.10.0)**: `FLOW_STEPS` marca `closed` só em Finalizado; Não autorizado (o solicitante
+  reenvia) e Concluído são chamados em aberto — entram nas listas, na carga da equipe e na regra do pai com filho em
+  aberto. O Zammad continua com o tipo "fechado" em Não autorizado (docs §1.1); o plugin decide pelo NOME do estado.
+  O cabeçalho do chamado (`FlowProgress`) e o selo (`StateBadge`) mostram o cadeado só no que encerra.
+- **Leitura da equipe em cache (v1.10.0)**: `shared/manager-snapshot.ts` guarda em memória a leitura 1 + N buscas (fila
+  e cada agente) que Fila, Início do gestor, Equipe e carga por agente compartilham: fresca por
+  `COLABORA_QUEUE_CACHE_SECONDS` (padrão 20 s; 0 desliga), até 5 min entrega o antigo e atualiza em segundo plano, e
+  TODA escrita do `zammadRequest` (POST/PUT) a descarta (`onZammadWrite`). Mudança feita direto no Zammad aparece em
+  até esse tempo. Cache é por processo: serve ao Coolify (processo único); em serverless valeria por instância.
 - **Desempenho (v1.9.1)**: o Zammad leva 0,2–0,8 s por chamada; o que pesa é a QUANTIDADE de chamadas em
   sequência. `resolveRequester` roda uma vez por requisição (`cache` do React) e a conta no Zammad fica 5 min em
   cache; solicitante e tags (uma leitura por chamado) só para as linhas que vão para a tela. `COLABORA_TIMING=1`

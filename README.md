@@ -31,7 +31,7 @@ As mesmas telas existem no portal (`/colabora/...`, dentro da casca do site) e n
 | `/colabora/novo` | todos | Abertura guiada (Setor → Detalhes → Pedido → Revisão). `?setor=<id do grupo>` já começa no setor. |
 | `/colabora/meus` | todos | Os chamados da pessoa ("sua vez", "em andamento", "encerrados"). |
 | `/colabora/atribuidos` | agente+ | O que está com ele, com filtros e ações rápidas. |
-| `/colabora/fila` | gestor+ | Os chamados dos setores que gerencia, uma aba por estado (Novo … Finalizado); filtros `?etapa=`, `?setor=` e `?ordem=idade\|prioridade`; decisão e alocação na linha. |
+| `/colabora/fila` | gestor+ | Os chamados dos setores que gerencia. A aba inicial, "Em aberto", agrupa todos os abertos por etapa; depois uma aba por estado (Novo … Finalizado). Filtros `?etapa=`, `?setor=` e `?ordem=idade|prioridade`; decisão e alocação na linha. |
 | `/colabora/equipe`, `/colabora/equipe/:id` | gestor+ | Cartões por agente (setores, carga) e a lista de cada um. |
 | `/colabora/chamado/:id` | conforme o papel | A conversa (responder, citar, anexos); para quem atende: estado, prioridade e ações rápidas; para gestor: alocação. |
 | `/admin/colabora` | admin do plugin | A administração (veja abaixo). |

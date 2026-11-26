@@ -3,6 +3,10 @@
 //
 //   Novo → Em análise → Autorizado ─(gestor atribui agente)→ Atribuído ─(agente inicia)→ Em andamento → Concluído
 //                    ↘ Não autorizado ─(cliente reenvia)→ Reavaliação → Autorizado | Não autorizado
+//
+// Só FINALIZADO encerra de verdade (v1.10.0). Todos os outros passos, inclusive Não autorizado (o solicitante ainda
+// pode reenviar) e Concluído (ainda espera o retorno dele), são chamados em aberto: contam nas listas, na carga da
+// equipe e na regra do pai com filho em aberto.
 //   Atribuído (v1.9.0) é opcional: num Zammad sem esse estado, atribuir leva direto a Em andamento (gatilho
 //   "Administrador atribui agente"), como antes.
 //   Concluído ─(cliente aprova | 48 h, agendador)→ Finalizado
@@ -32,12 +36,19 @@ export const FLOW_STEPS: Record<FlowStep, StepInfo> = {
   em_analise: { label: "Em análise", color: "warning", closed: false, hint: "O gestor está analisando o pedido." },
   autorizado: { label: "Autorizado", color: "success", closed: false, hint: "Autorizado. Aguardando um responsável." },
   atribuido: { label: "Atribuído", color: "info", closed: false, hint: "Já tem um responsável, que vai iniciar o atendimento." },
-  nao_autorizado: { label: "Não autorizado", color: "danger", closed: true, hint: "O gestor não autorizou o pedido." },
+  nao_autorizado: { label: "Não autorizado", color: "danger", closed: false, hint: "O gestor não autorizou o pedido. Ainda não foi encerrado: o solicitante pode reenviar." },
   reavaliacao: { label: "Reavaliação", color: "warning", closed: false, hint: "Reenviado: o gestor vai analisar de novo." },
   em_andamento: { label: "Em andamento", color: "primary", closed: false, hint: "Um responsável está trabalhando no pedido." },
   concluido: { label: "Concluído", color: "success", closed: false, hint: "Entregue. Confira e dê o seu retorno." },
   finalizado: { label: "Finalizado", color: "neutral", closed: true, hint: "Chamado finalizado." },
 };
+
+// O único passo que encerra o chamado.
+export const FINAL_STEP: FlowStep = "finalizado";
+
+export function isFinalStep(step: FlowStep | null | undefined): boolean {
+  return step === FINAL_STEP;
+}
 
 const BY_NAME: Record<string, FlowStep> = {
   novo: "novo",

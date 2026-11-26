@@ -30,6 +30,26 @@ function logTiming(method: string, path: string, status: number | "erro", starte
   console.info(`[colabora:zammad] ${method} ${base.replace(/^\/+/, "")}${keys} ${status} ${Math.round(performance.now() - startedAt)}ms`);
 }
 
+// Quem guarda leituras do Zammad em cache se registra aqui para ser avisado de toda ESCRITA bem-sucedida (qualquer
+// POST/PUT feito por este cliente): a pessoa que acabou de agir precisa ver a própria mudança na tela. A lista fica em
+// `globalThis` porque o Next pode carregar este módulo mais de uma vez no mesmo processo.
+type WriteListener = () => void;
+const registry = globalThis as typeof globalThis & { __colaboraWriteListeners?: WriteListener[] };
+
+export function onZammadWrite(listener: WriteListener): void {
+  (registry.__colaboraWriteListeners ??= []).push(listener);
+}
+
+function notifyWrite(): void {
+  for (const listener of registry.__colaboraWriteListeners ?? []) {
+    try {
+      listener();
+    } catch {
+      // um cache com defeito não pode derrubar a escrita
+    }
+  }
+}
+
 export const NOT_CONFIGURED_MESSAGE =
   "A integração com o Zammad não está configurada (variáveis ZAMMAD_URL e ZAMMAD_API_TOKEN).";
 
@@ -91,6 +111,7 @@ export async function zammadRequest<T>(path: string, options: RequestOptions = {
     if (response.status === 403) return failure("forbidden", `O Zammad não permitiu esta ação (${human}).`);
     return failure("request_failed", `O Zammad respondeu com erro: ${human}`);
   }
+  if (method !== "GET") notifyWrite();
   return { success: true, data: data as T };
 }
 
