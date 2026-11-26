@@ -3,7 +3,7 @@ import { staffRoleFor } from "../../shared/directory";
 import { resolveRequester } from "../../shared/requester";
 import { failure } from "../../shared/results";
 import { getManagerDashboard, getQueueBoard, getTeamLoads } from "./service";
-import type { GetManagerDashboardResult, GetQueueBoardResult, GetTeamLoadsResult } from "./types";
+import type { GetManagerDashboardResult, GetQueueBoardInput, GetQueueBoardResult, GetTeamLoadsResult } from "./types";
 
 // Tudo aqui é do gestor/admin: o agente comum não vê fila nem carga da equipe (a autorização fica no handler).
 export async function getManagerDashboardHandler(): Promise<GetManagerDashboardResult> {
@@ -13,11 +13,11 @@ export async function getManagerDashboardHandler(): Promise<GetManagerDashboardR
   return getManagerDashboard(requester.data);
 }
 
-export async function getQueueBoardHandler(): Promise<GetQueueBoardResult> {
+export async function getQueueBoardHandler(input: GetQueueBoardInput = {}): Promise<GetQueueBoardResult> {
   const requester = await resolveRequester();
   if (!requester.success) return requester;
   if (!isSupervisor(await staffRoleFor(requester.data))) return failure("forbidden_queue", "A fila de chamados sem responsável é do gestor.");
-  return getQueueBoard(requester.data);
+  return getQueueBoard(requester.data, input);
 }
 
 export async function getTeamLoadsHandler(): Promise<GetTeamLoadsResult> {

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { cn } from "@venore/plugin-sdk/ui";
 import type { NavItem, NavKey } from "../views/nav";
+import { LinkPending } from "../public/link-pending";
 
 // Casca do app Colabora: cabeçalho fixo + navegação inferior, no formato de app de celular. NÃO usa a casca do
 // Venore Docks (a página roda sob /ext, fora do layout da plataforma). Respeita a área segura (notch e barra de
@@ -69,7 +70,10 @@ export function AppShell({
                         </span>
                       )}
                     </span>
-                    {item.shortLabel}
+                    <span className="inline-flex items-center gap-1">
+                      {item.shortLabel}
+                      <LinkPending />
+                    </span>
                   </Link>
                 </li>
               );

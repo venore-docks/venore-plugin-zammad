@@ -144,7 +144,8 @@ export function ChildTicketDialog({ parentId, isSupervisor, assignees, groups }:
       toast.success(`Chamado filho #${result.data.number} criado.`);
       setOpen(false);
       reset();
-      router.refresh();
+      // Dentro da mesma transição: o botão segue ocupado até a tela atualizar (evita o segundo clique).
+      startTransition(() => router.refresh());
     });
   }
 

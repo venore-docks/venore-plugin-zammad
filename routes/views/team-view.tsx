@@ -9,6 +9,7 @@ import { enterSurface } from "./context";
 import { LevelPill, LoadBar } from "./dashboards/manager/load-bar";
 import { ColaboraFrame } from "./frame";
 import type { ViewQuery } from "./query";
+import { LinkPending } from "../public/link-pending";
 
 function Chip({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
   return (
@@ -21,6 +22,7 @@ function Chip({ href, active, children }: { href: string; active: boolean; child
       )}
     >
       {children}
+      <LinkPending />
     </Link>
   );
 }

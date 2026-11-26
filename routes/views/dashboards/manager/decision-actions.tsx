@@ -49,7 +49,8 @@ function useSend() {
       }
       toast.success(done);
       after?.();
-      router.refresh();
+      // Dentro da mesma transição: o botão segue ocupado até a tela atualizar (evita o segundo clique).
+      startTransition(() => router.refresh());
     });
   }
   return { busy, send };

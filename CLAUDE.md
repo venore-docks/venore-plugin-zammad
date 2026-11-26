@@ -30,6 +30,13 @@ O Colabora é a referência dessa regra.
 - **Datas e horas**: `datetime-local` não tem fuso, e o plugin fixa `-03:00` (`LOCAL_UTC_OFFSET`).
   Booleanos nunca vêm pré-marcados, para que a pessoa responda de fato.
 - **Settings são de leitura pública**: segredo nunca vai em setting, só em variável de ambiente.
+- **Desempenho (v1.9.1)**: o Zammad leva 0,2–0,8 s por chamada; o que pesa é a QUANTIDADE de chamadas em
+  sequência. `resolveRequester` roda uma vez por requisição (`cache` do React) e a conta no Zammad fica 5 min em
+  cache; solicitante e tags (uma leitura por chamado) só para as linhas que vão para a tela. `COLABORA_TIMING=1`
+  registra cada chamada ao Zammad (caminho, status, duração) no log do servidor.
+- **Toda ação na tela mostra que está carregando**: links de navegação com `LinkPending` (`useLinkStatus`) e
+  `router.refresh()` sempre dentro da mesma transição do botão (`startTransition(() => router.refresh())`), para o
+  botão seguir ocupado até a tela atualizar.
 
 ## Fluxo de atendimento da FEM (v1.1.0) — ler `docs/zammad-fem.md` antes de mexer
 

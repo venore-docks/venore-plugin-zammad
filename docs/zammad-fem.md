@@ -167,7 +167,8 @@ comportamento genérico antigo (encerrar/reabrir), para outros Zammads.
 - **Fila do gestor (v1.2.0; todos os estados na v1.9.0)**: uma aba por estado, na ordem do fluxo — Novo, Em
   análise, Reavaliação, Autorizado, Atribuído, Em andamento, Concluído, Não autorizado e Finalizado — com filtro de
   setor secundário (`?etapa=&setor=&ordem=`; o antigo `?etapa=atribuidos` abre Em andamento). Finalizado mostra os
-  encerrados mais recentes (os 100 últimos de cada agente da equipe e da fila).
+  50 encerrados mais recentes (v1.9.1: buscados só quando a aba é aberta; fora dela a aba aparece sem número).
+  Solicitante e tags só são lidos para as linhas da aba aberta; 25 linhas por vez ("Mostrar mais", `?mais=`).
   Card de **Novo**: "Analisar" abre um diálogo com o resumo do pedido (respostas, texto, anexos) e as decisões
   Manter em análise / Autorizar / Não autorizar (motivo obrigatório) / **Autorizar e atribuir** (um só PUT com
   `state_id` = Autorizado + `owner_id`; o servidor grava Atribuído no mesmo envio). Card de

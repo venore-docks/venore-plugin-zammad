@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import type { OperationResult } from "@venore/plugin-sdk";
 import { getCurrentUser } from "@venore/plugin-sdk/auth";
 import { authorizeActor } from "@venore/plugin-sdk/rbac";
@@ -34,7 +35,17 @@ export async function requesterIsColaboraAdmin(requester: Requester): Promise<bo
 
 export const VIEW_AS_READ_ONLY = "Você está no modo “ver como”, que é só leitura. Saia dele para abrir, responder ou alterar chamados.";
 
+// Uma tela chama vários handlers (moldura, painéis, conteúdo) e cada um precisa de quem pede. `cache` do React
+// faz a resolução (permissão, sessão, "ver como" e a busca da conta no Zammad) acontecer UMA vez por requisição;
+// fora da renderização (server actions) ele só repassa a chamada. A recusa de escrita no "ver como" fica fora do
+// cache porque depende de `write`.
 export async function resolveRequester(options: { write?: boolean } = {}): Promise<OperationResult<Requester>> {
+  const resolved = await resolveRequesterOnce();
+  if (resolved.success && options.write && resolved.data.viewAs) return failure("view_as_read_only", VIEW_AS_READ_ONLY);
+  return resolved;
+}
+
+const resolveRequesterOnce = cache(async (): Promise<OperationResult<Requester>> => {
   const authz = await authorizeActor(COLABORA_PERMISSIONS.tickets);
   if (!authz.authorized) return { success: false, error: authz.error };
 
@@ -44,7 +55,6 @@ export async function resolveRequester(options: { write?: boolean } = {}): Promi
 
   const target = await readViewAs(authz.actorId);
   if (target) {
-    if (options.write) return failure("view_as_read_only", VIEW_AS_READ_ONLY);
     if (!target.hasAccess) {
       return failure("view_as_no_access", `${target.name ?? target.email} não tem acesso ao Colabora (falta a permissão “colabora.tickets” no portal).`);
     }
@@ -71,4 +81,4 @@ export async function resolveRequester(options: { write?: boolean } = {}): Promi
     success: true,
     data: { ...who, zammadUser: found.data, viewAs: target ? { adminActorId: authz.actorId } : null },
   };
-}
+});

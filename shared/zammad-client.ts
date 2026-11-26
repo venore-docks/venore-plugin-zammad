@@ -19,6 +19,17 @@ export function readConnection(): ZammadConnection | null {
   return { baseUrl, token };
 }
 
+// Medição (diagnóstico de desempenho): com COLABORA_TIMING=1, cada chamada ao Zammad registra método, caminho
+// (sem os valores da query, que podem ter e-mail), status e duração. Desligado por padrão.
+const TIMING = process.env.COLABORA_TIMING === "1";
+
+function logTiming(method: string, path: string, status: number | "erro", startedAt: number): void {
+  if (!TIMING) return;
+  const [base, query] = path.split("?");
+  const keys = query ? `?${[...new URLSearchParams(query).keys()].join("&")}` : "";
+  console.info(`[colabora:zammad] ${method} ${base.replace(/^\/+/, "")}${keys} ${status} ${Math.round(performance.now() - startedAt)}ms`);
+}
+
 export const NOT_CONFIGURED_MESSAGE =
   "A integração com o Zammad não está configurada (variáveis ZAMMAD_URL e ZAMMAD_API_TOKEN).";
 
@@ -40,16 +51,19 @@ export async function zammadRequest<T>(path: string, options: RequestOptions = {
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
   if (options.onBehalfOf) headers["X-On-Behalf-Of"] = options.onBehalfOf;
 
+  const method = options.method ?? "GET";
+  const startedAt = performance.now();
   let response: Response;
   try {
     response = await fetch(`${connection.baseUrl}/api/v1/${path.replace(/^\/+/, "")}`, {
-      method: options.method ?? "GET",
+      method,
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
       cache: "no-store",
       signal: AbortSignal.timeout(options.timeoutMs ?? 20000),
     });
   } catch (error) {
+    logTiming(method, path, "erro", startedAt);
     const timedOut = error instanceof Error && error.name === "TimeoutError";
     return failure(
       "unreachable",
@@ -58,6 +72,7 @@ export async function zammadRequest<T>(path: string, options: RequestOptions = {
   }
 
   const text = await response.text();
+  logTiming(method, path, response.status, startedAt);
   let data: unknown = null;
   try {
     data = text ? JSON.parse(text) : null;

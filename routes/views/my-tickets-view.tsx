@@ -10,6 +10,7 @@ import { TicketGroup } from "../public/ticket-list";
 import { enterSurface } from "./context";
 import { ColaboraFrame } from "./frame";
 import type { ViewQuery } from "./query";
+import { LinkPending } from "../public/link-pending";
 
 const FILTER_LABEL: Record<MineFilter, string> = {
   todos: "Todos",
@@ -97,6 +98,7 @@ function MineList({ tickets, filter, surface }: { tickets: TicketSummary[]; filt
                 >
                   {FILTER_LABEL[item]}
                   <span className={cn("text-xs tabular-nums", pending ? "font-semibold text-warning" : "text-muted-foreground")}>{counts[item]}</span>
+                  <LinkPending />
                 </Link>
               </li>
             );

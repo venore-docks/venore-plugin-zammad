@@ -35,7 +35,8 @@ export function TicketStateButton({ ticketId, closed }: { ticketId: number; clos
         return;
       }
       toast.success(action === "close" ? "Chamado encerrado." : "Chamado reaberto.");
-      router.refresh();
+      // Dentro da mesma transição: o botão segue ocupado até a tela atualizar (evita o segundo clique).
+      startTransition(() => router.refresh());
     });
   }
 
@@ -156,7 +157,8 @@ export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number;
       setMessage("");
       setFiles([]);
       setQuote(null);
-      router.refresh();
+      // Dentro da mesma transição: o botão segue ocupado até a tela atualizar (evita o segundo clique).
+      startTransition(() => router.refresh());
     });
   }
 

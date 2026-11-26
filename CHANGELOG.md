@@ -2,6 +2,18 @@
 
 Versões anteriores: ver o histórico do git (tags `vX.Y.Z`).
 
+## v1.9.1
+
+### Correções
+- **Desempenho**: a pessoa logada era buscada no Zammad 2–3 vezes por página, em sequência e sem cache; agora é
+  uma vez por requisição, com cache de 5 min da conta. A Fila só lê solicitante e tags das linhas da aba aberta (a
+  v1.9.0 lia de todos os chamados, inclusive os finalizados), não repete a busca da fila sem responsável e só busca
+  os encerrados na aba Finalizado (os 50 mais recentes). 25 linhas por vez, com "Mostrar mais".
+- **Retorno visual**: abas, filtros, menu e "Mostrar mais" mostram que estão carregando; os botões de ação
+  (atribuir, iniciar atendimento, concluir, responder…) ficam ocupados até a tela atualizar, evitando o clique
+  repetido.
+- `COLABORA_TIMING=1` registra no log do servidor o tempo de cada chamada ao Zammad (diagnóstico).
+
 ## v1.9.0
 
 ### Novidades

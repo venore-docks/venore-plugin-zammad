@@ -6,6 +6,7 @@ import { surfaceFor, type SurfaceKey } from "../../shared/routes";
 import { AppShell } from "../app/shell";
 import { navItemsFor, type NavKey } from "./nav";
 import { ViewAsBar } from "./view-as-bar";
+import { LinkPending } from "../public/link-pending";
 
 // Moldura de toda tela do Colabora. Mesma API nas duas superfícies; só o desenho muda:
 //   app    → AppShell (cabeçalho fixo + abas embaixo), SEM a casca do Venore Docks;
@@ -97,6 +98,7 @@ export function ColaboraFrame({ surfaceKey, viewer, active, title, subtitle, bac
                 >
                   {item.label}
                   {count > 0 && <span className="text-xs text-muted-foreground tabular-nums">{count}</span>}
+                  <LinkPending />
                 </Link>
               );
             })}

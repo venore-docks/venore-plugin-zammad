@@ -72,7 +72,8 @@ export function FlowButton({ label, color, icon, emphasis, prompt, reason, confi
       toast.success(result.message);
       setOpen(false);
       setText("");
-      router.refresh();
+      // Dentro da mesma transição: o botão segue ocupado até a tela atualizar (evita o segundo clique).
+      startTransition(() => router.refresh());
     });
   }
 

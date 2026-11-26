@@ -3,7 +3,7 @@ import { Check, Layers, Tag } from "lucide-react";
 import { EmptyState, cn } from "@venore/plugin-sdk/ui";
 import { getQueueBoardHandler } from "../../features/get-manager-dashboard/handler";
 import { hrefWith, parseQueueSort, parseSectorFilter, sectorChips, shortGroupName, sortQueue, type QueueSort } from "../../shared/manager-stats";
-import { QUEUE_BUCKETS, bucketParam, defaultBucket, parseBucket, pendingDecisions } from "../../shared/queue-buckets";
+import { QUEUE_BUCKETS, bucketParam, parseBucket, pendingDecisions, type QueueBucket } from "../../shared/queue-buckets";
 import { describeTags } from "../../shared/tag-labels";
 import { FLOW_BADGE } from "../public/palette";
 import { surfaceFor, type SurfaceKey } from "../../shared/routes";
@@ -12,6 +12,19 @@ import { enterSurface } from "./context";
 import { QueueRow } from "./dashboards/manager/queue-row";
 import { ColaboraFrame } from "./frame";
 import type { ViewQuery } from "./query";
+import { LinkPending } from "../public/link-pending";
+
+// Linhas por vez (o resto vem em "Mostrar mais", ?mais=<total>): menos HTML para o navegador.
+const PAGE_SIZE = 25;
+const MAX_LIMIT = 500;
+
+function parseLimit(value: string | undefined): number {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > PAGE_SIZE ? Math.min(parsed, MAX_LIMIT) : PAGE_SIZE;
+}
+
+// Abas em que "nada aqui" quer dizer "fila zerada" (as que pedem decisão do gestor).
+const PENDING_BUCKETS: QueueBucket[] = ["novo", "analise", "reavaliacao", "autorizado"];
 
 const SORTS: { key: QueueSort; label: string }[] = [
   { key: "idade", label: "Mais antigos" },
@@ -30,6 +43,7 @@ function Chip({ href, active, children }: { href: string; active: boolean; child
       )}
     >
       {children}
+      <LinkPending />
     </Link>
   );
 }
@@ -46,6 +60,7 @@ function SectorChip({ href, active, children }: { href: string; active: boolean;
       )}
     >
       {children}
+      <LinkPending className="ms-1.5" />
     </Link>
   );
 }
@@ -75,7 +90,9 @@ export async function QueueView({ surfaceKey, query }: { surfaceKey: SurfaceKey;
   const sectorId = parseSectorFilter(query?.setor);
   const sort = parseQueueSort(query?.ordem);
   const tagFilter = query?.tag?.trim() || undefined;
-  const result = await getQueueBoardHandler();
+  const limit = parseLimit(query?.mais);
+  // Só a aba pedida é completada (solicitante e tags); sem ?etapa, o servidor escolhe a primeira com decisão pendente.
+  const result = await getQueueBoardHandler({ bucket: parseBucket(query?.etapa) });
   const ordem = sort === "idade" ? undefined : sort;
 
   return (
@@ -89,21 +106,12 @@ export async function QueueView({ surfaceKey, query }: { surfaceKey: SurfaceKey;
     >
       {!result.success ? (
         <BlockedNotice title="Fila" message={result.error.message} />
-      ) : result.data.items.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center">
-          <span className="grid size-12 place-items-center rounded-full bg-success/15 text-success">
-            <Check className="size-6" aria-hidden />
-          </span>
-          <p className="text-base font-semibold text-foreground">Fila zerada</p>
-          <p className="text-sm text-muted-foreground">Nenhum pedido esperando decisão nos seus setores.</p>
-        </div>
       ) : (
         (() => {
-          const { items: allItems, allocation, counts, flowStateIds } = result.data;
-          const bucket = parseBucket(query?.etapa) ?? defaultBucket(counts);
+          const { items, allocation, counts, uncounted, flowStateIds, bucket } = result.data;
           const bucketInfo = QUEUE_BUCKETS.find((entry) => entry.key === bucket);
-          const items = allItems.filter((item) => item.bucket === bucket);
           const sectors = sectorChips(items);
+          const nothingPending = pendingDecisions(counts) === 0;
           // Tags presentes nesta etapa (com quantos chamados cada), na ordem de atenção (fluxo primeiro).
           const tagCount = new Map<string, number>();
           for (const item of items) for (const name of new Set(item.tags)) tagCount.set(name, (tagCount.get(name) ?? 0) + 1);
@@ -119,7 +127,7 @@ export async function QueueView({ surfaceKey, query }: { surfaceKey: SurfaceKey;
                 {QUEUE_BUCKETS.map((entry) => (
                   <Chip key={entry.key} href={hrefWith(surface.queue, { etapa: bucketParam(entry.key), ordem })} active={entry.key === bucket}>
                     {entry.label}
-                    <span className="text-xs opacity-80">{counts[entry.key]}</span>
+                    {!uncounted.includes(entry.key) && <span className="text-xs opacity-80">{counts[entry.key]}</span>}
                   </Chip>
                 ))}
               </nav>
@@ -171,13 +179,22 @@ export async function QueueView({ surfaceKey, query }: { surfaceKey: SurfaceKey;
                         )}
                       >
                         {option.label}
+                        <LinkPending className="ms-1" />
                       </Link>
                     ))}
                   </div>
                 </div>
               </div>
 
-              {sorted.length === 0 ? (
+              {sorted.length === 0 && !filteredBy && nothingPending && PENDING_BUCKETS.includes(bucket) ? (
+                <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center">
+                  <span className="grid size-12 place-items-center rounded-full bg-success/15 text-success">
+                    <Check className="size-6" aria-hidden />
+                  </span>
+                  <p className="text-base font-semibold text-foreground">Fila zerada</p>
+                  <p className="text-sm text-muted-foreground">Nenhum pedido esperando decisão nos seus setores.</p>
+                </div>
+              ) : sorted.length === 0 ? (
                 <EmptyState
                   icon={<Layers className="size-6" />}
                   title={`Nada em “${bucketInfo?.label ?? "esta etapa"}”`}
@@ -191,18 +208,32 @@ export async function QueueView({ surfaceKey, query }: { surfaceKey: SurfaceKey;
                   }
                 />
               ) : (
-                <ul className={LIST_CLASS}>
-                  {sorted.map((ticket) => (
-                    <QueueRow
-                      key={ticket.id}
-                      ticket={ticket}
-                      href={surface.detail(ticket.id)}
-                      options={allocation.byGroup[ticket.groupId] ?? []}
-                      suggestedId={allocation.suggestedByGroup[ticket.groupId] ?? null}
-                      flowStateIds={flowStateIds}
-                    />
-                  ))}
-                </ul>
+                <>
+                  <ul className={LIST_CLASS}>
+                    {sorted.slice(0, limit).map((ticket) => (
+                      <QueueRow
+                        key={ticket.id}
+                        ticket={ticket}
+                        href={surface.detail(ticket.id)}
+                        options={allocation.byGroup[ticket.groupId] ?? []}
+                        suggestedId={allocation.suggestedByGroup[ticket.groupId] ?? null}
+                        flowStateIds={flowStateIds}
+                      />
+                    ))}
+                  </ul>
+                  {sorted.length > limit && (
+                    <div className="flex justify-center">
+                      <Link
+                        href={hrefWith(surface.queue, { etapa, setor: sectorId, tag, ordem, mais: limit + PAGE_SIZE })}
+                        scroll={false}
+                        className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                      >
+                        Mostrar mais ({sorted.length - limit} {sorted.length - limit === 1 ? "restante" : "restantes"})
+                        <LinkPending />
+                      </Link>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           );

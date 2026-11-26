@@ -30,7 +30,8 @@ export function QuickAssign({ ticketId, options, suggestedId }: { ticketId: numb
       }
       toast.success("Chamado atribuído.");
       setValue("");
-      router.refresh();
+      // Dentro da mesma transição: o botão segue ocupado até a tela atualizar (evita o segundo clique).
+      startTransition(() => router.refresh());
     });
   }
 

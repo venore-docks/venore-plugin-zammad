@@ -9,6 +9,7 @@ import { enterSurface } from "./context";
 import { AgentTicketList } from "./dashboards/agent/ticket-rows";
 import { ColaboraFrame } from "./frame";
 import type { ViewQuery } from "./query";
+import { LinkPending } from "../public/link-pending";
 
 const EMPTY_FILTER: Record<AssignedFilter, string> = {
   todos: "Nada atribuído a você",
@@ -76,6 +77,7 @@ export async function AssignedView({ surfaceKey, query }: { surfaceKey: SurfaceK
                   >
                     {option.label}
                     <span className="text-xs text-muted-foreground tabular-nums">{counts[option.key]}</span>
+                    <LinkPending />
                   </Link>
                 );
               })}

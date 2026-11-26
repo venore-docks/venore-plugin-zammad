@@ -5,7 +5,8 @@ import { zammadRequest } from "./zammad-client";
 // Tags dos chamados. A busca do Zammad (`tickets/search`) não traz as tags, então lemos uma a uma
 // (`GET /tags?object=Ticket&o_id=<id>`), em nome de quem pede, com poucas em paralelo e cache curto.
 // Falha numa leitura = sem tags naquele card (nunca derruba a lista).
-const CONCURRENCY = 8;
+// A fila só pede as tags das linhas da aba aberta; 12 por vez segura o tempo sem sobrecarregar o Zammad.
+const CONCURRENCY = 12;
 const TTL_MS = 60 * 1000;
 
 const cache = new Map<string, { at: number; tags: string[] }>();

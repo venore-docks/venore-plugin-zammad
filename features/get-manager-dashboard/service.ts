@@ -3,7 +3,7 @@ import type { ZammadExpandedTicket } from "../../contracts/zammad";
 import { UNASSIGNED_OWNER_ID, isUnassigned } from "../../shared/access-rules";
 import { flowStepOf, type FlowStep } from "../../shared/flow";
 import { loadAgentOptions } from "../../shared/own-ticket";
-import { bucketOf, countBuckets } from "../../shared/queue-buckets";
+import { bucketOf, countBuckets, defaultBucket, type QueueBucket } from "../../shared/queue-buckets";
 import { describeState } from "../../shared/ticket-state";
 import { assigneesFor, teamFor } from "../../shared/directory";
 import { isUrgentPriority, pickLeastLoaded, rankLoads, sectorChips, sortQueue, summarizeManager, ageMs, type KpiTicket } from "../../shared/manager-stats";
@@ -17,6 +17,7 @@ import type {
   AllocationOptions,
   AssigneeOption,
   GetManagerDashboardResult,
+  GetQueueBoardInput,
   GetQueueBoardResult,
   GetTeamLoadsResult,
   QueueRow,
@@ -27,29 +28,41 @@ import type {
 const MAX_MEMBERS = 40;
 const QUEUE_TOP = 5;
 const LOADS_TTL_MS = 60 * 1000;
+// Aba Finalizado: só os mais recentes (é consulta; o resto continua no histórico de cada pessoa).
+const FINISHED_LIMIT = 50;
 
 type Snapshot = {
   now: number;
   members: { id: number; name: string }[];
+  // Sem responsável: abertos (a fila) e encerrados (Não autorizado, Finalizado). UMA busca no Zammad.
   queue: ZammadExpandedTicket[];
-  // Abertos de cada agente (mesma ordem de `members`).
+  unassignedClosed: ZammadExpandedTicket[];
+  // Os de cada agente (mesma ordem de `members`): só abertos, ou também encerrados com `includeClosed`.
   perMember: ZammadExpandedTicket[][];
 };
 
-// A fila e os chamados de cada agente da equipe: N+1 buscas no Zammad, todas em paralelo. `includeClosed`: os de
-// cada agente vêm também encerrados (os 100 mais recentes de cada um) — a fila mostra a aba Finalizado.
+const isClosed = (ticket: ZammadExpandedTicket) => describeState(ticket.state ?? "").closed;
+
+// A fila e os chamados de cada agente da equipe: 1 + N buscas no Zammad, todas em paralelo. `includeClosed`: os de
+// cada agente vêm também encerrados (os 100 mais recentes de cada um) — só para a aba Finalizado.
 async function loadSnapshot(requester: Requester, options: { includeClosed?: boolean } = {}): Promise<OperationResult<Snapshot>> {
   const team = await teamFor(requester);
   const members = team.members.slice(0, MAX_MEMBERS).map((member) => ({ id: member.id, name: member.name }));
   const byMember = options.includeClosed ? searchTicketsByOwner : searchOpenTicketsByOwner;
-  const [queue, ...perMember] = await Promise.all([
-    searchOpenTicketsByOwner(requester, UNASSIGNED_OWNER_ID),
+  const [unassigned, ...perMember] = await Promise.all([
+    searchTicketsByOwner(requester, UNASSIGNED_OWNER_ID),
     ...members.map((member) => byMember(requester, member.id)),
   ]);
-  if (!queue.success) return queue;
+  if (!unassigned.success) return unassigned;
   return {
     success: true,
-    data: { now: Date.now(), members, queue: queue.data, perMember: perMember.map((found) => (found.success ? found.data : [])) },
+    data: {
+      now: Date.now(),
+      members,
+      queue: unassigned.data.filter((ticket) => !isClosed(ticket)),
+      unassignedClosed: unassigned.data.filter(isClosed),
+      perMember: perMember.map((found) => (found.success ? found.data : [])),
+    },
   };
 }
 
@@ -61,40 +74,58 @@ function loadsOf(snapshot: Snapshot): Map<number, { open: number; waiting: numbe
   const loads = new Map<number, { open: number; waiting: number }>();
   snapshot.members.forEach((member, index) => {
     // Carga = só os abertos (com includeClosed, a lista traz também os encerrados).
-    const tickets = (snapshot.perMember[index] ?? []).filter((ticket) => !describeState(ticket.state ?? "").closed);
+    const tickets = (snapshot.perMember[index] ?? []).filter((ticket) => !isClosed(ticket));
     loads.set(member.id, { open: tickets.length, waiting: tickets.filter((ticket) => isCustomerWaiting(ticket)).length });
   });
   return loads;
 }
 
-async function toRows(requester: Requester, tickets: ZammadExpandedTicket[], now: number, ownerNames: Map<number, string> = new Map()): Promise<QueueRow[]> {
-  const [people, tags] = await Promise.all([getPeople(tickets.map((ticket) => ticket.customer_id)), loadTicketTags(requester, tickets)]);
-  return tickets.flatMap((ticket) => {
-    const state = describeState(ticket.state ?? "");
-    const ownerId = isUnassigned(ticket.owner_id) ? null : ticket.owner_id;
-    const bucket = bucketOf(state.step, ownerId !== null, state.closed);
-    if (!bucket) return [];
-    return [
-      {
-        id: ticket.id,
-        number: String(ticket.number),
-        title: ticket.title,
-        group: ticket.group,
-        groupId: ticket.group_id,
-        priorityId: ticket.priority_id,
-        priorityLabel: priorityLabel(ticket.priority ?? ""),
-        urgent: isUrgentPriority(ticket.priority),
-        requesterName: people.get(ticket.customer_id)?.name ?? null,
-        ageMs: ageMs(ticket.created_at, now),
-        step: state.step,
-        stateLabel: state.label,
-        stateColor: state.color,
-        bucket,
-        ownerId,
-        ownerName: ownerId === null ? null : (ownerNames.get(ownerId) ?? null),
-        tags: tags.get(ticket.id) ?? [],
-      },
-    ];
+// Linha "crua": tudo que vem da busca, sem solicitante nem tags (esses custam uma leitura por chamado — ver
+// completeRows). null = fora da fila (estado genérico encerrado).
+function toRow(ticket: ZammadExpandedTicket, now: number, ownerNames: Map<number, string>): QueueRow | null {
+  const state = describeState(ticket.state ?? "");
+  const ownerId = isUnassigned(ticket.owner_id) ? null : ticket.owner_id;
+  const bucket = bucketOf(state.step, ownerId !== null, state.closed);
+  if (!bucket) return null;
+  return {
+    id: ticket.id,
+    number: String(ticket.number),
+    title: ticket.title,
+    group: ticket.group,
+    groupId: ticket.group_id,
+    priorityId: ticket.priority_id,
+    priorityLabel: priorityLabel(ticket.priority ?? ""),
+    urgent: isUrgentPriority(ticket.priority),
+    requesterName: null,
+    ageMs: ageMs(ticket.created_at, now),
+    step: state.step,
+    stateLabel: state.label,
+    stateColor: state.color,
+    bucket,
+    ownerId,
+    ownerName: ownerId === null ? null : (ownerNames.get(ownerId) ?? null),
+    tags: [],
+  };
+}
+
+// Solicitante e tags SÓ das linhas que vão para a tela: a busca do Zammad não traz nenhum dos dois, e cada um é
+// uma leitura por pessoa/chamado (com cache). `withTags: false` pula as tags (aba Finalizado: não ajudam a decidir).
+async function completeRows(requester: Requester, rows: QueueRow[], tickets: Map<number, ZammadExpandedTicket>, withTags = true): Promise<QueueRow[]> {
+  const source = rows.flatMap((row) => {
+    const ticket = tickets.get(row.id);
+    return ticket ? [ticket] : [];
+  });
+  const [people, tags] = await Promise.all([
+    getPeople(source.map((ticket) => ticket.customer_id)),
+    withTags ? loadTicketTags(requester, source) : Promise.resolve(new Map<number, string[]>()),
+  ]);
+  return rows.map((row) => {
+    const customerId = tickets.get(row.id)?.customer_id;
+    return {
+      ...row,
+      requesterName: customerId === undefined ? null : (people.get(customerId)?.name ?? null),
+      tags: tags.get(row.id) ?? [],
+    };
   });
 }
 
@@ -127,33 +158,55 @@ export async function getManagerDashboard(requester: Requester): Promise<GetMana
   const kpis = summarizeManager(queue.map(toKpiTicket), assigned.map(toKpiTicket), now);
   const agents = rankLoads(members.map((member) => ({ id: member.id, name: member.name, ...(loads.get(member.id) ?? { open: 0, waiting: 0 }) })));
 
-  // Os mais antigos da fila: só deles buscamos solicitante e opções de alocação.
+  // Os mais antigos da fila: só deles buscamos solicitante, tags e opções de alocação.
   const oldest = [...queue].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()).slice(0, QUEUE_TOP);
-  const queueTop = await toRows(requester, oldest, now);
-  const allocation = await allocationFor(queueTop, loads);
+  const bare = oldest.flatMap((ticket) => toRow(ticket, now, new Map()) ?? []);
+  const [queueTop, allocation] = await Promise.all([
+    completeRows(requester, bare, new Map(oldest.map((ticket) => [ticket.id, ticket]))),
+    allocationFor(bare, loads),
+  ]);
   return { success: true, data: { kpis, agents, queueTop, allocation, flowStateIds: flowStateIdsOf(options) } };
 }
 
-// A fila do gestor por etapa, com TODOS os estados: sem responsável (Novo, Em análise, Autorizado, Reavaliação), os
-// encerrados sem responsável (Não autorizado, à espera do solicitante; Finalizado) e os chamados dos agentes da
-// equipe, abertos e encerrados (Atribuído, Em andamento, Concluído, Finalizado).
-export async function getQueueBoard(requester: Requester): Promise<GetQueueBoardResult> {
-  const [snapshot, unassignedAll, options] = await Promise.all([
-    loadSnapshot(requester, { includeClosed: true }),
-    searchTicketsByOwner(requester, UNASSIGNED_OWNER_ID),
-    loadAgentOptions(),
-  ]);
+// A fila do gestor por etapa, com TODOS os estados (uma aba por estado). Para ser rápida:
+//   - as contagens das abas vêm das buscas (1 + N, em paralelo), sem nenhuma leitura extra;
+//   - solicitante e tags (uma leitura por chamado) só para as linhas da aba aberta;
+//   - os encerrados de cada agente só são buscados na aba Finalizado (fora dela, a contagem dessa aba é
+//     desconhecida: `uncounted`).
+export async function getQueueBoard(requester: Requester, input: GetQueueBoardInput = {}): Promise<GetQueueBoardResult> {
+  const includeClosed = input.bucket === "finalizado";
+  const [snapshot, options] = await Promise.all([loadSnapshot(requester, { includeClosed }), loadAgentOptions()]);
   if (!snapshot.success) return snapshot;
-  const { now, queue, perMember, members } = snapshot.data;
-  const closedUnassigned = unassignedAll.success ? unassignedAll.data.filter((ticket) => describeState(ticket.state ?? "").closed && flowStepOf(ticket.state) !== null) : [];
+  const { now, queue, unassignedClosed, perMember, members } = snapshot.data;
 
+  // Encerrados sem responsável só entram se forem do fluxo (Não autorizado espera o solicitante; Finalizado).
+  const flowClosed = unassignedClosed.filter((ticket) => flowStepOf(ticket.state) !== null);
   const byId = new Map<number, ZammadExpandedTicket>();
-  for (const ticket of [...queue, ...closedUnassigned, ...perMember.flat()]) byId.set(ticket.id, ticket);
+  for (const ticket of [...queue, ...flowClosed, ...perMember.flat()]) byId.set(ticket.id, ticket);
   const ownerNames = new Map(members.map((member) => [member.id, member.name]));
-  const items = sortQueue(await toRows(requester, [...byId.values()], now, ownerNames), "idade");
+  const all = [...byId.values()].flatMap((ticket) => toRow(ticket, now, ownerNames) ?? []);
 
-  const allocation = await allocationFor(items, loadsOf(snapshot.data));
-  return { success: true, data: { items, sectors: sectorChips(items), allocation, counts: countBuckets(items), flowStateIds: flowStateIdsOf(options) } };
+  const counts = countBuckets(all);
+  const uncounted: QueueBucket[] = includeClosed ? [] : ["finalizado"];
+  const bucket = input.bucket ?? defaultBucket(counts);
+
+  let inBucket = sortQueue(
+    all.filter((row) => row.bucket === bucket),
+    "idade",
+  );
+  if (bucket === "finalizado") {
+    const updated = (row: QueueRow) => byId.get(row.id)?.updated_at ?? "";
+    inBucket = [...inBucket].sort((a, b) => updated(b).localeCompare(updated(a))).slice(0, FINISHED_LIMIT);
+  }
+
+  const [items, allocation] = await Promise.all([
+    completeRows(requester, inBucket, byId, bucket !== "finalizado"),
+    allocationFor(inBucket, loadsOf(snapshot.data)),
+  ]);
+  return {
+    success: true,
+    data: { bucket, items, sectors: sectorChips(items), allocation, counts, uncounted, flowStateIds: flowStateIdsOf(options) },
+  };
 }
 
 function flowStateIdsOf(options: Awaited<ReturnType<typeof loadAgentOptions>>): Partial<Record<FlowStep, number>> {

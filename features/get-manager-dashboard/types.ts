@@ -47,11 +47,18 @@ export type ManagerDashboardData = {
   flowStateIds: Partial<Record<FlowStepKey, number>>;
 };
 
+// `bucket`: a aba pedida (ou a primeira com decisão pendente). Ausente = a fila escolhe.
+export type GetQueueBoardInput = { bucket?: QueueBucket };
+
 export type QueueBoardData = {
+  // A aba mostrada e as linhas DELA (só essas vêm com solicitante e tags).
+  bucket: QueueBucket;
   items: QueueRow[];
   sectors: SectorChip[];
   allocation: AllocationOptions;
   counts: Record<QueueBucket, number>;
+  // Abas cuja contagem não foi calculada (Finalizado, fora da própria aba): a tela não mostra número.
+  uncounted: QueueBucket[];
   // Id de cada estado do fluxo no Zammad (para os botões Autorizar, Não autorizar, Em análise).
   flowStateIds: Partial<Record<FlowStepKey, number>>;
 };

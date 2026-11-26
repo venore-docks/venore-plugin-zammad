@@ -28,7 +28,7 @@ export const QUEUE_BUCKETS: { key: QueueBucket; label: string; hint: string }[] 
   { key: "andamento", label: "Em andamento", hint: "Um agente está trabalhando no pedido." },
   { key: "concluido", label: "Concluído", hint: "Entregues, esperando o solicitante aprovar ou pedir ajustes." },
   { key: "nao_autorizado", label: "Não autorizado", hint: "Negados. O solicitante pode reenviar com explicação." },
-  { key: "finalizado", label: "Finalizado", hint: "Encerrados recentemente (os mais novos de cada pessoa da equipe)." },
+  { key: "finalizado", label: "Finalizado", hint: "Os 50 encerrados mais recentes dos seus setores." },
 ];
 
 const BY_STEP: Record<FlowStepKey, QueueBucket> = {
