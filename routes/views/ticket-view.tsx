@@ -37,7 +37,10 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
   }
   const ticket = result.data;
   const agent = ticket.agent;
-  const backHref = agent ? (ticket.owner === null ? surface.queue : surface.assigned) : surface.mine;
+  // Chamado filho volta para o PAI (que, se também for filho, volta para o dele…): a cadeia inteira de volta até o
+  // chamado raiz, que então volta para a lista.
+  const backHref = ticket.parent ? surface.detail(ticket.parent.id) : agent ? (ticket.owner === null ? surface.queue : surface.assigned) : surface.mine;
+  const backLabel = ticket.parent ? `Voltar ao chamado pai #${ticket.parent.number}` : undefined;
 
   return (
     <ColaboraFrame
@@ -47,6 +50,7 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
       title={surfaceKey === "app" ? `#${ticket.number}` : ticket.title}
       subtitle={surfaceKey === "app" ? ticket.group : `#${ticket.number} · ${ticket.group} · aberto em ${formatDateTime(ticket.createdAt)}`}
       backHref={backHref}
+      backLabel={backLabel}
     >
       <ReplyProvider>
         <div className="max-w-3xl space-y-4 pb-6">

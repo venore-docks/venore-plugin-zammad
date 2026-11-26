@@ -21,6 +21,8 @@ export type FrameProps = {
   subtitle?: string;
   /** Link "voltar" (no app vira a seta do cabeçalho). */
   backHref?: string;
+  /** Texto do link "voltar" quando ele não leva à lista (ex.: "Voltar ao chamado pai #123"). */
+  backLabel?: string;
   /** Números nas abas/pílulas (ex.: fila, atribuídos). */
   counts?: Partial<Record<NavKey, number>>;
   /** Ações no canto do título (só no portal). */
@@ -28,7 +30,7 @@ export type FrameProps = {
   children: React.ReactNode;
 };
 
-export function ColaboraFrame({ surfaceKey, viewer, active, title, subtitle, backHref, counts, actions, children }: FrameProps) {
+export function ColaboraFrame({ surfaceKey, viewer, active, title, subtitle, backHref, backLabel, counts, actions, children }: FrameProps) {
   const surface = surfaceFor(surfaceKey);
   if (surfaceKey === "app") {
     return (
@@ -36,6 +38,7 @@ export function ColaboraFrame({ surfaceKey, viewer, active, title, subtitle, bac
         title={title}
         subtitle={subtitle}
         backHref={backHref}
+        backLabel={backLabel}
         // Telas de detalhe (active=null) ficam sem a barra de abas: a resposta ocupa o rodapé.
         nav={viewer && active ? { active, items: navItemsFor(surface, viewer), counts } : undefined}
       >
@@ -68,7 +71,7 @@ export function ColaboraFrame({ surfaceKey, viewer, active, title, subtitle, bac
         {backHref && (
           <Link href={backHref} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="size-4 rtl:rotate-180" />
-            Voltar
+            {backLabel ?? "Voltar"}
           </Link>
         )}
         <div className="flex flex-wrap items-end justify-between gap-4">

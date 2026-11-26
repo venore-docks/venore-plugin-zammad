@@ -14,12 +14,14 @@ export function AppShell({
   title,
   subtitle,
   backHref,
+  backLabel,
   nav,
   children,
 }: {
   title: string;
   subtitle?: string;
   backHref?: string;
+  backLabel?: string;
   nav?: AppNav;
   children: React.ReactNode;
 }) {
@@ -31,7 +33,8 @@ export function AppShell({
           {backHref && (
             <Link
               href={backHref}
-              aria-label="Voltar"
+              aria-label={backLabel ?? "Voltar"}
+              title={backLabel}
               className="grid size-11 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
               <ArrowLeft className="size-5" />

@@ -2,6 +2,13 @@
 
 Versões anteriores: ver o histórico do git (tags `vX.Y.Z`).
 
+## v1.10.1
+
+### Correções
+- **Voltar no chamado filho** leva ao chamado pai (e, numa cadeia de filhos, passo a passo até o chamado raiz, que
+  então volta para a lista), em vez de ir sempre para "Atribuídos a mim". O botão diz para onde leva ("Voltar ao
+  chamado pai #N").
+
 ## v1.10.0
 
 ### Novidades
