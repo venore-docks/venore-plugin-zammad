@@ -26,7 +26,7 @@ const DEFS: NavDef[] = [
   { key: "queue", label: "Fila", shortLabel: "Fila", icon: Layers, audience: "supervisor", hrefOf: (s) => s.queue },
   { key: "team", label: "Equipe", shortLabel: "Equipe", icon: Users, audience: "supervisor", hrefOf: (s) => s.team },
   { key: "assigned", label: "Atribuídos a mim", shortLabel: "Atribuídos", icon: Inbox, audience: "staff", hrefOf: (s) => s.assigned },
-  { key: "mine", label: "Meus chamados", shortLabel: "Meus", icon: MessagesSquare, audience: "all", hrefOf: (s) => s.mine },
+  { key: "mine", label: "Meus chamados", shortLabel: "Chamados", icon: MessagesSquare, audience: "all", hrefOf: (s) => s.mine },
   { key: "new", label: "Abrir chamado", shortLabel: "Novo", icon: PlusCircle, audience: "all", hrefOf: (s) => s.newTicket },
 ];
 

@@ -7,6 +7,7 @@ import { AppShell } from "../app/shell";
 import { navItemsFor, type NavKey } from "./nav";
 import { ViewAsBar } from "./view-as-bar";
 import { LinkPending } from "../public/link-pending";
+import { SCROLL_TAB_CLASS, ScrollTabs } from "./scroll-tabs";
 
 // Moldura de toda tela do Colabora. Mesma API nas duas superfícies; só o desenho muda:
 //   app    → AppShell (cabeçalho fixo + abas embaixo), SEM a casca do Venore Docks;
@@ -82,10 +83,7 @@ export function ColaboraFrame({ surfaceKey, viewer, active, title, subtitle, bac
           {actions ?? newTicketAction}
         </div>
         {items.length > 0 && (
-          <nav
-            aria-label="Navegação do Colabora"
-            className="flex gap-6 overflow-x-auto border-b text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          >
+          <ScrollTabs label="Navegação do Colabora" className="gap-6">
             {items.map((item) => {
               const isActive = item.key === active;
               const count = counts?.[item.key] ?? 0;
@@ -95,7 +93,8 @@ export function ColaboraFrame({ surfaceKey, viewer, active, title, subtitle, bac
                   href={item.href}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "inline-flex shrink-0 items-center gap-1.5 rounded-sm pb-2.5 whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                    SCROLL_TAB_CLASS,
+                    "rounded-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                     isActive ? "font-medium text-foreground shadow-[inset_0_-2px_0_var(--color-primary)]" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
@@ -105,7 +104,7 @@ export function ColaboraFrame({ surfaceKey, viewer, active, title, subtitle, bac
                 </Link>
               );
             })}
-          </nav>
+          </ScrollTabs>
         )}
       </header>
       <ViewAsBar showPicker={active === "home"} homeHref={surface.home} />

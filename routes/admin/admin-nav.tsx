@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@venore/plugin-sdk/ui";
+import { ScrollTabs } from "../views/scroll-tabs";
 
 const BASE = "/admin/colabora";
 
@@ -18,7 +19,7 @@ const SECTIONS = [
 export function AdminNav() {
   const pathname = usePathname().replace(/\/$/, "");
   return (
-    <nav aria-label="Seções do Colabora" className="overflow-x-auto border-b">
+    <ScrollTabs label="Seções do Colabora">
       <ul className="flex min-w-max items-center gap-1">
         {SECTIONS.map((section) => {
           const active = section.exact ? pathname === section.href : pathname === section.href || pathname.startsWith(`${section.href}/`);
@@ -28,7 +29,7 @@ export function AdminNav() {
                 href={section.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "-mb-px inline-flex h-10 items-center border-b-2 px-3 text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  "-mb-px inline-flex min-h-11 items-center border-b-2 px-3 text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                   active ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
                 )}
               >
@@ -38,6 +39,6 @@ export function AdminNav() {
           );
         })}
       </ul>
-    </nav>
+    </ScrollTabs>
   );
 }
