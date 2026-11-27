@@ -27,6 +27,7 @@ import type { AgentControls, AgentStateOption } from "../../contracts/types";
 import { localNow } from "../../shared/answers";
 import { tomorrowAtNineLocal } from "../../shared/agent-stats";
 import { validatePending } from "../../shared/ticket-options";
+import { updateNotice } from "../../shared/update-notice";
 import { agentUpdateTicketAction } from "../public/actions";
 
 // Valor do Select para "sem previsão" (o Select não aceita string vazia como item).
@@ -46,17 +47,21 @@ export function AttendanceControls({
   controls,
   allocation,
   currentEstimate,
+  currentDeadline,
 }: {
   ticketId: number;
   controls: AgentControls;
   allocation: React.ReactNode;
   // Valor salvo do tempo previsto ("" = não definido).
   currentEstimate: string;
+  // Prazo de entrega salvo, "YYYY-MM-DDTHH:mm" em UTC-3 ("" = não definido).
+  currentDeadline: string;
 }) {
   const router = useRouter();
   const [stateId, setStateId] = useState(controls.stateId);
   const [priorityId, setPriorityId] = useState(controls.priorityId);
   const [estimate, setEstimate] = useState(currentEstimate);
+  const [deadline, setDeadline] = useState(currentDeadline);
   const [pendingTime, setPendingTime] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, startTransition] = useTransition();
@@ -66,21 +71,23 @@ export function AttendanceControls({
   const allocationFirst = Boolean(allocation) && controls.ownerId === null;
   const state = controls.states.find((candidate) => candidate.id === stateId);
   const estimateChanged = controls.canSetEstimate && estimate !== currentEstimate;
-  const dirty = stateId !== controls.stateId || priorityId !== controls.priorityId || estimateChanged;
+  const deadlineChanged = controls.canSetEstimate && controls.hasDeadline && deadline !== currentDeadline;
+  const dirty = stateId !== controls.stateId || priorityId !== controls.priorityId || estimateChanged || deadlineChanged;
 
   // Atalhos: só os que fazem sentido a partir do estado atual.
   const inProgress = controls.states.find((candidate) => candidate.tone === "open");
   const pendingState = controls.states.find((candidate) => candidate.needsPending && /retorno/i.test(candidate.label)) ?? controls.states.find((candidate) => candidate.needsPending);
   const closedState = controls.states.find((candidate) => candidate.tone === "closed");
 
-  function send(update: { stateId?: number; pendingTime?: string; priorityId?: number; estimate?: string }, done: string) {
+  function send(update: { stateId?: number; pendingTime?: string; priorityId?: number; estimate?: string; deadline?: string }, done: string) {
     startTransition(async () => {
       const result = await agentUpdateTicketAction({ ticketId, ...update });
       if (!result.ok) {
         toast.error(result.error);
         return;
       }
-      toast.success(done);
+      const notice = updateNotice(result.data);
+      toast.success(notice ? `${done} ${notice}` : done);
       // Dentro da mesma transição: o botão segue ocupado até a tela atualizar (evita o segundo clique).
       startTransition(() => router.refresh());
     });
@@ -99,6 +106,7 @@ export function AttendanceControls({
         pendingTime: state?.needsPending && stateId !== controls.stateId ? pendingTime : undefined,
         priorityId: priorityId !== controls.priorityId ? priorityId : undefined,
         estimate: estimateChanged ? estimate : undefined,
+        deadline: deadlineChanged ? deadline : undefined,
       },
       "Alterações salvas.",
     );
@@ -122,8 +130,11 @@ export function AttendanceControls({
   const showClose = controls.canEdit && !controls.inFlow && closedState && closedState.id !== controls.stateId;
   const hasQuick = showInProgress || showPending || showClose;
   const hasFlow = controls.canEdit && controls.flowActions.length > 0;
+  // Estados que pedem uma escolha (Em pausa → motivo) só pelo botão do fluxo, que abre o diálogo.
+  const viaButton = new Set(controls.flowActions.filter((action) => action.choice).map((action) => action.stateId));
+  const manualStates = controls.states.filter((option) => option.id === controls.stateId || !viaButton.has(option.id));
   // Só o estado atual na lista = nada a mudar por aqui (o seletor some; fica a prioridade).
-  const canChangeState = controls.states.some((option) => option.id !== controls.stateId);
+  const canChangeState = manualStates.some((option) => option.id !== controls.stateId);
   const hasNextStep = allocationFirst || hasFlow || hasQuick || Boolean(controls.flowHint);
 
   return (
@@ -217,6 +228,12 @@ export function AttendanceControls({
                 </Select>
               </label>
             )}
+            {controls.canSetEstimate && controls.hasDeadline && (
+              <label className="space-y-1.5 text-sm">
+                <span className="text-muted-foreground">Prazo de entrega</span>
+                <Input type="datetime-local" className="h-10" value={deadline} onChange={(event) => setDeadline(event.target.value)} />
+              </label>
+            )}
             {controls.canEdit && canChangeState && (
               <label className="space-y-1.5 text-sm">
                 <span className="text-muted-foreground">Mudar estado manualmente</span>
@@ -225,7 +242,7 @@ export function AttendanceControls({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {controls.states.map((option) => (
+                    {manualStates.map((option) => (
                       <SelectItem key={option.id} value={String(option.id)}>
                         {option.label}
                       </SelectItem>

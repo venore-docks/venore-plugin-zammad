@@ -140,15 +140,17 @@ describe("equipe (espelha os Core Workflows 600–607)", () => {
     expect(stepAfterOwnerChange(null, true)).toBeNull();
   });
 
-  it("agente só alterna entre Em andamento e Concluído", () => {
-    expect(allowedTargets("em_andamento", agente)).toEqual(["concluido"]);
+  it("agente: Em andamento vai para Concluído ou Em pausa; Em pausa só volta para Em andamento", () => {
+    expect(allowedTargets("em_andamento", agente)).toEqual(["concluido", "em_pausa"]);
+    expect(allowedTargets("em_pausa", agente)).toEqual(["em_andamento"]);
+    expect(canMoveTo("em_pausa", "concluido", agente)).toBe(false);
     expect(allowedTargets("concluido", agente)).toEqual(["em_andamento"]);
     expect(canMoveTo("novo", "autorizado", agente)).toBe(false);
     expect(canMoveTo("em_andamento", "finalizado", agente)).toBe(false);
   });
 
   it("gestor que também é o responsável soma as duas listas", () => {
-    expect(allowedTargets("em_andamento", ambos)).toEqual(["concluido"]);
+    expect(allowedTargets("em_andamento", ambos).sort()).toEqual(["concluido", "em_pausa"]);
     expect(allowedTargets("autorizado", ambos).sort()).toEqual(["em_analise", "nao_autorizado", "reavaliacao"]);
   });
 
@@ -156,7 +158,10 @@ describe("equipe (espelha os Core Workflows 600–607)", () => {
     const novo = staffActionsFor("novo", gestor);
     expect(novo.map((action) => action.target)).toEqual(["em_analise", "autorizado", "nao_autorizado"]);
     expect(novo.find((action) => action.target === "nao_autorizado")?.reason).toBe("required");
-    expect(staffActionsFor("em_andamento", agente)).toMatchObject([{ target: "concluido", reason: "optional", color: "success" }]);
+    expect(staffActionsFor("em_andamento", agente)).toMatchObject([
+      { target: "concluido", reason: "optional", color: "success" },
+      { target: "em_pausa", label: "Pausar" },
+    ]);
   });
 
   it("dica: autorizado sem responsável pede atribuição", () => {

@@ -1,6 +1,8 @@
 import { toTicketHistory, type RawHistory } from "../../shared/ticket-history";
 import { zammadRequest } from "../../shared/zammad-client";
-import type { AgentControls, CustomerActionOption, LinkedTicket, StaffFlowAction, TicketAttachmentInfo, TicketHistoryEntry, TicketMessage } from "../../contracts/types";
+import type { AgentControls, CustomerActionOption, FieldOption, LinkedTicket, StaffFlowAction, TicketAttachmentInfo, TicketHistoryEntry, TicketMessage } from "../../contracts/types";
+import { DEADLINE_FIELD, deadlineToLocal } from "../../shared/deadline";
+import { flattenOptions } from "../../shared/workflow";
 import { childGroupOptions, childrenBlockMessage, openChildren } from "../../shared/children";
 import { loadLinkedTickets } from "../../shared/ticket-links";
 import {
@@ -12,6 +14,7 @@ import {
   customerMustDecide,
   customerReplyBlockedMessage,
   flowStepOf,
+  PAUSE_REASON_FIELD,
   staffActionsFor,
   staffHintFor,
   type FlowStep,
@@ -98,7 +101,7 @@ async function buildAgentControls(
   mode: ViewerMode,
   role: StaffRole,
   estimateChoices: EstimateOption[] | null,
-  extra: { openChildren: number; childGroups: { id: number; label: string }[] },
+  extra: { openChildren: number; childGroups: { id: number; label: string }[]; pauseReasons: FieldOption[]; hasDeadline: boolean },
 ): Promise<AgentControls | null> {
   if (mode !== "agent") return null;
   const meId = requester.zammadUser.id;
@@ -119,7 +122,9 @@ async function buildAgentControls(
     states = allStates.filter((state) => state.id === ticket.state_id || targets.includes(flowStepOf(state.name) as FlowStep));
     flowActions = staffActionsFor(step, actor).flatMap((action) => {
       const state = allStates.find((candidate) => flowStepOf(candidate.name) === action.target);
-      return state ? [{ stateId: state.id, label: action.label, prompt: action.prompt, color: action.color, reason: action.reason, done: action.done }] : [];
+      // Pausar: o diálogo pede o motivo (opções do campo `motivo_pausa` do Zammad).
+      const choice = action.target === "em_pausa" && extra.pauseReasons.length > 0 ? { field: PAUSE_REASON_FIELD, options: extra.pauseReasons } : null;
+      return state ? [{ stateId: state.id, label: action.label, prompt: action.prompt, color: action.color, reason: action.reason, done: action.done, choice }] : [];
     });
     flowHint = staffHintFor(step, { ...actor, hasOwner: !isUnassigned(ticket.owner_id) });
     // Filho aberto bloqueia concluir o pai (o servidor também recusa, em agent-update-ticket).
@@ -147,6 +152,7 @@ async function buildAgentControls(
     canComment: canCommentTicket(mode, role, ticket.owner_id, meId),
     canSetEstimate: estimateChoices !== null && canSetEstimate(mode, role),
     estimateOptions: estimateChoices ?? [],
+    hasDeadline: extra.hasDeadline,
     canCreateChild: work || allocate,
     childGroups: work || allocate ? extra.childGroups : [],
   };
@@ -189,10 +195,21 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
   // Tempo previsto: opções do campo do Zammad (schema em cache). Sem o campo, a função some.
   const schema = await loadSchema();
   const estimateChoices = schema.success ? estimateOptions(schema.data.attributes) : null;
-  const estimateValue = (ticket as unknown as Record<string, unknown>)[ESTIMATE_FIELD];
-  const estimate = estimateChoices
-    ? { value: estimateValue === null || estimateValue === undefined || estimateValue === "" ? null : String(estimateValue), label: estimateLabel(estimateChoices, estimateValue) }
-    : null;
+  const raw = ticket as unknown as Record<string, unknown>;
+  const estimateValue = raw[ESTIMATE_FIELD];
+  // Tempo previsto: só a equipe vê (no Zammad, o campo fica oculto para o cliente).
+  const estimate =
+    estimateChoices && mode === "agent"
+      ? { value: estimateValue === null || estimateValue === undefined || estimateValue === "" ? null : String(estimateValue), label: estimateLabel(estimateChoices, estimateValue) }
+      : null;
+  const attributes = schema.success ? schema.data.attributes : [];
+  const hasDeadline = attributes.some((attribute) => attribute.name === DEADLINE_FIELD && attribute.active);
+  const deadlineLocal = hasDeadline ? deadlineToLocal(raw[DEADLINE_FIELD]) : null;
+  const deadline = deadlineLocal ? { iso: new Date(String(raw[DEADLINE_FIELD])).toISOString(), local: deadlineLocal } : null;
+  const pauseReasons = flattenOptions(attributes.find((attribute) => attribute.name === PAUSE_REASON_FIELD)?.data_option?.options).filter((option) => option.value !== "");
+  const pauseValue = raw[PAUSE_REASON_FIELD];
+  const pauseReason =
+    mode === "agent" && flowStepOf(ticket.state) === "em_pausa" && pauseValue ? (pauseReasons.find((option) => option.value === String(pauseValue))?.label ?? String(pauseValue)) : null;
   // Vínculos pai/filho: só na visão da equipe (os filhos são internos; o solicitante do pai não os vê).
   const links = mode === "agent" ? await loadLinkedTickets(requester, ticket.id) : { parent: null, children: [] };
   const linkedOwners = await getPeople(
@@ -207,7 +224,7 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
   const [requesterPerson, ownerPerson, agent, canClose, tags, history] = await Promise.all([
     ticket.customer_id === meId ? Promise.resolve(null) : getPerson(ticket.customer_id),
     ticket.owner_id && ticket.owner_id !== meId ? getPerson(ticket.owner_id) : Promise.resolve(null),
-    buildAgentControls(ticket, requester, mode, role, estimateChoices, { openChildren: open, childGroups }),
+    buildAgentControls(ticket, requester, mode, role, estimateChoices, { openChildren: open, childGroups, pauseReasons, hasDeadline }),
     canManageTicketState(requester),
     // Tags são da equipe (marcas internas do fluxo): o solicitante não as vê.
     mode === "agent" ? loadTicketTags(requester, [ticket]).then((found) => found.get(ticket.id) ?? []) : Promise.resolve([] as string[]),
@@ -259,6 +276,8 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
       agent,
       tags,
       estimate,
+      deadline,
+      pauseReason,
       parent: parentLinked,
       children,
       openChildren: open,

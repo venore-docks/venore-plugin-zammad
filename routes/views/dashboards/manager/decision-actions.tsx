@@ -24,6 +24,7 @@ import type { FlowStepKey } from "../../../../contracts/types";
 import type { AssigneeOption } from "../../../../features/get-manager-dashboard/types";
 import { REASON_MAX, validateReason } from "../../../../shared/flow";
 import type { QueueBucket } from "../../../../shared/queue-buckets";
+import { updateNotice } from "../../../../shared/update-notice";
 import { agentUpdateTicketAction, ticketPreviewAction, type TicketPreview } from "../../../public/actions";
 import { formatDateTime } from "../../../public/shared";
 
@@ -47,7 +48,7 @@ function useSend() {
         toast.error(result.error);
         return;
       }
-      toast.success(done);
+      toast.success([done, updateNotice(result.data)].filter(Boolean).join(" "));
       after?.();
       // Dentro da mesma transição: o botão segue ocupado até a tela atualizar (evita o segundo clique).
       startTransition(() => router.refresh());

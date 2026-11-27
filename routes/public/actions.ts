@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { isPluginActive } from "@venore/plugin-sdk";
 import { agentUpdateTicket, changeTicketState, createChildTicket, createTicket, getChildForm, customerRespond, getTicket, replyTicket, searchViewAsTargets, startViewAs, stopViewAs } from "../../index";
-import type { AgentUpdateInput, AnswerValue, ChildFormData, CreateChildTicketInput, GetChildFormInput, CreatedTicket, CustomerRespondInput, TicketAttachment, ViewAsPerson } from "../../index";
+import type { AgentUpdateInput, AgentUpdateOutcome, AnswerValue, ChildFormData, CreateChildTicketInput, GetChildFormInput, CreatedTicket, CustomerRespondInput, TicketAttachment, ViewAsPerson } from "../../index";
 import { APP_SURFACE, PORTAL_SURFACE } from "../../shared/routes";
 
 // Toda action passa pelo handler do barrel (autorização + conta no Zammad lá dentro). Servem às DUAS
@@ -192,7 +192,7 @@ export async function stopViewAsAction(): Promise<ZammadActionResult<null>> {
 }
 
 // App do agente: estado, prioridade, assumir/devolver (vão juntos num único envio).
-export async function agentUpdateTicketAction(input: AgentUpdateInput): Promise<ZammadActionResult<{ changed: string[] }>> {
+export async function agentUpdateTicketAction(input: AgentUpdateInput): Promise<ZammadActionResult<AgentUpdateOutcome>> {
   if (!(await isPluginActive("colabora"))) return { ok: false, error: DISABLED };
   const result = await agentUpdateTicket(input);
   if (!result.success) return { ok: false, error: result.error.message };

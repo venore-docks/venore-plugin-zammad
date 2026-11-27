@@ -1,20 +1,37 @@
 import { beginOperation, endOperation } from "@venore/plugin-sdk/observability";
+import type { ZammadExpandedTicket } from "../../contracts/zammad";
 import { UNASSIGNED_OWNER_ID, canAllocate, canEditTicket, canSetEstimate, canWorkTicket } from "../../shared/access-rules";
-import { ESTIMATE_FIELD, estimateOptions, parseEstimate } from "../../shared/estimate";
-import { loadSchema } from "../../shared/schema";
-import { childrenBlockMessage, openChildren } from "../../shared/children";
-import { loadLinkedTickets } from "../../shared/ticket-links";
-import { describeState } from "../../shared/ticket-state";
 import { composeReplyBody } from "../../shared/answers";
-import { FLOW_STEPS, canMoveTo, flowStepOf, staffActionFor, stepAfterOwnerChange, validateReason } from "../../shared/flow";
+import { businessDaySeconds } from "../../shared/business-hours";
+import { loadBusinessCalendar } from "../../shared/calendar";
+import { childrenBlockMessage, openChildren } from "../../shared/children";
+import { DEADLINE_FIELD, deadlineToZammad, defaultDeadline } from "../../shared/deadline";
 import { assigneesFor } from "../../shared/directory";
+import { DEFAULT_ESTIMATE, ESTIMATE_FIELD, estimateOptions, findEstimateKey, parseEstimate } from "../../shared/estimate";
+import {
+  AUTO_PAUSE_REASON,
+  FLOW_STEPS,
+  PAUSE_REASON_FIELD,
+  canMoveTo,
+  flowStepOf,
+  inProgressToPause,
+  staffActionFor,
+  stepAfterOwnerChange,
+  validateReason,
+} from "../../shared/flow";
 import { loadAgentOptions, loadTicketForViewer } from "../../shared/own-ticket";
 import type { Requester } from "../../shared/requester";
-import { resolveAllocation } from "../../shared/team-rules";
 import { failure } from "../../shared/results";
+import { loadSchema } from "../../shared/schema";
+import { resolveAllocation } from "../../shared/team-rules";
+import { loadLinkedTickets } from "../../shared/ticket-links";
+import { searchOpenTicketsByOwner } from "../../shared/ticket-search";
 import { pendingTimeToIso, validatePending } from "../../shared/ticket-options";
+import { describeState } from "../../shared/ticket-state";
+import { missingForChange } from "../../shared/transition";
+import { flattenOptions } from "../../shared/workflow";
 import { zammadRequest } from "../../shared/zammad-client";
-import type { AgentUpdateInput, AgentUpdateResult } from "./types";
+import type { AgentUpdateInput, AgentUpdateOutcome, AgentUpdateResult } from "./types";
 
 export async function agentUpdateTicket(requester: Requester, input: AgentUpdateInput): Promise<AgentUpdateResult> {
   const handle = beginOperation({ useCase: "colabora.agent-update-ticket", actor: { id: requester.actorId, type: "user" }, kind: "write" });
@@ -31,6 +48,7 @@ export async function agentUpdateTicket(requester: Requester, input: AgentUpdate
   const meId = requester.zammadUser.id;
   const body: Record<string, unknown> = {};
   const changed: string[] = [];
+  const outcome: AgentUpdateOutcome = { changed, paused: [], defaults: [] };
 
   if (input.ownerId !== undefined) {
     // Alocar chamado é do gestor/admin — o agente comum não atribui nem devolve (nem a si mesmo).
@@ -54,8 +72,8 @@ export async function agentUpdateTicket(requester: Requester, input: AgentUpdate
     if (input.stateId !== undefined && input.stateId !== ticket.state_id) {
       const state = options.data.states.find((candidate) => candidate.id === input.stateId);
       if (!state) return finish(failure("invalid_state", "Estado inválido."));
-      // Fluxo da FEM: a API do Zammad não aplica os Core Workflows, então a regra de quem muda o quê
-      // (600–607) é repetida aqui. Fora do fluxo, vale o comportamento genérico.
+      // Fluxo da FEM: a API do Zammad não aplica os Core Workflows de estado, então a regra de quem muda o quê
+      // (600–607, 650/651) é repetida aqui. Fora do fluxo, vale o comportamento genérico.
       const currentStep = flowStepOf(ticket.state);
       if (currentStep) {
         const targetStep = flowStepOf(state.name);
@@ -97,38 +115,128 @@ export async function agentUpdateTicket(requester: Requester, input: AgentUpdate
   // Atribuído (v1.9.0): quem recebe um chamado Autorizado ainda não começou — o chamado vai para Atribuído e só
   // entra em Em andamento quando o agente inicia o atendimento. Devolver à fila um Atribuído volta a Autorizado.
   // Sem o estado "Atribuído" no Zammad, nada muda aqui (o gatilho do Zammad segue levando a Em andamento).
+  const options = await loadAgentOptions();
+  const states = options.success ? options.data.states : [];
   if (changed.includes("owner")) {
-    const options = await loadAgentOptions();
-    if (options.success) {
-      const stateNow = typeof body.state_id === "number" ? options.data.states.find((state) => state.id === body.state_id)?.name : ticket.state;
-      const next = stepAfterOwnerChange(flowStepOf(stateNow), body.owner_id !== UNASSIGNED_OWNER_ID);
-      const nextState = next ? options.data.states.find((state) => flowStepOf(state.name) === next) : undefined;
-      if (nextState && nextState.id !== ticket.state_id) {
-        body.state_id = nextState.id;
-        if (!changed.includes("state")) changed.push("state");
-      }
+    const stateNow = typeof body.state_id === "number" ? states.find((state) => state.id === body.state_id)?.name : ticket.state;
+    const next = stepAfterOwnerChange(flowStepOf(stateNow), body.owner_id !== UNASSIGNED_OWNER_ID);
+    const nextState = next ? states.find((state) => flowStepOf(state.name) === next) : undefined;
+    if (nextState && nextState.id !== ticket.state_id) {
+      body.state_id = nextState.id;
+      if (!changed.includes("state")) changed.push("state");
     }
   }
 
-  // Tempo previsto: só o gestor/admin do setor (no Zammad, os fluxos 613/614 fazem o mesmo na tela dele; a API
-  // não os aplica, então a regra é repetida aqui). Opções = as do campo do Zammad.
+  const schema = await loadSchema();
+  const attributes = schema.success ? schema.data.attributes : [];
+
+  // Tempo previsto e prazo de entrega: só o gestor/admin do setor (no Zammad, os fluxos 613–616 fazem o mesmo na
+  // tela dele; a API não os aplica, então a regra é repetida aqui). Opções = as do campo do Zammad.
+  if (input.estimate !== undefined || input.deadline !== undefined) {
+    if (!canSetEstimate(mode, role)) return finish(failure("forbidden_estimate", "Só o administrador do setor define o tempo previsto e o prazo."));
+  }
+  const estimateChoices = estimateOptions(attributes);
+  const raw = ticket as unknown as Record<string, unknown>;
   if (input.estimate !== undefined) {
-    if (!canSetEstimate(mode, role)) return finish(failure("forbidden_estimate", "Só o administrador do setor define o tempo previsto."));
-    const schema = await loadSchema();
-    const choices = schema.success ? estimateOptions(schema.data.attributes) : null;
-    if (!choices) return finish(failure("estimate_unavailable", "O Zammad não tem o campo de tempo previsto."));
-    const parsed = parseEstimate(choices, input.estimate);
+    if (!estimateChoices) return finish(failure("estimate_unavailable", "O Zammad não tem o campo de tempo previsto."));
+    const parsed = parseEstimate(estimateChoices, input.estimate);
     if (!parsed.ok) return finish(failure("invalid_estimate", "Tempo previsto inválido."));
-    const current = (ticket as unknown as Record<string, unknown>)[ESTIMATE_FIELD];
-    const currentValue = current === null || current === undefined || current === "" ? null : String(current);
-    if (parsed.value !== currentValue) {
+    if (parsed.value !== emptyToNull(raw[ESTIMATE_FIELD])) {
       body[ESTIMATE_FIELD] = parsed.value ?? "";
       changed.push("estimate");
     }
   }
+  if (input.deadline !== undefined) {
+    const value = input.deadline ? deadlineToZammad(input.deadline) : null;
+    if (input.deadline && !value) return finish(failure("invalid_deadline", "Prazo de entrega inválido."));
+    if (value !== emptyToNull(raw[DEADLINE_FIELD]) && !sameInstant(value, raw[DEADLINE_FIELD])) {
+      body[DEADLINE_FIELD] = value;
+      changed.push("deadline");
+    }
+  }
 
-  if (changed.length === 0) return finish({ success: true, data: { changed } });
+  // Campos que a mudança de estado EXIGE (Core Workflows da tela de edição; o Zammad recusa sem eles):
+  // motivo da pausa vem do diálogo; tempo previsto e prazo, se ninguém definiu, ganham o padrão de 1 dia útil.
+  const targetState = typeof body.state_id === "number" && body.state_id !== ticket.state_id ? states.find((state) => state.id === body.state_id) : undefined;
+  const targetStep = targetState ? flowStepOf(targetState.name) : null;
+  if (targetStep === "em_pausa") {
+    const reasons = flattenOptions(attributes.find((attribute) => attribute.name === PAUSE_REASON_FIELD)?.data_option?.options).map((option) => option.value);
+    const pauseReason = (input.pauseReason ?? "").trim();
+    if (reasons.length > 0 && !reasons.includes(pauseReason)) return finish(failure("pause_reason_required", "Escolha o motivo da pausa."));
+    if (pauseReason) body[PAUSE_REASON_FIELD] = pauseReason;
+  }
+  if (targetState && schema.success) {
+    const missing = missingForChange(schema.data, raw, body, { roleIds: requester.zammadUser.role_ids, userId: meId });
+    const unresolved: string[] = [];
+    for (const field of missing) {
+      if (field.name === ESTIMATE_FIELD && estimateChoices) {
+        const key = findEstimateKey(estimateChoices, DEFAULT_ESTIMATE);
+        if (key) {
+          body[ESTIMATE_FIELD] = key;
+          outcome.defaults.push("estimate");
+          continue;
+        }
+      }
+      if (field.name === DEADLINE_FIELD) {
+        body[DEADLINE_FIELD] = defaultDeadline(new Date(), await loadBusinessCalendar());
+        outcome.defaults.push("deadline");
+        continue;
+      }
+      unresolved.push(field.label);
+    }
+    if (unresolved.length > 0) {
+      return finish(failure("missing_fields", `Para mudar para “${targetState.label}”, o Zammad exige: ${unresolved.join(", ")}. Peça ao administrador do setor para preencher.`));
+    }
+  }
+
+  if (changed.length === 0) return finish({ success: true, data: outcome });
+
+  // Um agente tem UM chamado Em andamento: os outros dele são pausados (urgência) ANTES de este entrar. Se este
+  // envio falhar, os pausados voltam (melhor esforço).
+  const ownerId = (typeof body.owner_id === "number" ? body.owner_id : ticket.owner_id) ?? UNASSIGNED_OWNER_ID;
+  const pauseState = states.find((state) => flowStepOf(state.name) === "em_pausa");
+  const resumeId = targetState?.id;
+  let pausedTickets: ZammadExpandedTicket[] = [];
+  if (targetStep === "em_andamento" && ownerId !== UNASSIGNED_OWNER_ID && pauseState) {
+    const owned = await searchOpenTicketsByOwner(requester, ownerId);
+    if (!owned.success) return finish(owned);
+    for (const other of inProgressToPause(owned.data, ticket.id)) {
+      const paused = await zammadRequest(`tickets/${other.id}`, {
+        method: "PUT",
+        onBehalfOf: requester.email,
+        body: { state_id: pauseState.id, [PAUSE_REASON_FIELD]: AUTO_PAUSE_REASON },
+      });
+      if (!paused.success) {
+        await resume(requester, pausedTickets, resumeId);
+        return finish(failure("auto_pause_failed", `Não foi possível pausar o chamado #${other.number}, que está em andamento: ${paused.error.message}`));
+      }
+      pausedTickets.push(other);
+    }
+  }
+
   const updated = await zammadRequest(`tickets/${ticket.id}`, { method: "PUT", onBehalfOf: requester.email, body });
-  if (!updated.success) return finish(updated);
-  return finish({ success: true, data: { changed } });
+  if (!updated.success) {
+    await resume(requester, pausedTickets, resumeId);
+    pausedTickets = [];
+    return finish(updated);
+  }
+  outcome.paused = pausedTickets.map((other) => ({ id: other.id, number: String(other.number) }));
+  return finish({ success: true, data: outcome });
+}
+
+// Desfaz a pausa automática (volta a Em andamento) quando o chamado novo não pôde iniciar.
+async function resume(requester: Requester, tickets: readonly ZammadExpandedTicket[], inProgressStateId: number | undefined): Promise<void> {
+  if (!inProgressStateId) return;
+  for (const other of tickets) {
+    await zammadRequest(`tickets/${other.id}`, { method: "PUT", onBehalfOf: requester.email, body: { state_id: inProgressStateId } });
+  }
+}
+
+function emptyToNull(value: unknown): string | null {
+  return value === null || value === undefined || value === "" ? null : String(value);
+}
+
+function sameInstant(a: string | null, b: unknown): boolean {
+  if (!a || typeof b !== "string" || !b) return false;
+  return new Date(a).getTime() === new Date(b).getTime();
 }

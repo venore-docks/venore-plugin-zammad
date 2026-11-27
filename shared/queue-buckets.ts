@@ -5,7 +5,7 @@ import type { FlowStepKey, TicketStateColor } from "../contracts/types";
 // Finalizado. Só Finalizado é encerrado de verdade. Puro: testado em queue-buckets.test.ts.
 //   novo / analise / autorizado / reavaliacao   a decisão é do gestor
 //   nao_autorizado                              espera o solicitante reenviar
-//   atribuido / andamento / concluido           com um agente (Atribuído espera o agente iniciar)
+//   atribuido / andamento / pausa / concluido   com um agente (Atribuído espera o agente iniciar; Em pausa, retomar)
 //   finalizado                                  encerrado
 // Chamado fora do fluxo (Zammad sem esses estados): aberto sem responsável cai em "novo"; aberto com responsável,
 // em "andamento"; encerrado fica fora da fila.
@@ -19,6 +19,7 @@ export type StageBucket =
   | "reavaliacao"
   | "atribuido"
   | "andamento"
+  | "pausa"
   | "concluido"
   | "finalizado";
 export type QueueBucket = "abertos" | StageBucket;
@@ -36,6 +37,7 @@ export const QUEUE_BUCKETS: BucketInfo[] = [
   { key: "reavaliacao", label: "Reavaliação", hint: "Pedidos não autorizados que o solicitante reenviou." },
   { key: "atribuido", label: "Atribuído", hint: "Com um responsável, que ainda não iniciou o atendimento." },
   { key: "andamento", label: "Em andamento", hint: "Um agente está trabalhando no pedido." },
+  { key: "pausa", label: "Em pausa", hint: "Atendimento parado. Volta para Em andamento quando for retomado." },
   { key: "concluido", label: "Concluído", hint: "Entregues, esperando o solicitante aprovar ou pedir ajustes." },
   { key: "finalizado", label: "Finalizado", hint: "Encerrados. Os 50 mais recentes dos seus setores." },
 ];
@@ -50,6 +52,7 @@ export const STAGES: { key: StageBucket; label: string; hint: string; color: Tic
   { key: "reavaliacao", label: "Reavaliação", hint: "Reenviados: decida de novo.", color: "warning", open: true },
   { key: "atribuido", label: "Atribuído", hint: "Esperam o agente iniciar.", color: "info", open: true },
   { key: "andamento", label: "Em andamento", hint: "Com um agente trabalhando.", color: "primary", open: true },
+  { key: "pausa", label: "Em pausa", hint: "Atendimento parado; volta quando for retomado.", color: "warning", open: true },
   { key: "concluido", label: "Concluído", hint: "Esperam o retorno do solicitante.", color: "success", open: true },
   { key: "finalizado", label: "Finalizado", hint: "Encerrados.", color: "neutral", open: false },
 ];
@@ -64,6 +67,7 @@ const BY_STEP: Record<FlowStepKey, StageBucket> = {
   reavaliacao: "reavaliacao",
   atribuido: "atribuido",
   em_andamento: "andamento",
+  em_pausa: "pausa",
   concluido: "concluido",
   finalizado: "finalizado",
 };

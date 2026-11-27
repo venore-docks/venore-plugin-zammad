@@ -69,7 +69,7 @@ export type TicketStateTone = "new" | "open" | "pending" | "closed";
 export type TicketStateColor = "neutral" | "info" | "primary" | "warning" | "success" | "danger";
 
 // Etapas do fluxo da FEM (ver shared/flow.ts). null = Zammad sem esses estados (comportamento genérico).
-export type FlowStepKey = "novo" | "em_analise" | "autorizado" | "atribuido" | "nao_autorizado" | "reavaliacao" | "em_andamento" | "concluido" | "finalizado";
+export type FlowStepKey = "novo" | "em_analise" | "autorizado" | "atribuido" | "nao_autorizado" | "reavaliacao" | "em_andamento" | "em_pausa" | "concluido" | "finalizado";
 export type CustomerActionKey = "approve" | "adjust" | "reject" | "not_solved" | "resubmit";
 
 // Botão de decisão do SOLICITANTE (Concluído / Não autorizado): manda a palavra de controle no assunto.
@@ -89,6 +89,8 @@ export type StaffFlowAction = {
   color: TicketStateColor;
   reason: "required" | "optional" | "none";
   done: string;
+  // Escolha obrigatória que vai junto da mudança (ex.: motivo da pausa, com as opções do campo do Zammad).
+  choice?: { field: string; options: FieldOption[] } | null;
 };
 
 export type TicketSummary = {
@@ -175,6 +177,8 @@ export type AgentControls = {
   // Define o tempo previsto (só gestor/admin do setor). As opções vêm do campo do Zammad.
   canSetEstimate: boolean;
   estimateOptions: { value: string; label: string }[];
+  // O Zammad tem o campo de prazo de entrega (o administrador do setor o edita junto do tempo previsto).
+  hasDeadline: boolean;
   // Chamado filho: quem atende ou o gestor cria. `childGroups` = setores para "pedir a outro setor";
   // subtarefa usa `assignees` (gestor escolhe o agente; o agente fica com ela).
   canCreateChild: boolean;
@@ -213,8 +217,13 @@ export type TicketDetail = {
   // Histórico (abertura e mudanças de estado, responsável, setor, prioridade, tempo previsto). Só na visão da
   // equipe; null quando o Zammad não o entrega (visão do solicitante, falha de leitura).
   history: TicketHistoryEntry[] | null;
-  // Tempo previsto: visto por todos (solicitante, agente, gestor); só o gestor edita.
+  // Tempo previsto (esforço de trabalho): só a equipe vê (v1.12.0, como no Zammad); só o administrador do setor edita.
   estimate: TicketEstimate | null;
+  // Prazo de entrega (compromisso do setor): todos veem; só o administrador do setor edita. `local` =
+  // "YYYY-MM-DDTHH:mm" em UTC-3 (campo datetime-local); null = sem prazo ou o Zammad sem o campo.
+  deadline: { iso: string; local: string } | null;
+  // Em pausa: o motivo (rótulo do Zammad). Só na visão da equipe.
+  pauseReason: string | null;
   // Vínculos (só na visão da equipe): chamado pai e chamados filhos. `openChildren` bloqueia concluir o pai.
   parent: LinkedTicket | null;
   children: LinkedTicket[];

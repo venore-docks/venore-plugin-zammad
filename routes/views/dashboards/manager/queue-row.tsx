@@ -4,6 +4,7 @@ import { cn } from "@venore/plugin-sdk/ui";
 import type { AssigneeOption, QueueRow as QueueRowData } from "../../../../features/get-manager-dashboard/types";
 import { ageTone, formatAge, shortGroupName } from "../../../../shared/manager-stats";
 import type { FlowStepKey } from "../../../../contracts/types";
+import { formatDateTime } from "../../../public/shared";
 import { TagInline } from "../../../public/tag-chips";
 import { DecisionActions } from "./decision-actions";
 import { QuickAssign } from "./quick-assign";
@@ -55,6 +56,8 @@ export function QueueRow({
           {meta && <span aria-hidden>·</span>}
           <AgeBadge ms={ticket.ageMs} />
           {ticket.ownerId !== null && <span>· com {ticket.ownerName ?? "um agente"}</span>}
+          {ticket.deadline && <span title="Prazo de entrega">· prazo {formatDateTime(ticket.deadline)}</span>}
+          {ticket.estimateLabel && <span title="Tempo previsto">· {ticket.estimateLabel}</span>}
           {ticket.tags.length > 0 && <span aria-hidden>·</span>}
           <TagInline tags={ticket.tags} stateLabel={ticket.stateLabel} />
         </p>

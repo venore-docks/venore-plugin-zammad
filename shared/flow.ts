@@ -39,6 +39,7 @@ export const FLOW_STEPS: Record<FlowStep, StepInfo> = {
   nao_autorizado: { label: "Não autorizado", color: "danger", closed: false, hint: "O gestor não autorizou o pedido. Ainda não foi encerrado: o solicitante pode reenviar." },
   reavaliacao: { label: "Reavaliação", color: "warning", closed: false, hint: "Reenviado: o gestor vai analisar de novo." },
   em_andamento: { label: "Em andamento", color: "primary", closed: false, hint: "Um responsável está trabalhando no pedido." },
+  em_pausa: { label: "Em pausa", color: "warning", closed: false, hint: "O atendimento está pausado e volta para Em andamento quando for retomado." },
   concluido: { label: "Concluído", color: "success", closed: false, hint: "Entregue. Confira e dê o seu retorno." },
   finalizado: { label: "Finalizado", color: "neutral", closed: true, hint: "Chamado finalizado." },
 };
@@ -60,6 +61,7 @@ const BY_NAME: Record<string, FlowStep> = {
   "nao autorizado": "nao_autorizado",
   reavaliacao: "reavaliacao",
   "em andamento": "em_andamento",
+  "em pausa": "em_pausa",
   concluido: "concluido",
   finalizado: "finalizado",
 };
@@ -173,10 +175,17 @@ const SUPERVISOR_FROM: FlowStep[] = ["novo", "em_analise", "autorizado", "reaval
 const SUPERVISOR_TO: FlowStep[] = ["em_analise", "autorizado", "nao_autorizado", "reavaliacao"];
 // Responsável: de onde para onde. Atribuído só anda para Em andamento (o agente inicia o atendimento; concluir
 // direto pularia o tempo de atendimento).
+// Em pausa (v1.12.0) só sai para Em andamento (regras 650/651 do Zammad).
 const WORKER_MOVES: Partial<Record<FlowStep, FlowStep[]>> = {
   atribuido: ["em_andamento"],
-  em_andamento: ["concluido"],
+  em_andamento: ["concluido", "em_pausa"],
+  em_pausa: ["em_andamento"],
   concluido: ["em_andamento"],
+};
+// Pausar e retomar: o responsável E o gestor do setor (decisão de 27/11/2026).
+const SUPERVISOR_MOVES: Partial<Record<FlowStep, FlowStep[]>> = {
+  em_andamento: ["em_pausa"],
+  em_pausa: ["em_andamento"],
 };
 
 export type FlowActor = { supervisor: boolean; worker: boolean };
@@ -184,6 +193,7 @@ export type FlowActor = { supervisor: boolean; worker: boolean };
 export function allowedTargets(current: FlowStep, actor: FlowActor): FlowStep[] {
   const targets = new Set<FlowStep>();
   if (actor.supervisor && SUPERVISOR_FROM.includes(current)) SUPERVISOR_TO.forEach((step) => targets.add(step));
+  if (actor.supervisor) (SUPERVISOR_MOVES[current] ?? []).forEach((step) => targets.add(step));
   if (actor.worker) (WORKER_MOVES[current] ?? []).forEach((step) => targets.add(step));
   targets.delete(current);
   return [...targets];
@@ -237,7 +247,28 @@ const STAFF_ACTIONS: StaffActionInfo[] = [
   },
   { target: "em_andamento", from: ["atribuido"], label: "Iniciar atendimento", color: "primary", reason: "none", prompt: "", done: "Atendimento iniciado. O chamado está em andamento." },
   { target: "em_andamento", from: ["concluido"], label: "Voltar para em andamento", color: "primary", reason: "none", prompt: "", done: "Chamado em andamento." },
+  // Pausar pede o motivo (`motivo_pausa`, opções do Zammad) e vai num único PUT com o estado.
+  {
+    target: "em_pausa",
+    label: "Pausar",
+    color: "warning",
+    reason: "none",
+    prompt: "Por que o atendimento vai parar? O tempo de trabalho para de contar até você retomar.",
+    done: "Atendimento pausado.",
+  },
+  { target: "em_andamento", from: ["em_pausa"], label: "Retomar", color: "primary", reason: "none", prompt: "", done: "Atendimento retomado." },
 ];
+
+// Campo do Zammad com o motivo da pausa (obrigatório ao entrar em Em pausa — regra 800).
+export const PAUSE_REASON_FIELD = "motivo_pausa";
+// Motivo da pausa automática quando o agente inicia outro chamado (um Em andamento por agente).
+export const AUTO_PAUSE_REASON = "urgencia";
+
+// Um agente tem UM chamado Em andamento por vez: ao levar `ticketId` para Em andamento, os outros chamados Em
+// andamento do mesmo responsável são pausados (motivo urgência). Retomar é sempre explícito.
+export function inProgressToPause<T extends { id: number; state?: string | null }>(ownerTickets: readonly T[], ticketId: number): T[] {
+  return ownerTickets.filter((ticket) => ticket.id !== ticketId && flowStepOf(ticket.state) === "em_andamento");
+}
 
 export function staffActionsFor(current: FlowStep, actor: FlowActor): StaffActionInfo[] {
   const targets = allowedTargets(current, actor);
@@ -260,6 +291,8 @@ export function staffHintFor(step: FlowStep, actor: FlowActor & { hasOwner: bool
   if (actor.supervisor && step === "autorizado" && !actor.hasOwner) return "Atribua um responsável: ao atribuir, o chamado passa para Atribuído.";
   if (actor.worker && step === "atribuido") return "Este chamado é seu. Quando começar a trabalhar nele, toque em Iniciar atendimento.";
   if (actor.supervisor && step === "atribuido") return "Aguardando o responsável iniciar o atendimento.";
+  if (actor.worker && step === "em_pausa") return "Atendimento pausado. Toque em Retomar quando voltar a trabalhar nele.";
+  if (actor.supervisor && step === "em_pausa") return "Atendimento pausado. O responsável retoma quando voltar a trabalhar nele.";
   if (step === "concluido") return "Aguardando o solicitante aprovar ou pedir ajustes (finaliza sozinho em 48 h).";
   if (step === "nao_autorizado") return "Não autorizado. O solicitante pode reenviar com explicação.";
   return null;

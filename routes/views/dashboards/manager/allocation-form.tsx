@@ -6,6 +6,7 @@ import { UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, cn } from "@venore/plugin-sdk/ui";
 import type { AgentControls } from "../../../../contracts/types";
+import { updateNotice } from "../../../../shared/update-notice";
 import { agentUpdateTicketAction } from "../../../public/actions";
 
 // Formulário de ALOCAÇÃO (gestor/admin) no detalhe do chamado: quem atende agora em destaque, escolha do novo
@@ -39,7 +40,7 @@ export function AllocationForm({ ticketId, controls, children }: { ticketId: num
         toast.error(result.error);
         return;
       }
-      toast.success(ownerId === null ? "Chamado devolvido à fila." : "Chamado atribuído.");
+      toast.success([ownerId === null ? "Chamado devolvido à fila." : "Chamado atribuído.", updateNotice(result.data)].filter(Boolean).join(" "));
       // Dentro da mesma transição: o botão segue ocupado até a tela atualizar (evita o segundo clique).
       startTransition(() => router.refresh());
     });

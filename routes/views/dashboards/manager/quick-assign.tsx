@@ -6,6 +6,7 @@ import { UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@venore/plugin-sdk/ui";
 import type { AssigneeOption } from "../../../../features/get-manager-dashboard/types";
+import { updateNotice } from "../../../../shared/update-notice";
 import { agentUpdateTicketAction } from "../../../public/actions";
 
 // ALOCAÇÃO RÁPIDA na linha do chamado: escolhe o agente do setor e atribui. Só o gestor/admin vê esta tela e o
@@ -28,7 +29,7 @@ export function QuickAssign({ ticketId, options, suggestedId }: { ticketId: numb
         toast.error(result.error);
         return;
       }
-      toast.success("Chamado atribuído.");
+      toast.success(["Chamado atribuído.", updateNotice(result.data)].filter(Boolean).join(" "));
       setValue("");
       // Dentro da mesma transição: o botão segue ocupado até a tela atualizar (evita o segundo clique).
       startTransition(() => router.refresh());

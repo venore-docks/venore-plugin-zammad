@@ -17,8 +17,9 @@ import {
   Textarea,
   cn,
 } from "@venore/plugin-sdk/ui";
-import type { CustomerActionKey, CustomerActionOption, StaffFlowAction, TicketStateColor } from "../../contracts/types";
+import type { CustomerActionKey, CustomerActionOption, FieldOption, StaffFlowAction, TicketStateColor } from "../../contracts/types";
 import { REASON_MAX, validateReason } from "../../shared/flow";
+import { updateNotice } from "../../shared/update-notice";
 import { agentUpdateTicketAction, customerRespondAction } from "./actions";
 
 type ActionResult = { ok: true; message: string } | { ok: false; error: string };
@@ -40,7 +41,9 @@ type FlowButtonProps = {
   confirmTitle: string;
   confirmLabel: string;
   disabled?: boolean;
-  run: (reason: string) => Promise<ActionResult>;
+  // Escolha obrigatória no diálogo (ex.: motivo da pausa). O valor escolhido vai para `run`.
+  choice?: FieldOption[] | null;
+  run: (reason: string, choice: string | null) => Promise<ActionResult>;
 };
 
 const TRIGGER: Record<FlowEmphasis, string> = {
@@ -52,19 +55,21 @@ const TRIGGER: Record<FlowEmphasis, string> = {
 // Botão de decisão do fluxo. SEMPRE com confirmação: toda mudança de estado do fluxo dispara gatilhos do
 // Zammad que avisam outra pessoa. Com `reason`, o diálogo pede o texto. No diálogo, o botão de confirmar só
 // fica vermelho quando a decisão é negativa (`color: "danger"`).
-export function FlowButton({ label, color, icon, emphasis, prompt, reason, confirmTitle, confirmLabel, disabled, run }: FlowButtonProps) {
+export function FlowButton({ label, color, icon, emphasis, prompt, reason, confirmTitle, confirmLabel, disabled, choice, run }: FlowButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
+  const [picked, setPicked] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, startTransition] = useTransition();
+  const hasChoice = Boolean(choice && choice.length > 0);
 
   function confirm() {
-    const problem = reason === "none" ? null : validateReason(text, reason === "required");
+    const problem = hasChoice && !picked ? "Escolha uma opção." : reason === "none" ? null : validateReason(text, reason === "required");
     setError(problem);
     if (problem) return;
     startTransition(async () => {
-      const result = await run(text.trim());
+      const result = await run(text.trim(), hasChoice ? picked : null);
       if (!result.ok) {
         setError(result.error);
         return;
@@ -72,6 +77,7 @@ export function FlowButton({ label, color, icon, emphasis, prompt, reason, confi
       toast.success(result.message);
       setOpen(false);
       setText("");
+      setPicked(null);
       // Dentro da mesma transição: o botão segue ocupado até a tela atualizar (evita o segundo clique).
       startTransition(() => router.refresh());
     });
@@ -112,6 +118,23 @@ export function FlowButton({ label, color, icon, emphasis, prompt, reason, confi
             </AlertDialogDescription>
           )}
         </AlertDialogHeader>
+        {hasChoice && (
+          <fieldset className="space-y-2">
+            <legend className="sr-only">{prompt || label}</legend>
+            {(choice ?? []).map((option) => (
+              <label
+                key={option.value}
+                className={cn(
+                  "flex min-h-11 cursor-pointer items-center gap-3 rounded-md border px-3 py-2 text-sm text-foreground has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
+                  picked === option.value ? "border-foreground/40 bg-muted" : "hover:bg-muted/60",
+                )}
+              >
+                <input type="radio" name={`${fieldId}-choice`} value={option.value} checked={picked === option.value} onChange={() => setPicked(option.value)} className="size-4" />
+                {option.label}
+              </label>
+            ))}
+          </fieldset>
+        )}
         {reason !== "none" && (
           <Textarea
             id={fieldId}
@@ -238,9 +261,12 @@ export function StaffFlowButtons({ ticketId, actions, disabled }: { ticketId: nu
           confirmTitle={`${action.label} este chamado?`}
           confirmLabel={action.label}
           disabled={disabled}
-          run={async (reason) => {
-            const result = await agentUpdateTicketAction({ ticketId, stateId: action.stateId, reason: reason || null });
-            return result.ok ? { ok: true, message: action.done } : result;
+          choice={action.choice?.options}
+          run={async (reason, choice) => {
+            const result = await agentUpdateTicketAction({ ticketId, stateId: action.stateId, reason: reason || null, pauseReason: choice });
+            if (!result.ok) return result;
+            const notice = updateNotice(result.data);
+            return { ok: true, message: notice ? `${action.done} ${notice}` : action.done };
           }}
         />
       ))}

@@ -63,8 +63,15 @@ O Colabora é a referência dessa regra.
 - **Cliente nunca manda `state_id`**: decide por botões que criam artigo `web`/`Customer`/público com a
   palavra de controle no ASSUNTO (`[APROVADO]` `[AJUSTAR]` `[REJEITADO]` `[NAO_RESOLVIDO]` `[REENVIAR]`);
   os gatilhos do Zammad mudam o estado (`features/customer-respond`). Mudar uma palavra = mudar o gatilho.
-- A API não aplica Core Workflows: as transições da equipe são validadas no servidor (`canMoveTo` em
+- A API não aplica os Core Workflows de ESTADO: as transições da equipe são validadas no servidor (`canMoveTo` em
   `agent-update-ticket`). "Não autorizar" exige motivo, enviado como nota PÚBLICA no mesmo PUT.
+- **Mas a API aplica os OBRIGATÓRIOS** (422 "Missing required value"). Antes do PUT, `missingForChange`
+  (`shared/transition.ts`) avalia a tela `edit` com o estado de destino: motivo da pausa vem do diálogo; tempo previsto
+  e prazo sem valor ganham 1 dia útil (`DEFAULT_ESTIMATE`, `defaultDeadline` pelo calendário do Zammad,
+  `shared/calendar.ts`); qualquer outro vira erro claro. Nunca fixar no código quais campos cada estado exige.
+- **Em pausa (v1.12.0)**: só sai para Em andamento; responsável e gestor pausam/retomam. Um Em andamento por agente
+  (`inProgressToPause`): iniciar/retomar pausa os outros do responsável (motivo `urgencia`) ANTES do PUT e os
+  devolve se ele falhar. Tempo previsto só a equipe vê; prazo de entrega, todos.
 - Audiência dos setores também vem do Zammad: workflows da máscara de criação em `ticket.group_id`
   (`allowedGroupIds` + `groupsAllowedByZammad`).
 - Gestor = `report` OU função `<Setor> - Administrador`.

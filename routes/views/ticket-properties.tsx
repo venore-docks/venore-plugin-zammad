@@ -37,7 +37,13 @@ export function TicketProperties({ ticket, surfaceKey, readOnly }: { ticket: Tic
           )}
           <span>
             {people.join(" · ")} · aberto em {formatDateTime(ticket.createdAt)}
-            {/* Tempo previsto (definido pelo gestor): todos veem. */}
+            {/* Prazo de entrega (compromisso do setor): todos veem. Tempo previsto (esforço): só a equipe. */}
+            {ticket.deadline && (
+              <>
+                {" · "}
+                <span className="text-foreground">prazo: {formatDateTime(ticket.deadline.iso)}</span>
+              </>
+            )}
             {ticket.estimate?.label && (
               <>
                 {" · "}
@@ -46,6 +52,7 @@ export function TicketProperties({ ticket, surfaceKey, readOnly }: { ticket: Tic
             )}
           </span>
         </p>
+        {ticket.pauseReason && <p className="text-sm text-muted-foreground">Motivo da pausa: <span className="text-foreground">{ticket.pauseReason}</span></p>}
         {ticket.flowStep && <FlowProgress step={ticket.flowStep} />}
         {ticket.parent && <ParentLink parent={ticket.parent} surfaceKey={surfaceKey} />}
         {agent && <TagChips tags={ticket.tags} stateLabel={ticket.stateLabel} />}
@@ -66,10 +73,11 @@ export function TicketProperties({ ticket, surfaceKey, readOnly }: { ticket: Tic
 
       {agent && (
         <AttendanceControls
-          key={`att-${ticket.id}-${agent.stateId}-${agent.priorityId}-${agent.ownerId}-${ticket.estimate?.value ?? ""}`}
+          key={`att-${ticket.id}-${agent.stateId}-${agent.priorityId}-${agent.ownerId}-${ticket.estimate?.value ?? ""}-${ticket.deadline?.local ?? ""}`}
           ticketId={ticket.id}
           controls={agent}
           currentEstimate={ticket.estimate?.value ?? ""}
+          currentDeadline={ticket.deadline?.local ?? ""}
           allocation={agent.canAllocate ? <AllocationControls ticketId={ticket.id} controls={agent} /> : null}
         />
       )}

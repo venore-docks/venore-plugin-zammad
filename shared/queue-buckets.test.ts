@@ -33,6 +33,7 @@ describe("abas e etapas", () => {
       "reavaliacao",
       "atribuido",
       "andamento",
+      "pausa",
       "concluido",
       "finalizado",
     ]);
@@ -48,6 +49,7 @@ describe("abas e etapas", () => {
       "reavaliacao",
       "atribuido",
       "andamento",
+      "pausa",
       "concluido",
     ]);
   });

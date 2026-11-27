@@ -2,6 +2,36 @@
 
 Versões anteriores: ver o histórico do git (tags `vX.Y.Z`).
 
+## v1.12.0
+
+### Novidades
+- **Em pausa**: botões **Pausar** (em Em andamento) e **Retomar** (em Em pausa), para o responsável e para o gestor do
+  setor. Pausar pede o motivo (opções do campo `motivo_pausa` do Zammad) e vai num único envio com o estado. Em pausa só
+  volta para Em andamento. Aparece na Fila (aba e contador próprios, entre Em andamento e Concluído), no selo e na barra
+  de etapas ("Etapa 5 de 7 · em pausa"); a equipe vê o motivo no chamado.
+- **Um chamado Em andamento por agente**: ao iniciar ou retomar um chamado, os outros Em andamento do mesmo
+  responsável são pausados (motivo "Urgência / outro chamado") antes, e o aviso diz quais. Se o chamado novo não
+  puder iniciar, os pausados voltam. Retomar é sempre explícito.
+- **O que a mudança exige vem do Zammad**: antes de mudar o estado, o plugin avalia os Core Workflows da tela de
+  edição (na FEM, a regra 810 exige tempo previsto e prazo ao entrar em Atribuído ou Em andamento; a 800, o motivo ao
+  pausar) e coleta ou preenche no mesmo envio — o Zammad não devolve mais 422. Sem tempo previsto ou prazo definidos
+  pelo administrador do setor, o plugin preenche **1 dia útil** (tempo previsto "1 dia"; prazo = agora + 1 dia útil
+  pelo calendário do Zammad) e avisa. Outro campo exigido que o plugin não sabe preencher vira uma mensagem clara.
+- **Prazo de entrega** (`prazo_entrega`): todos veem no chamado; o administrador do setor edita ao lado do tempo
+  previsto. Fila e Início do gestor mostram prazo e tempo previsto em cada linha.
+- **Horas úteis pelo calendário do Zammad** (`shared/business-hours.ts`, puro): dias, faixas, feriados e fuso do
+  calendário padrão ("Horário comercial FEM", seg–sex 9h–17h). Base dos relógios das próximas versões.
+
+### Mudanças
+- O **tempo previsto** passa a ser visto só pela equipe (como no Zammad, onde o campo é oculto para o cliente).
+- Mudar o estado à mão para Em pausa sai do seletor manual: só pelo botão Pausar, que pede o motivo.
+
+### Atenção
+- A anotação "interrompido por #N" no chamado pausado automaticamente fica para a versão com o banco do plugin; por
+  ora o aviso aparece só na tela de quem iniciou.
+- O token do Zammad precisa de `admin.calendar` para ler o calendário; sem ele, vale seg–sex 9h–17h (o log avisa).
+- Escritas do agente/gestor (pausar, retomar, padrões) testadas só contra o recorte do Zammad, não contra o Zammad real.
+
 ## v1.11.0
 
 ### Correções

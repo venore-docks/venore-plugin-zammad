@@ -68,7 +68,7 @@ export type { ListAgentTicketsInput, ListAgentTicketsResult } from "./features/l
 export type { GetTeamOverviewResult, TeamMember, TeamOverview } from "./features/get-team-overview/types";
 export type { AppViewer, GetAppViewerResult } from "./features/get-app-viewer/types";
 export type { ViewAsPerson, ViewAsStatus } from "./features/view-as/types";
-export type { AgentUpdateInput, AgentUpdateResult } from "./features/agent-update-ticket/types";
+export type { AgentUpdateInput, AgentUpdateOutcome, AgentUpdateResult } from "./features/agent-update-ticket/types";
 export type { AttachmentStream, DownloadAttachmentInput, DownloadAttachmentResult } from "./features/download-attachment/types";
 export type { AdminField, AdminOverview, AdminSector, ConnectionStatus, GetAdminOverviewResult } from "./features/admin-overview/types";
 export type { ReloadSchemaResult, SaveAppNameInput, SaveConfigResult, SaveGroupConfigInput, SaveIntroInput } from "./features/manage-config/types";

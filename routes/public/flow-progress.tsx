@@ -16,11 +16,13 @@ function pathFor(step: FlowStepKey): FlowStepKey[] {
   return step === "nao_autorizado" || step === "reavaliacao" ? AFTER_DENIAL : MAIN;
 }
 
+// Em pausa (v1.12.0) não é uma etapa a mais: o chamado continua na etapa de Em andamento, parado.
 export function FlowProgress({ step }: { step: FlowStepKey }) {
   const path = pathFor(step);
-  const current = path.indexOf(step);
+  const paused = step === "em_pausa";
+  const current = path.indexOf(paused ? "em_andamento" : step);
   const closed = isFinalStep(step);
-  const label = closed ? "Encerrado" : `Etapa ${current + 1} de ${path.length} · em aberto`;
+  const label = closed ? "Encerrado" : `Etapa ${current + 1} de ${path.length} · ${paused ? "em pausa" : "em aberto"}`;
   return (
     <div className="flex items-center gap-3">
       <ol aria-label={`${label}: ${FLOW_STEPS[step].label}`} className="flex flex-1 gap-1">

@@ -29,6 +29,9 @@ export type QueueRow = {
   ownerName: string | null;
   // Tags do chamado no Zammad (ex.: ajustes, rejeitado, nao-autorizado, reenviado).
   tags: string[];
+  // Prazo de entrega (ISO) e tempo previsto (rótulo do Zammad); null = não definido.
+  deadline: string | null;
+  estimateLabel: string | null;
 };
 
 // Opções de alocação por setor (grupo do Zammad), sem repetir por chamado.

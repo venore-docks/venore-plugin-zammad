@@ -1,6 +1,9 @@
 import type { OperationResult } from "@venore/plugin-sdk";
 import type { ZammadExpandedTicket } from "../../contracts/zammad";
 import { isUnassigned } from "../../shared/access-rules";
+import { DEADLINE_FIELD } from "../../shared/deadline";
+import { ESTIMATE_FIELD, estimateLabel, estimateOptions, type EstimateOption } from "../../shared/estimate";
+import { loadSchema } from "../../shared/schema";
 import { flowStepOf, type FlowStep } from "../../shared/flow";
 import { loadAgentOptions } from "../../shared/own-ticket";
 import { OPEN_STAGES, OPEN_TAB, bucketOf, countBuckets, type QueueBucket } from "../../shared/queue-buckets";
@@ -23,6 +26,12 @@ import type {
   QueueRow,
   TeamLoads,
 } from "./types";
+
+// Rótulos do tempo previsto (opções do campo do Zammad; schema em cache). Sem o campo, lista vazia.
+async function loadEstimateOptions(): Promise<EstimateOption[]> {
+  const schema = await loadSchema();
+  return (schema.success ? estimateOptions(schema.data.attributes) : null) ?? [];
+}
 
 const QUEUE_TOP = 5;
 // "Em aberto": linhas por etapa na primeira tela (o resto vem na aba da etapa).
@@ -76,12 +85,17 @@ function loadsOf(snapshot: Snapshot): Map<number, { open: number; waiting: numbe
 
 // Linha "crua": tudo que vem da busca, sem solicitante nem tags (esses custam uma leitura por chamado — ver
 // completeRows). null = fora da fila (estado genérico encerrado).
-function toRow(ticket: ZammadExpandedTicket, now: number, ownerNames: Map<number, string>): QueueRow | null {
+function toRow(ticket: ZammadExpandedTicket, now: number, ownerNames: Map<number, string>, estimates: EstimateOption[] = []): QueueRow | null {
   const state = describeState(ticket.state ?? "");
   const ownerId = isUnassigned(ticket.owner_id) ? null : ticket.owner_id;
   const bucket = bucketOf(state.step, ownerId !== null, state.closed);
   if (!bucket) return null;
+  const raw = ticket as unknown as Record<string, unknown>;
+  const deadlineValue = raw[DEADLINE_FIELD];
+  const deadlineInstant = typeof deadlineValue === "string" && deadlineValue ? new Date(deadlineValue) : null;
   return {
+    deadline: deadlineInstant && !Number.isNaN(deadlineInstant.getTime()) ? deadlineInstant.toISOString() : null,
+    estimateLabel: estimateLabel(estimates, raw[ESTIMATE_FIELD]),
     id: ticket.id,
     number: String(ticket.number),
     title: ticket.title,
@@ -156,7 +170,8 @@ export async function getManagerDashboard(requester: Requester): Promise<GetMana
 
   // Os mais antigos da fila: só deles buscamos solicitante, tags e opções de alocação.
   const oldest = [...queue].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()).slice(0, QUEUE_TOP);
-  const bare = oldest.flatMap((ticket) => toRow(ticket, now, new Map()) ?? []);
+  const estimates = await loadEstimateOptions();
+  const bare = oldest.flatMap((ticket) => toRow(ticket, now, new Map(), estimates) ?? []);
   const [queueTop, allocation] = await Promise.all([
     completeRows(requester, bare, new Map(oldest.map((ticket) => [ticket.id, ticket]))),
     allocationFor(bare, loads),
@@ -186,7 +201,8 @@ export async function getQueueBoard(requester: Requester, input: GetQueueBoardIn
   const byId = new Map<number, ZammadExpandedTicket>();
   for (const ticket of [...queue, ...flowClosed, ...perMember.flat()]) byId.set(ticket.id, ticket);
   const ownerNames = new Map(members.map((member) => [member.id, member.name]));
-  const all = [...byId.values()].flatMap((ticket) => toRow(ticket, now, ownerNames) ?? []);
+  const estimates = await loadEstimateOptions();
+  const all = [...byId.values()].flatMap((ticket) => toRow(ticket, now, ownerNames, estimates) ?? []);
 
   const counts = countBuckets(all);
   const uncounted: QueueBucket[] = includeClosed ? [] : ["finalizado"];
