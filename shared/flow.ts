@@ -40,6 +40,7 @@ export const FLOW_STEPS: Record<FlowStep, StepInfo> = {
   reavaliacao: { label: "Reavaliação", color: "warning", closed: false, hint: "Reenviado: o gestor vai analisar de novo." },
   em_andamento: { label: "Em andamento", color: "primary", closed: false, hint: "Um responsável está trabalhando no pedido." },
   em_pausa: { label: "Em pausa", color: "warning", closed: false, hint: "O atendimento está pausado e volta para Em andamento quando for retomado." },
+  aguardando_solicitante: { label: "Aguardando solicitante", color: "info", closed: false, hint: "Esperando a resposta do solicitante. O chamado volta para Em andamento quando ele responder." },
   concluido: { label: "Concluído", color: "success", closed: false, hint: "Entregue. Confira e dê o seu retorno." },
   finalizado: { label: "Finalizado", color: "neutral", closed: true, hint: "Chamado finalizado." },
 };
@@ -62,6 +63,7 @@ const BY_NAME: Record<string, FlowStep> = {
   reavaliacao: "reavaliacao",
   "em andamento": "em_andamento",
   "em pausa": "em_pausa",
+  "aguardando solicitante": "aguardando_solicitante",
   concluido: "concluido",
   finalizado: "finalizado",
 };
@@ -178,14 +180,16 @@ const SUPERVISOR_TO: FlowStep[] = ["em_analise", "autorizado", "nao_autorizado",
 // Em pausa (v1.12.0) só sai para Em andamento (regras 650/651 do Zammad).
 const WORKER_MOVES: Partial<Record<FlowStep, FlowStep[]>> = {
   atribuido: ["em_andamento"],
-  em_andamento: ["concluido", "em_pausa"],
+  em_andamento: ["concluido", "em_pausa", "aguardando_solicitante"],
   em_pausa: ["em_andamento"],
+  aguardando_solicitante: ["em_andamento"],
   concluido: ["em_andamento"],
 };
 // Pausar e retomar: o responsável E o gestor do setor (decisão de 27/11/2026).
 const SUPERVISOR_MOVES: Partial<Record<FlowStep, FlowStep[]>> = {
-  em_andamento: ["em_pausa"],
+  em_andamento: ["em_pausa", "aguardando_solicitante"],
   em_pausa: ["em_andamento"],
+  aguardando_solicitante: ["em_andamento"],
 };
 
 export type FlowActor = { supervisor: boolean; worker: boolean };
@@ -257,6 +261,18 @@ const STAFF_ACTIONS: StaffActionInfo[] = [
     done: "Atendimento pausado.",
   },
   { target: "em_andamento", from: ["em_pausa"], label: "Retomar", color: "primary", reason: "none", prompt: "", done: "Atendimento retomado." },
+  // Aguardar o solicitante: o texto é a pergunta/pedido ao solicitante (vai como nota PÚBLICA no mesmo envio e o
+  // gatilho do Zammad avisa por e-mail). Quando ele responde, o gatilho 30 devolve o chamado a Em andamento.
+  {
+    target: "aguardando_solicitante",
+    label: "Aguardar solicitante",
+    color: "info",
+    reason: "required",
+    prompt: "O que você precisa que o solicitante responda? Ele recebe este texto por e-mail e o tempo de trabalho para de contar.",
+    done: "Chamado aguardando a resposta do solicitante.",
+  },
+  // Voltar a Em andamento sem esperar a resposta (o gatilho só age quando o solicitante escreve).
+  { target: "em_andamento", from: ["aguardando_solicitante"], label: "Retomar sem resposta", color: "primary", reason: "none", prompt: "", done: "Atendimento retomado." },
 ];
 
 // Campo do Zammad com o motivo da pausa (obrigatório ao entrar em Em pausa — regra 800).
@@ -279,9 +295,10 @@ export function staffActionFor(target: FlowStep, current?: FlowStep): StaffActio
   return STAFF_ACTIONS.find((action) => action.target === target && (!current || !action.from || action.from.includes(current))) ?? null;
 }
 
-// O chamado espera uma decisão do solicitante (aparece como "esperando você" nas listas dele).
+// O chamado espera algo do solicitante (aparece como "esperando você" nas listas dele): uma decisão (Concluído, Não
+// autorizado) ou a resposta a uma pergunta da equipe (Aguardando solicitante).
 export function customerMustDecide(step: FlowStep | null): boolean {
-  return step === "concluido" || step === "nao_autorizado";
+  return step === "concluido" || step === "nao_autorizado" || step === "aguardando_solicitante";
 }
 
 // Dica do passo para a equipe (o que fazer agora). null = nada a sugerir.
@@ -293,6 +310,7 @@ export function staffHintFor(step: FlowStep, actor: FlowActor & { hasOwner: bool
   if (actor.supervisor && step === "atribuido") return "Aguardando o responsável iniciar o atendimento.";
   if (actor.worker && step === "em_pausa") return "Atendimento pausado. Toque em Retomar quando voltar a trabalhar nele.";
   if (actor.supervisor && step === "em_pausa") return "Atendimento pausado. O responsável retoma quando voltar a trabalhar nele.";
+  if (step === "aguardando_solicitante") return "Esperando a resposta do solicitante. Quando ele responder, o chamado volta sozinho para Em andamento.";
   if (step === "concluido") return "Aguardando o solicitante aprovar ou pedir ajustes (finaliza sozinho em 48 h).";
   if (step === "nao_autorizado") return "Não autorizado. O solicitante pode reenviar com explicação.";
   return null;

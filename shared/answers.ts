@@ -16,12 +16,17 @@ export const DESCRIPTION_MAX = 20000;
 // arquivos deixam folga para o resto do formulário.
 export const ATTACHMENT_LIMITS: AttachmentLimits = { maxFiles: 5, maxTotalBytes: 8 * 1024 * 1024 };
 
+// Forma mínima de um e-mail: algo@dominio.tld, sem espaços. A conferência de verdade é do Zammad.
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 export type Answers = Record<string, AnswerValue | null | undefined>;
 
 // Setor com subdivisões (subgrupos liberados para a pessoa, ex.: Tecnologia → Suporte) não recebe chamado
 // direto: a pessoa escolhe o assunto. Vale no wizard (bloqueia "Continuar") e no servidor (recusa o envio).
 // `sectors` = a lista já filtrada para quem pede (ativos e da audiência dela), igual nos dois lados.
 export const SECTOR_REQUIRED_MESSAGE = "Escolha o setor para continuar.";
+// Setor aberto (com subdivisões) mas sem assunto escolhido: o que falta é o assunto.
+export const SUBJECT_REQUIRED_MESSAGE = "Escolha o assunto para continuar.";
 
 export function hasSubsectors(sectors: readonly { groupId: number; parentId: number | null }[], groupId: number): boolean {
   return sectors.some((sector) => sector.parentId === groupId);
@@ -54,6 +59,12 @@ export function validateField(field: WizardField, value: AnswerValue | null | un
       return typeof value === "boolean" ? null : "Responda sim ou não.";
     case "integer":
       return typeof value === "number" && Number.isInteger(value) ? null : "Informe um número inteiro.";
+    case "email": {
+      if (typeof value !== "string") return "Resposta inválida.";
+      const email = value.trim();
+      if (field.maxLength && email.length > field.maxLength) return `Use no máximo ${field.maxLength} caracteres.`;
+      return EMAIL_PATTERN.test(email) ? null : "Informe um e-mail válido, como nome@fem.org.br.";
+    }
     case "text":
     case "textarea":
       if (typeof value !== "string") return "Resposta inválida.";
@@ -118,7 +129,7 @@ export function toZammadValues(fields: WizardField[], answers: Answers): Record<
   for (const field of fields) {
     const value = answers[field.name];
     if (isEmptyAnswer(value)) continue;
-    values[field.name] = field.type === "datetime" ? `${value}:00${LOCAL_UTC_OFFSET}` : value;
+    values[field.name] = field.type === "datetime" ? `${value}:00${LOCAL_UTC_OFFSET}` : field.type === "email" && typeof value === "string" ? value.trim() : value;
   }
   return values;
 }

@@ -36,6 +36,15 @@ O Colabora é a referência dessa regra.
   nova: mudar o schema e rodar `scripts\db-generate.ps1 -Name <nome>` (nunca editar `_journal.json`); testar com
   `scripts\run-tests.ps1 -Integration` (PGlite). Leitura do banco que falha não pode derrubar tela (try/catch).
   Scripts `.ps1` só em ASCII.
+- **Contagens (v1.14.0)**: todo número de chamado sai de `shared/ticket-state.ts` — `isOpenTicket` (só Finalizado encerra),
+  `isAwaitingDecision` (Novo, Em análise, Autorizado, Reavaliação, com ou sem responsável), `isAwaitingRequester` e
+  `isCustomerWaiting` ("solicitante respondeu": ignora a abertura, chamado aberto pelo próprio responsável e Aguardando
+  solicitante). A tela do chamado usa `requesterRepliedAfterAgent` (pela conversa). Nunca refazer essas regras num serviço.
+  Tempo ("há 3 h"), setor ("Pai > Filho") e rótulo numerado vêm de `shared/format.ts`.
+- **Fila (v1.14.0)**: etapas em `shared/queue-buckets.ts` (`STAGE_GROUPS` agrupa; estado desconhecido vai para "outros" quando o
+  Zammad tem o fluxo da FEM). A navegação é `routes/views/stage-nav.tsx`: gaveta no celular, coluna de `md:` em diante.
+- **Select do Radix dentro de Dialog consome o primeiro clique no botão seguinte**: nos diálogos use `<select>` nativo
+  (`AgentSelect` em `decision-actions.tsx`).
 - **Escrita exige a pessoa**: `zammadRequest` com POST/PUT exige `onBehalfOf` no tipo e recusa e-mail vazio.
 - **O servidor remonta o formulário** em `create-ticket` (setor, campos visíveis e obrigatórios)
   e não confia no que vem do navegador. As regras de validação ficam em `shared/answers.ts`, que é

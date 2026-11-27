@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   ageMs,
   ageTone,
-  formatAge,
   hrefWith,
   isUrgentPriority,
   loadLevel,
@@ -32,12 +31,6 @@ describe("prioridade urgente", () => {
 });
 
 describe("idade", () => {
-  it("formata curto", () => {
-    expect(formatAge(10 * 60 * 1000)).toBe("menos de 1 h");
-    expect(formatAge(5 * H)).toBe("5 h");
-    expect(formatAge(50 * H)).toBe("2 d");
-  });
-
   it("tom por faixa e data inválida vira 0", () => {
     expect(ageTone(2 * H)).toBe("fresh");
     expect(ageTone(30 * H)).toBe("aging");
@@ -89,13 +82,13 @@ describe("KPIs do gestor", () => {
   it("conta fila, atendimento, aguardando e urgentes", () => {
     const kpis = summarizeManager(
       [
-        { ownerId: 1, priority: "3 high", customerWaiting: false, createdAt: "2026-11-12T06:00:00Z" },
-        { ownerId: 1, priority: "2 normal", customerWaiting: false, createdAt: "2026-11-10T12:00:00Z" },
+        { id: 1, ownerId: 1, priority: "3 high", customerWaiting: false, createdAt: "2026-11-12T06:00:00Z" },
+        { id: 2, ownerId: 1, priority: "2 normal", customerWaiting: false, createdAt: "2026-11-10T12:00:00Z" },
       ],
       [
-        { ownerId: 5, priority: "2 normal", customerWaiting: true, createdAt: "2026-11-11T12:00:00Z" },
-        { ownerId: 6, priority: "4 urgente", customerWaiting: false, createdAt: "2026-11-11T12:00:00Z" },
-        { ownerId: 6, priority: "2 normal", customerWaiting: true, createdAt: "2026-11-11T12:00:00Z" },
+        { id: 3, ownerId: 5, priority: "2 normal", customerWaiting: true, createdAt: "2026-11-11T12:00:00Z" },
+        { id: 4, ownerId: 6, priority: "4 urgente", customerWaiting: false, createdAt: "2026-11-11T12:00:00Z" },
+        { id: 5, ownerId: 6, priority: "2 normal", customerWaiting: true, createdAt: "2026-11-11T12:00:00Z" },
       ],
       NOW,
     );

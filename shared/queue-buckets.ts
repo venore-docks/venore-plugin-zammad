@@ -20,8 +20,10 @@ export type StageBucket =
   | "atribuido"
   | "andamento"
   | "pausa"
+  | "aguardando"
   | "concluido"
-  | "finalizado";
+  | "finalizado"
+  | "outros";
 export type QueueBucket = "abertos" | StageBucket;
 
 export const OPEN_TAB: QueueBucket = "abertos";
@@ -38,7 +40,9 @@ export const QUEUE_BUCKETS: BucketInfo[] = [
   { key: "atribuido", label: "Atribuído", hint: "Com um responsável, que ainda não iniciou o atendimento." },
   { key: "andamento", label: "Em andamento", hint: "Um agente está trabalhando no pedido." },
   { key: "pausa", label: "Em pausa", hint: "Atendimento parado. Volta para Em andamento quando for retomado." },
+  { key: "aguardando", label: "Aguardando solicitante", hint: "Esperando resposta do solicitante. Volta para Em andamento quando ele responder." },
   { key: "concluido", label: "Concluído", hint: "Entregues, esperando o solicitante aprovar ou pedir ajustes." },
+  { key: "outros", label: "Outros estados", hint: "Estados que o Colabora ainda não reconhece. Peça ao administrador para mapeá-los." },
   { key: "finalizado", label: "Finalizado", hint: "Encerrados. Os 50 mais recentes dos seus setores." },
 ];
 
@@ -53,7 +57,9 @@ export const STAGES: { key: StageBucket; label: string; hint: string; color: Tic
   { key: "atribuido", label: "Atribuído", hint: "Esperam o agente iniciar.", color: "info", open: true },
   { key: "andamento", label: "Em andamento", hint: "Com um agente trabalhando.", color: "primary", open: true },
   { key: "pausa", label: "Em pausa", hint: "Atendimento parado; volta quando for retomado.", color: "warning", open: true },
+  { key: "aguardando", label: "Aguardando solicitante", hint: "Esperando resposta do solicitante.", color: "info", open: true },
   { key: "concluido", label: "Concluído", hint: "Esperam o retorno do solicitante.", color: "success", open: true },
+  { key: "outros", label: "Outros estados", hint: "Estados que o Colabora não reconhece.", color: "neutral", open: true },
   { key: "finalizado", label: "Finalizado", hint: "Encerrados.", color: "neutral", open: false },
 ];
 
@@ -68,14 +74,17 @@ const BY_STEP: Record<FlowStepKey, StageBucket> = {
   atribuido: "atribuido",
   em_andamento: "andamento",
   em_pausa: "pausa",
+  aguardando_solicitante: "aguardando",
   concluido: "concluido",
   finalizado: "finalizado",
 };
 
 // `closed`: só importa fora do fluxo (estado genérico encerrado fica fora da fila).
-export function bucketOf(step: FlowStepKey | null, hasOwner: boolean, closed = false): StageBucket | null {
+export function bucketOf(step: FlowStepKey | null, hasOwner: boolean, closed = false, strict = false): StageBucket | null {
   if (step) return BY_STEP[step];
   if (closed) return null;
+  // Zammad com os estados do fluxo da FEM: um estado desconhecido NÃO é agrupado em silêncio em Novo/Em andamento.
+  if (strict) return "outros";
   return hasOwner ? "andamento" : "novo";
 }
 
@@ -110,3 +119,13 @@ export function countBuckets<T extends { bucket: StageBucket }>(items: readonly 
 export function pendingDecisions(counts: Record<QueueBucket, number>): number {
   return counts.novo + counts.analise + counts.reavaliacao + counts.autorizado;
 }
+
+// Os grupos da navegação da Fila: de quem é a vez. Cada etapa aparece em UM grupo (testado). "Outros estados" só
+// aparece quando há chamado nele.
+export const STAGE_GROUPS: { label: string; keys: StageBucket[] }[] = [
+  { label: "Decisão do gestor", keys: ["novo", "analise", "autorizado", "reavaliacao"] },
+  { label: "Com o agente", keys: ["atribuido", "andamento", "pausa"] },
+  { label: "Esperando o solicitante", keys: ["aguardando", "nao_autorizado", "concluido"] },
+  { label: "Outros", keys: ["outros"] },
+  { label: "Encerrado", keys: ["finalizado"] },
+];

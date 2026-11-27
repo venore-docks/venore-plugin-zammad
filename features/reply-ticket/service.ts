@@ -1,12 +1,12 @@
 import { beginOperation, endOperation } from "@venore/plugin-sdk/observability";
-import { canCommentTicket } from "../../shared/access-rules";
+import { canAllocate, canCommentTicket, canWorkTicket } from "../../shared/access-rules";
 import { composeReplyBody, validateAttachments, validateReply } from "../../shared/answers";
 import { articleVisibleText, cleanSenderName, makeExcerpt } from "../../shared/html-text";
-import { loadArticles, loadTicketForViewer, resolveStateId } from "../../shared/own-ticket";
+import { loadAgentOptions, loadArticles, loadTicketForViewer, resolveStateId } from "../../shared/own-ticket";
 import { getPerson } from "../../shared/people";
 import type { Requester } from "../../shared/requester";
 import { failure } from "../../shared/results";
-import { customerCanReply, customerReplyBlockedMessage, flowStepOf } from "../../shared/flow";
+import { canMoveTo, customerCanReply, customerReplyBlockedMessage, flowStepOf } from "../../shared/flow";
 import { describeState } from "../../shared/ticket-state";
 import { zammadRequest } from "../../shared/zammad-client";
 import type { ReplyTicketInput, ReplyTicketResult } from "./types";
@@ -81,6 +81,30 @@ export async function replyTicket(requester: Requester, input: ReplyTicketInput)
     payload = { ...common, type: "email", sender: "Agent", internal: false, to: customer.email };
   }
 
+  // "Enviar e aguardar resposta": só o agente, resposta pública, chamado Em andamento. Um único PUT do chamado leva o
+  // artigo e o estado juntos (nada fica pela metade); o solicitante recebe o e-mail e o gatilho 30 do Zammad devolve o
+  // chamado a Em andamento quando ele responder.
+  if (input.awaitReply) {
+    if (!agentMode || internal) return finish(failure("await_not_allowed", "Só uma resposta ao solicitante pode aguardar a resposta dele."));
+    const actor = { supervisor: canAllocate(mode, viewed.data.role), worker: canWorkTicket(mode, ticket.owner_id, meId) };
+    if (!step || !canMoveTo(step, "aguardando_solicitante", actor)) {
+      return finish(failure("await_not_allowed", "Este chamado não pode aguardar o solicitante agora (precisa estar Em andamento)."));
+    }
+    const options = await loadAgentOptions();
+    const waitingState = options.success ? options.data.states.find((state) => flowStepOf(state.name) === "aguardando_solicitante") : undefined;
+    if (!waitingState) return finish(failure("await_unavailable", "O Zammad não tem o estado “Aguardando solicitante”."));
+    const article = { ...payload };
+    delete article.ticket_id;
+    const updated = await zammadRequest(`tickets/${ticket.id}`, {
+      method: "PUT",
+      onBehalfOf: requester.email,
+      timeoutMs: 45000,
+      body: { state_id: waitingState.id, article },
+    });
+    if (!updated.success) return finish(updated);
+    return finish({ success: true, data: { reopened: false, waiting: true } });
+  }
+
   const created = await zammadRequest<{ id: number }>("ticket_articles", {
     method: "POST",
     onBehalfOf: requester.email,
@@ -104,5 +128,5 @@ export async function replyTicket(requester: Requester, input: ReplyTicketInput)
       reopened = updated.success;
     }
   }
-  return finish({ success: true, data: { reopened } });
+  return finish({ success: true, data: { reopened, waiting: false } });
 }

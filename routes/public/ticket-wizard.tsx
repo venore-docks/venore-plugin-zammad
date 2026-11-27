@@ -24,6 +24,7 @@ import type { CreatedTicket, FormRules, SectorForm, WizardData, WizardStep } fro
 import {
   DESCRIPTION_MIN,
   SECTOR_REQUIRED_MESSAGE,
+  SUBJECT_REQUIRED_MESSAGE,
   TITLE_MAX,
   displayAnswer,
   formatBytes,
@@ -31,12 +32,14 @@ import {
   isEmptyAnswer,
   validateAttachments,
   validateDescription,
+  validateField,
   validateFields,
   validateTitle,
   type Answers,
 } from "../../shared/answers";
 import { matchesSearch } from "../../shared/customer-stats";
 import { resolveForm } from "../../shared/form";
+import { bodyGuidanceFor, type BodyGuidance } from "../../shared/hints";
 import { APP_SURFACE, PORTAL_SURFACE } from "../../shared/routes";
 import { createTicketAction } from "./actions";
 import { FieldError, FieldInput, OptionChip } from "./field-input";
@@ -49,12 +52,6 @@ type StepDef =
   | { kind: "review"; title: string };
 
 const DEFAULT_INTRO = "Escolha o setor que pode ajudar. Se não tiver certeza, escolha o mais próximo — a equipe encaminha se for preciso.";
-const DEFAULT_BODY_HINTS = [
-  "O que você precisa ou o que aconteceu?",
-  "Onde? (sala, prédio, sistema, equipamento)",
-  "Desde quando, ou para quando precisa?",
-  "Já tentou alguma coisa? Qual foi o resultado?",
-];
 // Com mais setores que isto, o passo de setor ganha uma busca.
 const SEARCH_FROM = 8;
 // Espaço do cabeçalho fixo (casca do site ou cabeçalho do app) + respiro, ao rolar até o topo do formulário.
@@ -101,6 +98,10 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
   // (o React Compiler memoiza o cálculo)
   const sectorSteps = sector ? resolveForm(data.rules, sector.groupId, sector.presentation, answers).steps : [];
   const hasQuestions = sectorSteps.length > 0;
+  // Setor com o pai ("Tecnologia > Acesso a sistemas"): a revisão e a etiqueta dizem de onde é.
+  const parentSector = sector && sector.parentId !== null ? byId.get(sector.parentId) : undefined;
+  const sectorPath = sector ? [parentSector?.label, sector.label].filter(Boolean).join(" > ") : "";
+  const guidance = bodyGuidanceFor(sector ? [sector.label, parentSector?.label ?? ""].filter(Boolean) : []);
 
   const steps: StepDef[] = [
     { kind: "sector", title: "Com qual setor você precisa falar?" },
@@ -157,11 +158,25 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
       const next = { ...prev, [name]: value };
       return sector ? resolveForm(data.rules, sector.groupId, sector.presentation, next).answers : next;
     });
+    // O erro some assim que o valor passa a valer (não espera o próximo "Continuar").
+    const field = sectorSteps.flatMap((step) => step.fields).find((candidate) => candidate.name === name);
+    if (field) clearErrorIfValid(name, validateField(field, value));
+  }
+
+  function clearErrorIfValid(key: string, problem: string | null) {
+    if (problem) return;
+    setErrors((prev) => {
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
   }
 
   function validateCurrent(): boolean {
     let next: Record<string, string> = {};
-    if (current.kind === "sector" && !sector) next = { sector: SECTOR_REQUIRED_MESSAGE };
+    // Com o setor aberto (tem subdivisões) falta o ASSUNTO, não o setor.
+    if (current.kind === "sector" && !sector) next = { sector: parentId !== null ? SUBJECT_REQUIRED_MESSAGE : SECTOR_REQUIRED_MESSAGE };
     if (current.kind === "fields") next = validateFields(current.step.fields, answers);
     if (current.kind === "details") {
       const titleError = validateTitle(title);
@@ -227,12 +242,12 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
       <PhaseBar phases={phases} current={phase} />
 
       <section className={cn("space-y-6 rounded-lg border border-t-4 bg-card p-6 shadow-sm sm:p-8", sector ? accent.top : "border-t-primary")}>
-        {sector && current.kind !== "sector" && <SectorTag sector={sector} accent={accent} />}
+        {sector && current.kind !== "sector" && <SectorTag label={sectorPath} sector={sector} accent={accent} />}
 
         <div className="space-y-1.5">
           {current.kind === "fields" && (
             <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              Pergunta {questionNumber} de {questionSteps.length}
+              Detalhes · pergunta {questionNumber} de {questionSteps.length}
               {current.step.optional && <span className="ms-2 rounded-full bg-warning-soft px-2 py-0.5 text-warning normal-case">opcional</span>}
             </p>
           )}
@@ -254,15 +269,11 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
 
         {current.kind === "fields" && (
           <div className="space-y-8">
-            {current.step.optional && (
-              <p className="rounded-md border border-warning-border bg-warning-soft px-3 py-2 text-sm text-foreground">
-                Esta etapa é opcional — pode seguir sem responder.
-              </p>
-            )}
             {current.step.fields.map((field) => (
               <FieldInput
                 key={field.name}
                 field={field}
+                optionalTag={!current.step.optional}
                 showLabel={current.step.fields.length > 1 || current.step.title !== field.label}
                 value={answers[field.name]}
                 error={errors[field.name]}
@@ -275,10 +286,17 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
         {current.kind === "details" && (
           <DetailsStep
             hint={sector?.bodyHint ?? null}
+            guidance={guidance}
             title={title}
-            onTitle={setTitle}
+            onTitle={(value) => {
+              setTitle(value);
+              clearErrorIfValid("title", validateTitle(value));
+            }}
             description={description}
-            onDescription={setDescription}
+            onDescription={(value) => {
+              setDescription(value);
+              clearErrorIfValid("description", validateDescription(value));
+            }}
             files={files}
             onFiles={setFiles}
             limits={data.limits}
@@ -287,7 +305,7 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
         )}
 
         {current.kind === "review" && sector && (
-          <ReviewStep sector={sector} accent={accent} answers={answers} description={description} title={title} files={files} steps={steps} onEdit={goTo} />
+          <ReviewStep sector={sector} sectorPath={sectorPath} accent={accent} answers={answers} description={description} title={title} files={files} steps={steps} onEdit={goTo} />
         )}
       </section>
 
@@ -351,11 +369,11 @@ function PhaseBar({ phases, current }: { phases: string[]; current: number }) {
   );
 }
 
-function SectorTag({ sector, accent }: { sector: SectorForm; accent: Accent }) {
+function SectorTag({ label, sector, accent }: { label: string; sector: SectorForm; accent: Accent }) {
   return (
     <span className={cn("inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium text-foreground", accent.soft, accent.border)}>
       {sectorIcon(sector.label, "size-3.5")}
-      {sector.label}
+      {label}
     </span>
   );
 }
@@ -386,9 +404,6 @@ function SectorStep({
   const childrenOf = (id: number) => sectors.filter((sector) => sector.parentId === id);
   // Cartão marcado na grade: o pai aberto (com subdivisões) ou o setor escolhido (sem subdivisões).
   const activeTopId = openParentId ?? selectedId;
-  // Só os subgrupos: o pai não é opção ("Outro assunto" saiu — todo chamado desses setores vai para um assunto).
-  const subOptions = openParentId !== null ? childrenOf(openParentId) : [];
-  const parent = openParentId !== null ? sectors.find((sector) => sector.groupId === openParentId) : undefined;
 
   return (
     <div className="space-y-5">
@@ -423,52 +438,61 @@ function SectorStep({
       <div className="grid gap-3">
         {topLevel.map((sector) => {
           const active = activeTopId === sector.groupId;
-          const hasChildren = childrenOf(sector.groupId).length > 0;
+          const subOptions = childrenOf(sector.groupId);
+          const hasChildren = subOptions.length > 0;
+          // O assunto aparece DENTRO do card do setor aberto (não depois de toda a lista de setores).
+          const expanded = hasChildren && openParentId === sector.groupId;
           const accent = accentFor(sector.groupId);
           return (
-            <button
+            <div
               key={sector.groupId}
-              type="button"
-              onClick={() => {
-                onSelect(sector.groupId, !hasChildren);
-                // Com subdivisões, a pergunta "qual assunto" aparece abaixo da grade: rola até ela.
-                if (hasChildren) requestAnimationFrame(() => subRef.current?.scrollIntoView({ block: "center", behavior: "smooth" }));
-              }}
-              aria-pressed={active}
+              ref={expanded ? subRef : undefined}
               className={cn(
-                "group flex items-center gap-4 rounded-lg border bg-background p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                "scroll-mt-24 rounded-lg border bg-background transition-all",
                 active ? cn("ring-2", accent.border, accent.ring, accent.soft) : "hover:border-foreground/30",
               )}
             >
-              <span className={cn("grid size-11 shrink-0 place-items-center rounded-md text-foreground", accent.soft)}>
-                {sectorIcon(sector.label, "size-5")}
-              </span>
-              <span className="min-w-0 flex-1 space-y-0.5">
-                <span className="block font-medium text-foreground">{sector.label}</span>
-                {sector.description && <span className="block text-xs text-muted-foreground">{sector.description}</span>}
-              </span>
-              {hasChildren ? (
-                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-              ) : (
-                active && <CircleCheck className="size-5 shrink-0 text-success" />
+              <button
+                type="button"
+                onClick={() => {
+                  onSelect(sector.groupId, !hasChildren);
+                  // Com subdivisões, o card se abre com a pergunta "qual assunto": rola até ele.
+                  if (hasChildren) requestAnimationFrame(() => subRef.current?.scrollIntoView({ block: "center", behavior: "smooth" }));
+                }}
+                aria-pressed={active}
+                aria-expanded={hasChildren ? expanded : undefined}
+                className="group flex w-full items-center gap-4 rounded-lg p-4 text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              >
+                <span className={cn("grid size-11 shrink-0 place-items-center rounded-md text-foreground", accent.soft)}>
+                  {sectorIcon(sector.label, "size-5")}
+                </span>
+                <span className="min-w-0 flex-1 space-y-0.5">
+                  <span className="block font-medium text-foreground">{sector.label}</span>
+                  {sector.description && <span className="block text-xs text-muted-foreground">{sector.description}</span>}
+                </span>
+                {hasChildren ? (
+                  <ChevronRight className={cn("size-4 shrink-0 text-muted-foreground transition-transform rtl:rotate-180", expanded && "rotate-90 rtl:rotate-90")} />
+                ) : (
+                  active && <CircleCheck className="size-5 shrink-0 text-success" />
+                )}
+              </button>
+              {expanded && (
+                <div className="space-y-3 border-t px-4 pt-3 pb-4">
+                  <p className="text-sm font-medium text-foreground">Qual é o assunto em {sector.label}?</p>
+                  <div className="flex flex-wrap gap-2">
+                    {subOptions.map((option) => (
+                      <OptionChip key={option.groupId} selected={selectedId === option.groupId} onClick={() => onSelect(option.groupId, true)}>
+                        {option.label}
+                      </OptionChip>
+                    ))}
+                  </div>
+                </div>
               )}
-            </button>
+            </div>
           );
         })}
       </div>
 
-      {parent && subOptions.length > 0 && (
-        <div ref={subRef} className={cn("scroll-mt-24 space-y-3 rounded-lg border p-4", accentFor(parent.groupId).soft, accentFor(parent.groupId).border)}>
-          <p className="text-sm font-medium text-foreground">Qual é o assunto em {parent.label}?</p>
-          <div className="flex flex-wrap gap-2">
-            {subOptions.map((option) => (
-              <OptionChip key={option.groupId} selected={selectedId === option.groupId} onClick={() => onSelect(option.groupId, true)}>
-                {option.label}
-              </OptionChip>
-            ))}
-          </div>
-        </div>
-      )}
       <FieldError message={error} />
     </div>
   );
@@ -477,6 +501,7 @@ function SectorStep({
 // Título + descrição + anexos numa tela só: é o "pedido" em si, e o resto já foi respondido.
 function DetailsStep({
   hint,
+  guidance,
   title,
   onTitle,
   description,
@@ -487,6 +512,7 @@ function DetailsStep({
   errors,
 }: {
   hint: string | null;
+  guidance: BodyGuidance;
   title: string;
   onTitle: (value: string) => void;
   description: string;
@@ -497,7 +523,8 @@ function DetailsStep({
   errors: Record<string, string>;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const hints = hint ? hint.split("\n").filter((line) => line.trim().length > 0) : DEFAULT_BODY_HINTS;
+  // A ajuda configurada no admin vale por cima da ajuda do setor.
+  const hints = hint ? hint.split("\n").filter((line) => line.trim().length > 0) : guidance.lines;
   const remaining = Math.max(0, DESCRIPTION_MIN - description.trim().length);
 
   return (
@@ -507,8 +534,7 @@ function DetailsStep({
           Título do chamado
         </label>
         <p className="text-sm text-muted-foreground">
-          Em poucas palavras: <strong className="text-foreground">o quê</strong> e <strong className="text-foreground">onde</strong>. Ex.: “Projetor da sala 204 não
-          liga”.
+          Em poucas palavras: <strong className="text-foreground">o quê</strong> e <strong className="text-foreground">onde</strong>. Ex.: “{guidance.example}”.
         </p>
         <Input id="ticket-title" value={title} maxLength={TITLE_MAX} onChange={(event) => onTitle(event.target.value)} aria-invalid={Boolean(errors.title)} className="h-11 text-base" />
         <FieldError message={errors.title} />
@@ -592,6 +618,7 @@ function DetailsStep({
 
 function ReviewStep({
   sector,
+  sectorPath,
   accent,
   answers,
   description,
@@ -601,6 +628,7 @@ function ReviewStep({
   onEdit,
 }: {
   sector: SectorForm;
+  sectorPath: string;
   accent: Accent;
   answers: Answers;
   description: string;
@@ -612,7 +640,7 @@ function ReviewStep({
   const indexOf = (predicate: (step: StepDef) => boolean) => steps.findIndex(predicate);
   const detailsIndex = indexOf((step) => step.kind === "details");
   const rows: { label: string; value: string; stepIndex: number }[] = [
-    { label: "Setor", value: sector.label, stepIndex: 0 },
+    { label: "Setor", value: sectorPath || sector.label, stepIndex: 0 },
     ...steps.flatMap((def, stepIndex) =>
       def.kind !== "fields"
         ? []

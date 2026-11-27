@@ -1,6 +1,7 @@
 import type { TicketStateTone } from "../contracts/types";
 import type { ZammadTicketPriority, ZammadTicketState } from "../contracts/zammad";
 import { LOCAL_UTC_OFFSET } from "./answers";
+import { stripLeadingNumber } from "./format";
 import { describeState } from "./ticket-state";
 
 // Opções que o agente escolhe no app (estado e prioridade), montadas a partir do que o Zammad tem.
@@ -28,7 +29,7 @@ export function buildStateOptions(states: ZammadTicketState[]): StateOption[] {
 
 // "2 normal" → "Normal"; "4 urgente" → "Urgente".
 export function priorityLabel(name: string): string {
-  const text = name.replace(/^\d+\s*/, "").trim() || name;
+  const text = stripLeadingNumber(name);
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 

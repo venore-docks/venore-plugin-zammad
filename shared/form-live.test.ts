@@ -18,8 +18,16 @@ const ACESSO = 22;
 const built = buildSectorForms(FEM_SCHEMA_LIVE, EMPTY);
 const presentationOf = (groupId: number) => built.sectors.find((sector) => sector.groupId === groupId)!.presentation;
 const resolve = (groupId: number, answers: Answers = {}) => resolveForm(built.rules, groupId, presentationOf(groupId), answers);
+// acesso_nome / acesso_email (v. docs/plano-colabora-v2.md): atributos novos do Zammad que, em 27/11/2026, ainda
+// apareciam em TODOS os setores (as regras "ocultar por padrão" e "mostrar em Acesso a sistemas" não foram criadas).
+// Ficam fora deste resumo para o teste não fixar uma configuração provisória.
+const PENDING_ZAMMAD_FIELDS = new Set(["acesso_nome", "acesso_email"]);
 const summary = (groupId: number, answers: Answers = {}) =>
-  Object.fromEntries(resolve(groupId, answers).fields.map((field) => [field.name, field.required ? "obrigatório" : "opcional"]));
+  Object.fromEntries(
+    resolve(groupId, answers)
+      .fields.filter((field) => !PENDING_ZAMMAD_FIELDS.has(field.name))
+      .map((field) => [field.name, field.required ? "obrigatório" : "opcional"]),
+  );
 
 describe("recorte real: formulários de Tecnologia (cliente)", () => {
   it("nenhuma regra da tela de criação fica sem avaliar", () => {

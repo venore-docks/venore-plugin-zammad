@@ -20,7 +20,7 @@ export async function AgentDashboard({ surfaceKey }: DashboardProps) {
     );
   }
 
-  const { stats, needsReply, inProgress } = result.data;
+  const { stats, needsReply, awaitingRequester, inProgress } = result.data;
   const allDone = stats.open === 0;
 
   return (
@@ -41,6 +41,7 @@ export async function AgentDashboard({ surfaceKey }: DashboardProps) {
                   </span>
                 </>
               )}
+              {stats.awaitingRequester > 0 && ` · ${stats.awaitingRequester} aguardando solicitante`}
               {stats.stale > 0 && ` · ${stats.stale} sem retorno há mais de 24 h`}
               {stats.urgent > 0 && ` · ${stats.urgent} ${stats.urgent === 1 ? "urgente" : "urgentes"}`}
             </>
@@ -63,6 +64,12 @@ export async function AgentDashboard({ surfaceKey }: DashboardProps) {
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">Ninguém esperando resposta sua.</p>
+          )}
+          {awaitingRequester.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground">Aguardando solicitante</h3>
+              <AgentTicketList tickets={awaitingRequester} hrefFor={surface.detail} now={now} label="Aguardando solicitante" />
+            </div>
           )}
           {inProgress.length > 0 && (
             <div className="space-y-2">

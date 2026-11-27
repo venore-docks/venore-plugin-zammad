@@ -11,6 +11,7 @@ import type {
 } from "../contracts/types";
 import type { ZammadAttribute, ZammadGroup, ZammadSchema, ZammadWorkflow } from "../contracts/zammad";
 import type { Answers } from "./answers";
+import { stripNumbersFromOptions } from "./format";
 import { DEFAULT_AUDIENCE, isSectorVisible, type AudienceViewer } from "./audience";
 import {
   allowedGroupIds,
@@ -385,7 +386,9 @@ function autoSteps(fields: WizardField[], prefix = "auto"): WizardStep[] {
   for (const group of chunk(required.filter((field) => !isChoice(field) && !isDate(field)), QUICK_PER_STEP)) {
     steps.push(makeStep(next(), group.length === 1 ? group[0].label : "Só mais algumas perguntas", group));
   }
-  for (const group of chunk(optional, OPTIONAL_PER_STEP)) steps.push(makeStep(next(), "Quer ajustar mais alguma coisa?", group));
+  for (const group of chunk(optional, OPTIONAL_PER_STEP)) {
+    steps.push(makeStep(next(), group.every(isDate) ? "Alguma data de preferência?" : "Quer ajustar mais alguma coisa?", group));
+  }
   return steps;
 }
 
@@ -456,7 +459,8 @@ function fieldType(attribute: ZammadAttribute): FieldType | null {
     case "datetime":
       return "datetime";
     case "input":
-      return "text";
+      // Campo de e-mail do Zammad (data_option.type = "email"): validado como e-mail, não como texto solto.
+      return option.type === "email" ? "email" : "text";
     case "textarea":
       return "textarea";
     case "integer":
@@ -481,6 +485,8 @@ function toWizardField(
   if (type === "select" || type === "multiselect") {
     options = flattenOptions(option.options);
     if (allowed) options = options.filter((entry) => allowed.includes(entry.value));
+    // Lista numerada (ex.: prioridade sugerida "1 Baixa" … "4 Urgente"): o número é só a ordem no Zammad.
+    options = stripNumbersFromOptions(options);
   } else if (type === "boolean") {
     const labels = (option.options ?? {}) as Record<string, unknown>;
     options = [

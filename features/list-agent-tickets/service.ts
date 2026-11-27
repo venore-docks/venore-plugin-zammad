@@ -1,4 +1,5 @@
 import type { TicketSummary } from "../../contracts/types";
+import { formatGroupName } from "../../shared/format";
 import type { ZammadExpandedTicket } from "../../contracts/zammad";
 import { UNASSIGNED_OWNER_ID, canSeeQueue, isStaff, isSupervisor } from "../../shared/access-rules";
 import { staffRoleFor, teamFor } from "../../shared/directory";
@@ -8,7 +9,7 @@ import { failure } from "../../shared/results";
 import { priorityLabel } from "../../shared/ticket-options";
 import { searchOpenTicketsByOwner } from "../../shared/ticket-search";
 import { loadTicketTags } from "../../shared/ticket-tags";
-import { describeState, isCustomerWaiting } from "../../shared/ticket-state";
+import { describeState, isAwaitingRequester, isCustomerWaiting } from "../../shared/ticket-state";
 import type { ListAgentTicketsInput, ListAgentTicketsResult } from "./types";
 
 export async function listAgentTickets(requester: Requester, input: ListAgentTicketsInput): Promise<ListAgentTicketsResult> {
@@ -42,13 +43,14 @@ async function toSummaries(requester: Requester, tickets: ZammadExpandedTicket[]
       id: ticket.id,
       number: String(ticket.number),
       title: ticket.title,
-      group: ticket.group,
+      group: formatGroupName(ticket.group),
       stateLabel: state.label,
       stateTone: state.tone,
       stateColor: state.color,
       closed: false,
       // Para quem atende: o solicitante falou por último (o chamado espera resposta dele).
       awaitingYou: isCustomerWaiting(ticket),
+      awaitingRequester: isAwaitingRequester(ticket),
       priorityLabel: priorityLabel(ticket.priority ?? ""),
       requesterName: people.get(ticket.customer_id)?.name ?? null,
       tags: tags.get(ticket.id) ?? [],

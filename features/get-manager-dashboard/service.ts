@@ -1,4 +1,5 @@
 import type { OperationResult } from "@venore/plugin-sdk";
+import { formatGroupName } from "../../shared/format";
 import type { ZammadExpandedTicket } from "../../contracts/zammad";
 import { isUnassigned } from "../../shared/access-rules";
 import { DEADLINE_FIELD } from "../../shared/deadline";
@@ -15,7 +16,7 @@ import { getPeople } from "../../shared/people";
 import type { Requester } from "../../shared/requester";
 import { priorityLabel } from "../../shared/ticket-options";
 import { loadTicketTags } from "../../shared/ticket-tags";
-import { isCustomerWaiting, isWaitingOnRequester } from "../../shared/ticket-state";
+import { isAwaitingDecision, isAwaitingRequester, isCustomerWaiting, isOpenTicket } from "../../shared/ticket-state";
 import type {
   AllocationOptions,
   AssigneeOption,
@@ -49,7 +50,7 @@ type Snapshot = {
   perMember: ZammadExpandedTicket[][];
 };
 
-const isClosed = (ticket: ZammadExpandedTicket) => describeState(ticket.state ?? "").closed;
+const isClosed = (ticket: ZammadExpandedTicket) => !isOpenTicket(ticket);
 
 // A fila e os chamados de cada agente da equipe, vindos da leitura compartilhada (shared/manager-snapshot.ts: em
 // memória, 1 + N buscas só quando o cache vence). `includeClosed`: os de cada agente vêm também encerrados — só para a
@@ -70,25 +71,29 @@ async function loadSnapshot(requester: Requester, options: { includeClosed?: boo
 }
 
 function toKpiTicket(ticket: ZammadExpandedTicket): KpiTicket {
-  return { ownerId: ticket.owner_id, priority: ticket.priority ?? "", customerWaiting: isCustomerWaiting(ticket), createdAt: ticket.created_at };
+  return { id: ticket.id, ownerId: ticket.owner_id, priority: ticket.priority ?? "", customerWaiting: isCustomerWaiting(ticket), createdAt: ticket.created_at };
 }
 
-function loadsOf(snapshot: Snapshot): Map<number, { open: number; waiting: number }> {
-  const loads = new Map<number, { open: number; waiting: number }>();
+function loadsOf(snapshot: Snapshot): Map<number, { open: number; waiting: number; awaitingRequester: number }> {
+  const loads = new Map<number, { open: number; waiting: number; awaitingRequester: number }>();
   snapshot.members.forEach((member, index) => {
     // Carga = só os abertos (com includeClosed, a lista traz também os encerrados).
     const tickets = (snapshot.perMember[index] ?? []).filter((ticket) => !isClosed(ticket));
-    loads.set(member.id, { open: tickets.length, waiting: tickets.filter((ticket) => isCustomerWaiting(ticket)).length });
+    loads.set(member.id, {
+      open: tickets.length,
+      waiting: tickets.filter((ticket) => isCustomerWaiting(ticket)).length,
+      awaitingRequester: tickets.filter((ticket) => isAwaitingRequester(ticket)).length,
+    });
   });
   return loads;
 }
 
 // Linha "crua": tudo que vem da busca, sem solicitante nem tags (esses custam uma leitura por chamado — ver
 // completeRows). null = fora da fila (estado genérico encerrado).
-function toRow(ticket: ZammadExpandedTicket, now: number, ownerNames: Map<number, string>, estimates: EstimateOption[] = []): QueueRow | null {
+function toRow(ticket: ZammadExpandedTicket, now: number, ownerNames: Map<number, string>, estimates: EstimateOption[] = [], strict = false): QueueRow | null {
   const state = describeState(ticket.state ?? "");
   const ownerId = isUnassigned(ticket.owner_id) ? null : ticket.owner_id;
-  const bucket = bucketOf(state.step, ownerId !== null, state.closed);
+  const bucket = bucketOf(state.step, ownerId !== null, state.closed, strict);
   if (!bucket) return null;
   const raw = ticket as unknown as Record<string, unknown>;
   const deadlineValue = raw[DEADLINE_FIELD];
@@ -99,7 +104,7 @@ function toRow(ticket: ZammadExpandedTicket, now: number, ownerNames: Map<number
     id: ticket.id,
     number: String(ticket.number),
     title: ticket.title,
-    group: ticket.group,
+    group: formatGroupName(ticket.group),
     groupId: ticket.group_id,
     priorityId: ticket.priority_id,
     priorityLabel: priorityLabel(ticket.priority ?? ""),
@@ -160,18 +165,23 @@ export async function getManagerDashboard(requester: Requester): Promise<GetMana
   const [snapshot, options] = await Promise.all([loadSnapshot(requester), loadAgentOptions()]);
   if (!snapshot.success) return snapshot;
   const { now, members, perMember } = snapshot.data;
-  // Não autorizado espera o solicitante: não é fila de decisão do gestor.
-  const queue = snapshot.data.queue.filter((ticket) => !isWaitingOnRequester(ticket));
-
   const loads = loadsOf(snapshot.data);
-  const assigned = perMember.flat();
-  const kpis = summarizeManager(queue.map(toKpiTicket), assigned.map(toKpiTicket), now);
-  const agents = rankLoads(members.map((member) => ({ id: member.id, name: member.name, ...(loads.get(member.id) ?? { open: 0, waiting: 0 }) })));
+  const assigned = perMember.flat().filter(isOpenTicket);
+  // "Aguardando decisão" = os mesmos chamados do grupo "Decisão do gestor" da Fila (Novo, Em análise, Autorizado,
+  // Reavaliação), COM ou SEM responsável: o mesmo critério da Fila, então os números e o "mais antigo" batem.
+  const seen = new Set<number>();
+  const decision = [...snapshot.data.queue, ...assigned].filter((ticket) => {
+    if (seen.has(ticket.id) || !isAwaitingDecision(ticket)) return false;
+    seen.add(ticket.id);
+    return true;
+  });
+  const kpis = summarizeManager(decision.map(toKpiTicket), assigned.map(toKpiTicket), now);
+  const agents = rankLoads(members.map((member) => ({ id: member.id, name: member.name, ...(loads.get(member.id) ?? { open: 0, waiting: 0, awaitingRequester: 0 }) })));
 
-  // Os mais antigos da fila: só deles buscamos solicitante, tags e opções de alocação.
-  const oldest = [...queue].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()).slice(0, QUEUE_TOP);
+  // Os mais antigos aguardando decisão: só deles buscamos solicitante, tags e opções de alocação.
+  const oldest = [...decision].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()).slice(0, QUEUE_TOP);
   const estimates = await loadEstimateOptions();
-  const bare = oldest.flatMap((ticket) => toRow(ticket, now, new Map(), estimates) ?? []);
+  const bare = oldest.flatMap((ticket) => toRow(ticket, now, new Map(), estimates, hasFlow(options)) ?? []);
   const [queueTop, allocation] = await Promise.all([
     completeRows(requester, bare, new Map(oldest.map((ticket) => [ticket.id, ticket]))),
     allocationFor(bare, loads),
@@ -202,7 +212,7 @@ export async function getQueueBoard(requester: Requester, input: GetQueueBoardIn
   for (const ticket of [...queue, ...flowClosed, ...perMember.flat()]) byId.set(ticket.id, ticket);
   const ownerNames = new Map(members.map((member) => [member.id, member.name]));
   const estimates = await loadEstimateOptions();
-  const all = [...byId.values()].flatMap((ticket) => toRow(ticket, now, ownerNames, estimates) ?? []);
+  const all = [...byId.values()].flatMap((ticket) => toRow(ticket, now, ownerNames, estimates, hasFlow(options)) ?? []);
 
   const counts = countBuckets(all);
   const uncounted: QueueBucket[] = includeClosed ? [] : ["finalizado"];
@@ -236,6 +246,11 @@ export async function getQueueBoard(requester: Requester, input: GetQueueBoardIn
     success: true,
     data: { bucket, items, sectors, allocation, counts, filteredCounts, uncounted, flowStateIds: flowStateIdsOf(options) },
   };
+}
+
+// O Zammad tem os estados do fluxo da FEM (não é um Zammad genérico).
+function hasFlow(options: Awaited<ReturnType<typeof loadAgentOptions>>): boolean {
+  return Object.keys(flowStateIdsOf(options)).length > 0;
 }
 
 function flowStateIdsOf(options: Awaited<ReturnType<typeof loadAgentOptions>>): Partial<Record<FlowStep, number>> {

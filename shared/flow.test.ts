@@ -141,7 +141,9 @@ describe("equipe (espelha os Core Workflows 600–607)", () => {
   });
 
   it("agente: Em andamento vai para Concluído ou Em pausa; Em pausa só volta para Em andamento", () => {
-    expect(allowedTargets("em_andamento", agente)).toEqual(["concluido", "em_pausa"]);
+    expect(allowedTargets("em_andamento", agente)).toEqual(["concluido", "em_pausa", "aguardando_solicitante"]);
+    expect(allowedTargets("aguardando_solicitante", agente)).toEqual(["em_andamento"]);
+    expect(canMoveTo("aguardando_solicitante", "concluido", agente)).toBe(false);
     expect(allowedTargets("em_pausa", agente)).toEqual(["em_andamento"]);
     expect(canMoveTo("em_pausa", "concluido", agente)).toBe(false);
     expect(allowedTargets("concluido", agente)).toEqual(["em_andamento"]);
@@ -150,7 +152,7 @@ describe("equipe (espelha os Core Workflows 600–607)", () => {
   });
 
   it("gestor que também é o responsável soma as duas listas", () => {
-    expect(allowedTargets("em_andamento", ambos).sort()).toEqual(["concluido", "em_pausa"]);
+    expect(allowedTargets("em_andamento", ambos).sort()).toEqual(["aguardando_solicitante", "concluido", "em_pausa"]);
     expect(allowedTargets("autorizado", ambos).sort()).toEqual(["em_analise", "nao_autorizado", "reavaliacao"]);
   });
 
@@ -161,6 +163,7 @@ describe("equipe (espelha os Core Workflows 600–607)", () => {
     expect(staffActionsFor("em_andamento", agente)).toMatchObject([
       { target: "concluido", reason: "optional", color: "success" },
       { target: "em_pausa", label: "Pausar" },
+      { target: "aguardando_solicitante", label: "Aguardar solicitante", reason: "required" },
     ]);
   });
 

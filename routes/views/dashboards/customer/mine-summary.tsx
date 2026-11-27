@@ -10,6 +10,7 @@ type Surface = { mine: string; detail: (ticketId: number) => string };
 export function mineSentence(stats: CustomerStats): string {
   const parts = [`${stats.inProgress} em andamento`];
   if (stats.awaitingYou > 0) parts.push(`${stats.awaitingYou} ${stats.awaitingYou === 1 ? "aguarda" : "aguardam"} você`);
+  // O total de encerrados fica em "Meus chamados"; aqui só o recorte recente (a legenda de lá explica a diferença).
   parts.push(`${stats.closedRecently} ${stats.closedRecently === 1 ? "encerrado" : "encerrados"} nos últimos 30 dias`);
   return parts.join(" · ");
 }

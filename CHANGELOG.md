@@ -2,6 +2,31 @@
 
 Versões anteriores: ver o histórico do git (tags `vX.Y.Z`).
 
+## v1.14.0
+
+### Novidades
+- **Estado "Aguardando solicitante"** (id 12 no Zammad). A equipe pergunta e espera: o chamado volta sozinho para Em andamento quando o solicitante responde (gatilho 30 do Zammad).
+  - **Chamado:** botão **Aguardar solicitante** no "Próximo passo" (pede a pergunta, que vai como nota pública no mesmo envio) e **Enviar e aguardar resposta** na caixa de resposta (um só envio: a mensagem e o estado juntos). Saída manual: "Retomar sem resposta".
+  - **Fila:** etapa própria ao lado de Em pausa. O card mostra **Abrir** (não mais "Escolher agente"). Estado que o Colabora não reconhece vai para **Outros estados** (a aba só aparece com chamado) em vez de cair em silêncio em Em andamento.
+  - **Equipe e Início:** "aguardando solicitante" é contado à parte de "com resposta nova"; o indicador de etapas mostra "Etapa 5 de 7 · aguardando solicitante".
+  - **Solicitante:** o chamado aparece em "Aguardando você" com a pergunta da equipe.
+- **Navegação da Fila por etapa, mobile-first.** No celular, um botão com a etapa atual (e quantos chamados) abre uma **gaveta** com a lista completa; de tablet em diante vira uma **coluna lateral** fixa. As etapas ficam em grupos (Decisão do gestor, Com o agente, Esperando o solicitante, Encerrado) com bolinha de cor e contagem. "Aguardando a sua decisão: N" no topo.
+- **Abrir chamado:** o card do setor se abre com o **assunto dentro dele** (antes aparecia depois de toda a lista); campo de **e-mail** validado como e-mail (atributo `acesso_email` do Zammad); a ajuda da etapa Pedido (exemplo e perguntas) é **do setor** (Acesso a sistemas, Desenvolvimento, Infraestrutura, Suporte, Marketing, Manutenção, RH); a revisão mostra "Tecnologia > Acesso a sistemas".
+
+### Correções
+- **Fila → "Autorizar e atribuir"** não disparava no primeiro clique depois de escolher o agente (a lista do Radix dentro do diálogo consumia o clique). O seletor de agente passa a ser nativo, e o botão mostra carregamento e o erro, se houver, além do aviso.
+- **"Ver como"**: ao trocar de pessoa, a tela e o cache do navegador são refeitos (não mostra mais a pessoa anterior até recarregar).
+- **"Solicitante respondeu"**: não conta a mensagem de abertura, nem chamado que o próprio responsável abriu, nem chamado Aguardando solicitante; só mensagem do solicitante depois da última resposta pública da equipe.
+- **Contadores com uma regra só** (`isOpenTicket`, `isAwaitingDecision`, `isCustomerWaiting` em `shared/ticket-state.ts`): o Início ("Aguardando decisão" e o "mais antigo") passa a usar o mesmo critério da Fila (Novo, Em análise, Autorizado e Reavaliação, com ou sem responsável), então o Novo atribuído há 50 dias aparece; Equipe, Início e Fila contam "aberto" da mesma forma.
+- **Meus chamados**: as abas formam uma partição (Aguardando você + Em andamento + Encerrados = Todos, sem repetir) e uma legenda explica o recorte de 30 dias do Início.
+- Novo/Em análise/Reavaliação **com responsável** ganham o selo "atribuído sem iniciar".
+- Mensagens e rótulos: "Escolha o assunto para continuar." (era "o setor"); erros somem quando o valor passa a valer e a altura da mensagem é reservada (o botão não pula); "Detalhes · pergunta N de M"; a etapa opcional só de datas chama "Alguma data de preferência?" e a palavra "opcional" aparece uma vez; prioridade sem número ("Baixa", e sem o hífen que sobrava); o item do menu suspenso não fica mais salmão; setor sempre "Pai > Filho"; tempo sempre "há 2 min / há 3 h / há 7 d" (`shared/format.ts`); botão do cabeçalho "Novo chamado"; "Assumir análise" (Novo), "Continuar análise" (Em análise) e "Reavaliar"; a Equipe esconde o filtro por setor quando todo agente atende todos; o número da aba Fila ganha espaço e legenda.
+
+### Atenção
+- **Zammad (fora do plugin):** os atributos `acesso_nome` e `acesso_email` já existem, mas as regras ainda não os escondem fora de "Acesso a sistemas" nem os tornam obrigatórios lá, e a regra 61 ainda exige `acesso_para_quem`. Enquanto isso os dois campos aparecem em **todos** os setores. O plugin só lê as regras; falta criá-las no Zammad.
+- A fila agora traz uma suposição sobre o gatilho: Aguardando solicitante → Em andamento pelo gatilho 30 não passa pela regra "um Em andamento por agente" (o plugin não vê essa transição).
+- Escritas novas (Aguardar solicitante, Enviar e aguardar resposta) testadas só contra o recorte do Zammad, não contra o Zammad real.
+
 ## v1.13.0
 
 ### Novidades

@@ -1,4 +1,5 @@
 import { toTicketHistory, type RawHistory } from "../../shared/ticket-history";
+import { formatGroupName } from "../../shared/format";
 import { zammadRequest } from "../../shared/zammad-client";
 import type { AgentControls, CustomerActionOption, FieldOption, LinkedTicket, StaffFlowAction, TicketAttachmentInfo, TicketHistoryEntry, TicketMessage } from "../../contracts/types";
 import { DEADLINE_FIELD, deadlineToLocal } from "../../shared/deadline";
@@ -31,7 +32,8 @@ import { canManageTicketState, loadAgentOptions, loadArticles, loadTicketForView
 import { getPeople, getPerson } from "../../shared/people";
 import { loadTicketTags } from "../../shared/ticket-tags";
 import type { Requester } from "../../shared/requester";
-import { describeState, isAwaitingYou, isCustomerWaiting } from "../../shared/ticket-state";
+import { requesterRepliedAfterAgent } from "../../shared/requester-reply";
+import { describeState, isAwaitingYou } from "../../shared/ticket-state";
 import { priorityLabel } from "../../shared/ticket-options";
 import type { GetTicketInput, GetTicketResult } from "./types";
 
@@ -118,8 +120,10 @@ async function buildAgentControls(
   let states = allStates;
   let flowActions: StaffFlowAction[] = [];
   let flowHint: string | null = null;
+  let canAwaitReply = false;
   if (step) {
     const targets = allowedTargets(step, actor);
+    canAwaitReply = targets.includes("aguardando_solicitante") && allStates.some((state) => flowStepOf(state.name) === "aguardando_solicitante");
     states = allStates.filter((state) => state.id === ticket.state_id || targets.includes(flowStepOf(state.name) as FlowStep));
     flowActions = staffActionsFor(step, actor).flatMap((action) => {
       const state = allStates.find((candidate) => flowStepOf(candidate.name) === action.target);
@@ -153,6 +157,7 @@ async function buildAgentControls(
     canComment: canCommentTicket(mode, role, ticket.owner_id, meId),
     canSetEstimate: estimateChoices !== null && canSetEstimate(mode, role),
     estimateOptions: estimateChoices ?? [],
+    canAwaitReply,
     hasDeadline: extra.hasDeadline,
     canCreateChild: work || allocate,
     childGroups: work || allocate ? extra.childGroups : [],
@@ -165,7 +170,7 @@ function toLinked(ticket: ZammadExpandedTicket, ownerNames: Map<number, string>)
     id: ticket.id,
     number: String(ticket.number),
     title: ticket.title,
-    group: ticket.group,
+    group: formatGroupName(ticket.group),
     stateLabel: state.label,
     stateTone: state.tone,
     stateColor: state.color,
@@ -253,7 +258,7 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
       id: ticket.id,
       number: String(ticket.number),
       title: ticket.title,
-      group: ticket.group,
+      group: formatGroupName(ticket.group),
       stateLabel: state.label,
       stateTone: state.tone,
       stateColor: state.color,
@@ -264,7 +269,11 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
       customerCanReply: canReply,
       customerReplyBlocked: canReply ? null : customerReplyBlockedMessage(state.step),
       awaitingYou: isAwaitingYou(ticket, state.closed) || (isRequesterView && customerMustDecide(state.step)),
-      customerWaiting: !state.closed && isCustomerWaiting(ticket),
+      // Pela conversa (os artigos estão aqui): só mensagem do solicitante DEPOIS da última resposta pública da equipe, sem
+      // contar a abertura, e nunca em chamado que o próprio responsável abriu ou que aguarda o solicitante.
+      customerWaiting:
+        !state.closed &&
+        requesterRepliedAfterAgent(messages, { awaitingRequester: state.step === "aguardando_solicitante", ownerIsRequester: ticket.owner_id === ticket.customer_id }),
       canClose,
       createdAt: ticket.created_at,
       updatedAt: ticket.updated_at,

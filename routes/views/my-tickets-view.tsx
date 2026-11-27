@@ -3,7 +3,7 @@ import { BellRing, CircleCheck, Hourglass, LifeBuoy, Plus } from "lucide-react";
 import { Button, EmptyState, cn } from "@venore/plugin-sdk/ui";
 import type { TicketSummary } from "../../contracts/types";
 import { listMyTickets } from "../../index";
-import { MINE_FILTERS, countByFilter, filterTickets, parseMineFilter, type MineFilter } from "../../shared/customer-stats";
+import { MINE_FILTERS, RECENT_CLOSED_DAYS, computeCustomerStats, countByFilter, filterTickets, parseMineFilter, type MineFilter } from "../../shared/customer-stats";
 import { surfaceFor, type SurfaceKey } from "../../shared/routes";
 import { BlockedNotice } from "../public/shared";
 import { TicketGroup } from "../public/ticket-list";
@@ -41,6 +41,7 @@ export async function MyTicketsView({ surfaceKey, query }: { surfaceKey: Surface
 
   const result = await listMyTickets();
   const filter = parseMineFilter(query?.filtro);
+  const now = new Date().getTime();
 
   // "Abrir chamado" vem da moldura (botão de contorno no canto do título).
   return (
@@ -68,15 +69,23 @@ export async function MyTicketsView({ surfaceKey, query }: { surfaceKey: Surface
           }
         />
       ) : (
-        <MineList tickets={result.data.tickets} filter={filter} surface={surface} />
+        <MineList tickets={result.data.tickets} filter={filter} surface={surface} now={now} />
       )}
     </ColaboraFrame>
   );
 }
 
-function MineList({ tickets, filter, surface }: { tickets: TicketSummary[]; filter: MineFilter; surface: ReturnType<typeof surfaceFor> }) {
+function MineList({ tickets, filter, surface, now }: { tickets: TicketSummary[]; filter: MineFilter; surface: ReturnType<typeof surfaceFor>; now: number }) {
   const counts = countByFilter(tickets);
   const visible = filterTickets(tickets, filter);
+  const stats = computeCustomerStats(tickets, now);
+  // Legenda do recorte: a aba "Encerrados" traz todos; o Início conta só os dos últimos 30 dias.
+  const closedNote =
+    stats.closedTotal > 0 ? (
+      <p className="text-xs text-muted-foreground">
+        {stats.closedTotal} {stats.closedTotal === 1 ? "encerrado no total" : "encerrados no total"}; {stats.closedRecently} nos últimos {RECENT_CLOSED_DAYS} dias (é o número do Início).
+      </p>
+    ) : null;
 
   return (
     <div className="space-y-6">
@@ -112,10 +121,14 @@ function MineList({ tickets, filter, surface }: { tickets: TicketSummary[]; filt
         <div className="space-y-8">
           <TicketGroup title="Esperam a sua resposta" tickets={visible.filter((t) => !t.closed && t.awaitingYou)} hrefFor={surface.detail} waiting />
           <TicketGroup title="Em andamento" tickets={visible.filter((t) => !t.awaitingYou && !t.closed)} hrefFor={surface.detail} />
+          {closedNote}
           <TicketGroup title="Encerrados" tickets={visible.filter((t) => t.closed)} hrefFor={surface.detail} muted />
         </div>
       ) : (
-        <TicketGroup title={FILTER_LABEL[filter]} tickets={visible} hrefFor={surface.detail} waiting={filter === "aguardando"} muted={filter === "encerrados"} />
+        <div className="space-y-3">
+          {filter === "encerrados" && closedNote}
+          <TicketGroup title={FILTER_LABEL[filter]} tickets={visible} hrefFor={surface.detail} waiting={filter === "aguardando"} muted={filter === "encerrados"} />
+        </div>
       )}
     </div>
   );

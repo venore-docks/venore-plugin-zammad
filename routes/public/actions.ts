@@ -1,5 +1,6 @@
 "use server";
 
+import { formatGroupName } from "../../shared/format";
 import { revalidatePath } from "next/cache";
 import { isPluginActive } from "@venore/plugin-sdk";
 import { agentUpdateTicket, changeTicketState, createChildTicket, createTicket, getChildForm, customerRespond, getTicket, replyTicket, searchViewAsTargets, startViewAs, stopViewAs } from "../../index";
@@ -31,6 +32,12 @@ function revalidateLists(): void {
     revalidatePath(surface.queue);
     revalidatePath(surface.team);
   }
+}
+
+// "Ver como" troca QUEM está olhando: nenhuma página guardada (listas, chamados, moldura) pode servir o que a pessoa
+// anterior via. Invalida tudo, inclusive o cache do roteador do navegador (que o revalidatePath por página não alcança).
+function revalidateEverything(): void {
+  revalidatePath("/", "layout");
 }
 
 function revalidateTicket(ticketId: number): void {
@@ -67,7 +74,7 @@ export async function createTicketAction(formData: FormData): Promise<ZammadActi
 }
 
 // FormData: `ticketId`, `message`, `quoteArticleId?`, `asAgent?` ("1"), `internal?` ("1") + `attachments`.
-export async function replyTicketAction(formData: FormData): Promise<ZammadActionResult<{ reopened: boolean }>> {
+export async function replyTicketAction(formData: FormData): Promise<ZammadActionResult<{ reopened: boolean; waiting: boolean }>> {
   if (!(await isPluginActive("colabora"))) return { ok: false, error: DISABLED };
   const ticketId = Number(formData.get("ticketId"));
   const quoteId = Number(formData.get("quoteArticleId"));
@@ -78,6 +85,7 @@ export async function replyTicketAction(formData: FormData): Promise<ZammadActio
     attachments: await readAttachments(formData),
     asAgent: formData.get("asAgent") === "1",
     internal: formData.get("internal") === "1",
+    awaitReply: formData.get("awaitReply") === "1",
   });
   if (!result.success) return { ok: false, error: result.error.message };
   revalidateTicket(ticketId);
@@ -111,7 +119,7 @@ export async function ticketPreviewAction(ticketId: number): Promise<ZammadActio
       id: ticket.id,
       number: ticket.number,
       title: ticket.title,
-      group: ticket.group,
+      group: formatGroupName(ticket.group),
       requesterName: ticket.requester.name,
       createdAt: ticket.createdAt,
       priorityLabel: ticket.priorityLabel,
@@ -181,13 +189,13 @@ export async function startViewAsAction(targetId: string): Promise<ZammadActionR
   if (!(await isPluginActive("colabora"))) return { ok: false, error: DISABLED };
   const result = await startViewAs(String(targetId ?? ""));
   if (!result.success) return { ok: false, error: result.error.message };
-  revalidateLists();
+  revalidateEverything();
   return { ok: true, data: result.data };
 }
 
 export async function stopViewAsAction(): Promise<ZammadActionResult<null>> {
   await stopViewAs();
-  revalidateLists();
+  revalidateEverything();
   return { ok: true, data: null };
 }
 

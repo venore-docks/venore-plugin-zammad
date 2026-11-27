@@ -3,7 +3,8 @@ import { ChevronRight } from "lucide-react";
 import { cn } from "@venore/plugin-sdk/ui";
 import { getManagerDashboardHandler } from "../../../features/get-manager-dashboard/handler";
 import type { ManagerDashboardData } from "../../../features/get-manager-dashboard/types";
-import { ageTone, formatAge, maxOpen } from "../../../shared/manager-stats";
+import { elapsedLabel } from "../../../shared/format";
+import { ageTone, maxOpen } from "../../../shared/manager-stats";
 import { surfaceFor } from "../../../shared/routes";
 import { LIST_CLASS } from "../../public/shared";
 import { LoadBar } from "./manager/load-bar";
@@ -52,9 +53,9 @@ function ManagerBody({ surfaceKey, data }: { surfaceKey: DashboardProps["surface
     <>
       <div className="grid grid-cols-1 divide-y overflow-hidden rounded-lg border bg-card sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         <Stat
-          label="Na fila"
+          label="Aguardando decisão"
           value={kpis.queue}
-          hint={kpis.queueOldestMs === null ? "nada esperando" : `mais antigo há ${formatAge(kpis.queueOldestMs)}`}
+          hint={kpis.queueOldestMs === null ? "nada esperando você" : `mais antigo ${elapsedLabel(kpis.queueOldestMs)}`}
           hintClass={oldestTone === "stale" ? "font-medium text-destructive" : oldestTone === "aging" ? "text-warning" : undefined}
           href={surface.queue}
         />
@@ -65,7 +66,7 @@ function ManagerBody({ surfaceKey, data }: { surfaceKey: DashboardProps["surface
           hintClass={kpis.urgent > 0 ? "font-medium text-destructive" : undefined}
           href={`${surface.queue}?ordem=prioridade`}
         />
-        <Stat label="Solicitante respondeu" value={kpis.awaitingSupport} hint={`de ${kpis.inService} em atendimento`} href={surface.team} />
+        <Stat label="Solicitante respondeu" value={kpis.awaitingSupport} hint={`de ${kpis.inService} com responsável`} href={surface.team} />
       </div>
 
       <div className="min-w-0 space-y-3">
@@ -84,7 +85,8 @@ function ManagerBody({ surfaceKey, data }: { surfaceKey: DashboardProps["surface
                     <span className="truncate text-sm font-medium text-foreground">{agent.name}</span>
                     <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                       {agent.open} {agent.open === 1 ? "aberto" : "abertos"}
-                      {agent.waiting > 0 ? ` · ${agent.waiting} aguardando` : ""}
+                      {agent.waiting > 0 ? ` · ${agent.waiting} com resposta nova` : ""}
+                      {(agent.awaitingRequester ?? 0) > 0 ? ` · ${agent.awaitingRequester} aguardando solicitante` : ""}
                     </span>
                   </span>
                   <LoadBar open={agent.open} waiting={agent.waiting} max={max} />
@@ -103,7 +105,7 @@ function ManagerBody({ surfaceKey, data }: { surfaceKey: DashboardProps["surface
 
       <div className="min-w-0 space-y-3">
         <div className="flex items-baseline justify-between gap-3">
-          <h3 className="text-sm font-semibold text-foreground">Fila: mais antigos primeiro</h3>
+          <h3 className="text-sm font-semibold text-foreground">Aguardando decisão: mais antigos primeiro</h3>
           {kpis.queue > queueTop.length && (
             <Link href={surface.queue} className="text-sm font-medium text-primary hover:underline">
               Ver os {kpis.queue}
@@ -111,7 +113,7 @@ function ManagerBody({ surfaceKey, data }: { surfaceKey: DashboardProps["surface
           )}
         </div>
         {queueTop.length === 0 ? (
-          <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Fila zerada: todo chamado novo já tem responsável.</p>
+          <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Nada aguardando a sua decisão.</p>
         ) : (
           <ul className={LIST_CLASS}>
             {queueTop.map((ticket) => (

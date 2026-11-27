@@ -34,12 +34,15 @@ export function FieldInput({
   value,
   error,
   onChange,
+  optionalTag = true,
 }: {
   field: WizardField;
   showLabel: boolean;
   value: AnswerValue | null | undefined;
   error?: string;
   onChange: (value: AnswerValue | null) => void;
+  // "(opcional)" ao lado do nome; some quando a etapa inteira já é marcada como opcional (uma indicação só).
+  optionalTag?: boolean;
 }) {
   const id = `field-${field.name}`;
   const nowLocal = localNow();
@@ -48,7 +51,7 @@ export function FieldInput({
       {showLabel && (
         <label htmlFor={id} className="block font-medium text-foreground">
           {field.label}
-          {!field.required && <span className="ms-1.5 text-xs font-normal text-muted-foreground">(opcional)</span>}
+          {!field.required && optionalTag && <span className="ms-1.5 text-xs font-normal text-muted-foreground">(opcional)</span>}
         </label>
       )}
       {field.help && <p className="text-sm text-muted-foreground">{field.help}</p>}
@@ -73,7 +76,8 @@ export function FieldInput({
             </SelectTrigger>
             <SelectContent>
               {field.options.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                // Cor de destaque neutra: o destaque padrão do tema é salmão e lê como erro.
+                <SelectItem key={option.value} value={option.value} className="focus:bg-muted focus:text-foreground data-[highlighted]:bg-muted data-[highlighted]:text-foreground">
                   {option.label}
                 </SelectItem>
               ))}
@@ -162,6 +166,22 @@ export function FieldInput({
         />
       )}
 
+      {field.type === "email" && (
+        <Input
+          id={id}
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          autoCapitalize="none"
+          spellCheck={false}
+          className="h-11 w-full sm:w-96"
+          value={typeof value === "string" ? value : ""}
+          maxLength={field.maxLength ?? undefined}
+          onChange={(event) => onChange(event.target.value)}
+          aria-invalid={Boolean(error)}
+        />
+      )}
+
       {field.type === "textarea" && (
         <Textarea
           id={id}
@@ -190,11 +210,15 @@ export function FieldInput({
   );
 }
 
+// A altura da mensagem é reservada: o erro aparece e some sem empurrar o botão "Continuar" para baixo e para cima.
 export function FieldError({ message }: { message?: string }) {
-  if (!message) return null;
   return (
-    <p role="alert" className="text-sm font-medium text-destructive">
-      {message}
-    </p>
+    <div className="min-h-5">
+      {message && (
+        <p role="alert" className="text-sm font-medium text-destructive">
+          {message}
+        </p>
+      )}
+    </div>
   );
 }

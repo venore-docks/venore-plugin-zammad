@@ -7,6 +7,8 @@ export type AgentDashboardData = {
   stats: AgentStats;
   /** O solicitante falou por último: mais urgentes e mais antigos primeiro (até 5). */
   needsReply: TicketSummary[];
+  /** Esperando a resposta do solicitante (até 5). */
+  awaitingRequester: TicketSummary[];
   /** O resto dos atribuídos (até 5). */
   inProgress: TicketSummary[];
 };

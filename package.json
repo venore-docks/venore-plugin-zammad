@@ -1,6 +1,6 @@
 {
   "name": "@venore/plugin-colabora",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "description": "Colabora: chamados do Venore Docks em passos guiados, com o Zammad como motor (campos, regras e fila lidos do próprio Zammad).",
   "repository": {
     "type": "git",

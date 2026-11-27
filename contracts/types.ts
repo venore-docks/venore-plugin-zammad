@@ -2,7 +2,7 @@
 
 import type { ZammadAttribute, ZammadWorkflow } from "./zammad";
 
-export type FieldType = "select" | "multiselect" | "boolean" | "date" | "datetime" | "text" | "textarea" | "integer";
+export type FieldType = "select" | "multiselect" | "boolean" | "date" | "datetime" | "text" | "email" | "textarea" | "integer";
 export type FieldOption = { value: string; label: string };
 export type AnswerValue = string | string[] | boolean | number;
 
@@ -69,7 +69,7 @@ export type TicketStateTone = "new" | "open" | "pending" | "closed";
 export type TicketStateColor = "neutral" | "info" | "primary" | "warning" | "success" | "danger";
 
 // Etapas do fluxo da FEM (ver shared/flow.ts). null = Zammad sem esses estados (comportamento genérico).
-export type FlowStepKey = "novo" | "em_analise" | "autorizado" | "atribuido" | "nao_autorizado" | "reavaliacao" | "em_andamento" | "em_pausa" | "concluido" | "finalizado";
+export type FlowStepKey = "novo" | "em_analise" | "autorizado" | "atribuido" | "nao_autorizado" | "reavaliacao" | "em_andamento" | "em_pausa" | "aguardando_solicitante" | "concluido" | "finalizado";
 export type CustomerActionKey = "approve" | "adjust" | "reject" | "not_solved" | "resubmit";
 
 // Botão de decisão do SOLICITANTE (Concluído / Não autorizado): manda a palavra de controle no assunto.
@@ -104,6 +104,10 @@ export type TicketSummary = {
   closed: boolean;
   // A equipe respondeu e a pessoa ainda não (o chamado está esperando por ela).
   awaitingYou: boolean;
+  // Em Aguardando solicitante: o começo da última mensagem pública da equipe (a pergunta que espera resposta).
+  question?: string | null;
+  // Listas da equipe: o chamado está em Aguardando solicitante (a vez é do solicitante, não do agente).
+  awaitingRequester?: boolean;
   priorityLabel: string;
   // Nome do solicitante (só nas listas do agente; nas do próprio solicitante é null).
   requesterName: string | null;
@@ -177,6 +181,8 @@ export type AgentControls = {
   // Define o tempo previsto (só gestor/admin do setor). As opções vêm do campo do Zammad.
   canSetEstimate: boolean;
   estimateOptions: { value: string; label: string }[];
+  // A resposta ao solicitante pode já mudar o chamado para Aguardando solicitante ("Enviar e aguardar resposta").
+  canAwaitReply: boolean;
   // O Zammad tem o campo de prazo de entrega (o administrador do setor o edita junto do tempo previsto).
   hasDeadline: boolean;
   // Chamado filho: quem atende ou o gestor cria. `childGroups` = setores para "pedir a outro setor";

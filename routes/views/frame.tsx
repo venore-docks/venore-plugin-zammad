@@ -62,7 +62,7 @@ export function ColaboraFrame({ surfaceKey, viewer, active, title, subtitle, bac
       <Button asChild variant="outline" size="sm">
         <Link href={surface.newTicket}>
           <Plus className="size-4" />
-          Abrir chamado
+          Novo chamado
         </Link>
       </Button>
     ) : null;
@@ -99,7 +99,12 @@ export function ColaboraFrame({ surfaceKey, viewer, active, title, subtitle, bac
                   )}
                 >
                   {item.label}
-                  {count > 0 && <span className="text-xs text-muted-foreground tabular-nums">{count}</span>}
+                  {count > 0 && (
+                    <span className="ms-1.5 rounded-full bg-muted px-1.5 py-px text-xs text-muted-foreground tabular-nums" title={item.key === "queue" ? `${count} aguardando a sua decisão` : undefined}>
+                      {count}
+                      {item.key === "queue" && <span className="sr-only"> aguardando a sua decisão</span>}
+                    </span>
+                  )}
                   <LinkPending />
                 </Link>
               );

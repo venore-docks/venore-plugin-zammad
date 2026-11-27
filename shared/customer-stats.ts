@@ -7,12 +7,14 @@ export const RECENT_CLOSED_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type CustomerStats = {
-  /** Abertos (não encerrados), inclusive os que aguardam a pessoa. */
+  /** Abertos que NÃO esperam a pessoa (os que esperam contam só em awaitingYou: nada é contado duas vezes). */
   inProgress: number;
   /** A equipe respondeu e a vez é da pessoa (e o chamado não está encerrado). */
   awaitingYou: number;
-  /** Encerrados com última atualização dentro dos últimos 30 dias. */
+  /** Encerrados com última atualização dentro dos últimos 30 dias (o total de encerrados é maior). */
   closedRecently: number;
+  /** Todos os encerrados da lista. */
+  closedTotal: number;
   total: number;
 };
 
@@ -44,9 +46,10 @@ export function latestTickets(tickets: TicketSummary[], limit: number): TicketSu
 
 export function computeCustomerStats(tickets: TicketSummary[], now: number): CustomerStats {
   return {
-    inProgress: tickets.filter((ticket) => !ticket.closed).length,
+    inProgress: tickets.filter((ticket) => !ticket.closed && !ticket.awaitingYou).length,
     awaitingYou: tickets.filter(isAwaiting).length,
     closedRecently: tickets.filter((ticket) => isClosedRecently(ticket, now)).length,
+    closedTotal: tickets.filter((ticket) => ticket.closed).length,
     total: tickets.length,
   };
 }
@@ -57,7 +60,8 @@ export function parseMineFilter(value: string | undefined): MineFilter {
 }
 
 export function matchesFilter(ticket: TicketSummary, filter: MineFilter): boolean {
-  if (filter === "andamento") return !ticket.closed;
+  // As abas formam uma partição: Aguardando você + Em andamento + Encerrados = Todos.
+  if (filter === "andamento") return !ticket.closed && !ticket.awaitingYou;
   if (filter === "aguardando") return isAwaiting(ticket);
   if (filter === "encerrados") return ticket.closed;
   return true;

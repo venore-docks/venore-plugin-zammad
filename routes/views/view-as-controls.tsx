@@ -17,8 +17,11 @@ export function ViewAsControls({ target, canPick, homeHref }: { target: ViewAsPe
     startTransition(async () => {
       await stopViewAsAction();
       toast.success("Você voltou a ver o Colabora como você.");
-      router.push(homeHref);
-      startTransition(() => router.refresh());
+      // Navegar e refazer a leitura na MESMA transição: sem isso a tela seguia mostrando a pessoa anterior até recarregar.
+      startTransition(() => {
+        router.push(homeHref);
+        router.refresh();
+      });
     });
   }
 
@@ -89,8 +92,11 @@ function ViewAsPicker({ label, homeHref }: { label: string; homeHref: string }) 
       }
       setOpen(false);
       toast.success(`Vendo como ${result.data.name ?? result.data.email}.`);
-      startStart(() => router.push(homeHref));
-      startStart(() => router.refresh());
+      // Navegar e refazer a leitura na MESMA transição (a pessoa anterior não pode aparecer até recarregar a página).
+      startStart(() => {
+        router.push(homeHref);
+        router.refresh();
+      });
     });
   }
 

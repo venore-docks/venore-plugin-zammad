@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Flag } from "lucide-react";
 import { cn } from "@venore/plugin-sdk/ui";
 import type { AssigneeOption, QueueRow as QueueRowData } from "../../../../features/get-manager-dashboard/types";
-import { ageTone, formatAge, shortGroupName } from "../../../../shared/manager-stats";
+import { elapsedLabel, formatGroupName } from "../../../../shared/format";
+import { ageTone } from "../../../../shared/manager-stats";
 import type { FlowStepKey } from "../../../../contracts/types";
 import { formatDateTime } from "../../../public/shared";
 import { TagInline } from "../../../public/tag-chips";
@@ -17,7 +18,7 @@ export function AgeBadge({ ms }: { ms: number }) {
       className={cn("tabular-nums", tone === "aging" && "text-warning", tone === "stale" && "font-medium text-destructive")}
       title="Há quanto tempo o chamado foi aberto"
     >
-      há {formatAge(ms)}
+      {elapsedLabel(ms)}
     </span>
   );
 }
@@ -38,8 +39,9 @@ export function QueueRow({
   suggestedId: number | null;
   flowStateIds?: Partial<Record<FlowStepKey, number>>;
 }) {
-  const inFlow = ticket.step !== null && Object.keys(flowStateIds).length > 0;
-  const meta = [shortGroupName(ticket.group), ticket.requesterName].filter(Boolean).join(" · ");
+  // Estado desconhecido (balde "outros") também não oferece alocação: só "Abrir".
+  const inFlow = (ticket.step !== null || ticket.bucket === "outros") && Object.keys(flowStateIds).length > 0;
+  const meta = [formatGroupName(ticket.group), ticket.requesterName].filter(Boolean).join(" · ");
   return (
     <li className="flex flex-col gap-2 px-4 py-3 md:flex-row md:items-center md:gap-4">
       <div className="min-w-0 flex-1 space-y-0.5">
@@ -56,6 +58,15 @@ export function QueueRow({
           {meta && <span aria-hidden>·</span>}
           <AgeBadge ms={ticket.ageMs} />
           {ticket.ownerId !== null && <span>· com {ticket.ownerName ?? "um agente"}</span>}
+          {/* Tem responsável mas ainda espera a análise: atribuído por fora do fluxo. Sinaliza a inconsistência. */}
+          {ticket.ownerId !== null && (ticket.bucket === "novo" || ticket.bucket === "analise" || ticket.bucket === "reavaliacao") && (
+            <span
+              title="Este chamado já tem responsável, mas ainda não foi analisado. Foi atribuído fora do fluxo do Colabora."
+              className="rounded-full border border-warning-border bg-warning-soft px-1.5 py-px text-[0.6875rem] text-foreground"
+            >
+              atribuído sem iniciar
+            </span>
+          )}
           {ticket.deadline && <span title="Prazo de entrega">· prazo {formatDateTime(ticket.deadline)}</span>}
           {ticket.estimateLabel && <span title="Tempo previsto">· {ticket.estimateLabel}</span>}
           {ticket.tags.length > 0 && <span aria-hidden>·</span>}

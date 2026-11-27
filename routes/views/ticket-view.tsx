@@ -118,7 +118,7 @@ export async function TicketView({ surfaceKey, ticketId }: { surfaceKey: Surface
             <ReplyBox
               ticketId={ticket.id}
               closed={ticket.closed}
-              agent={agent ? { canWork: agent.canComment, blockedMessage: blockedMessage(ticket.owner?.name ?? null, agent.canAllocate) } : null}
+              agent={agent ? { canWork: agent.canComment, canAwait: agent.canAwaitReply, blockedMessage: blockedMessage(ticket.owner?.name ?? null, agent.canAllocate) } : null}
             />
           )}
         </div>

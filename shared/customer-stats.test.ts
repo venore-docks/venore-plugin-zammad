@@ -34,10 +34,10 @@ const LIST = [
 
 describe("computeCustomerStats", () => {
   it("conta em andamento, aguardando e encerrados recentes (limite de 30 dias inclusive)", () => {
-    expect(computeCustomerStats(LIST, NOW)).toEqual({ inProgress: 2, awaitingYou: 1, closedRecently: 2, total: 5 });
+    expect(computeCustomerStats(LIST, NOW)).toEqual({ inProgress: 1, awaitingYou: 1, closedRecently: 2, closedTotal: 3, total: 5 });
   });
   it("lista vazia", () => {
-    expect(computeCustomerStats([], NOW)).toEqual({ inProgress: 0, awaitingYou: 0, closedRecently: 0, total: 0 });
+    expect(computeCustomerStats([], NOW)).toEqual({ inProgress: 0, awaitingYou: 0, closedRecently: 0, closedTotal: 0, total: 0 });
   });
 });
 
@@ -48,13 +48,14 @@ describe("latestTickets / filterTickets", () => {
     expect(LIST.map((t) => t.id)).toEqual(before);
   });
   it("filtra por aba", () => {
-    expect(filterTickets(LIST, "andamento").map((t) => t.id)).toEqual([2, 1]);
+    // As abas formam uma partição: o que aguarda a pessoa não repete em "andamento".
+    expect(filterTickets(LIST, "andamento").map((t) => t.id)).toEqual([1]);
     expect(filterTickets(LIST, "aguardando").map((t) => t.id)).toEqual([2]);
     expect(filterTickets(LIST, "encerrados").map((t) => t.id)).toEqual([3, 5, 4]);
     expect(filterTickets(LIST, "todos")).toHaveLength(5);
   });
   it("conta por aba", () => {
-    expect(countByFilter(LIST)).toEqual({ todos: 5, andamento: 2, aguardando: 1, encerrados: 3 });
+    expect(countByFilter(LIST)).toEqual({ todos: 5, andamento: 1, aguardando: 1, encerrados: 3 });
   });
 });
 
@@ -68,5 +69,12 @@ describe("parseMineFilter / matchesSearch", () => {
     expect(matchesSearch("Tecnologia da Informação", "informacao")).toBe(true);
     expect(matchesSearch("Marketing", "rh")).toBe(false);
     expect(matchesSearch("Marketing", "  ")).toBe(true);
+  });
+});
+
+describe("partição das abas", () => {
+  it("Aguardando você + Em andamento + Encerrados = Todos, sem repetir", () => {
+    const counts = countByFilter(LIST);
+    expect(counts.aguardando + counts.andamento + counts.encerrados).toBe(counts.todos);
   });
 });

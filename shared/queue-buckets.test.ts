@@ -34,7 +34,9 @@ describe("abas e etapas", () => {
       "atribuido",
       "andamento",
       "pausa",
+      "aguardando",
       "concluido",
+      "outros",
       "finalizado",
     ]);
   });
@@ -50,7 +52,9 @@ describe("abas e etapas", () => {
       "atribuido",
       "andamento",
       "pausa",
+      "aguardando",
       "concluido",
+      "outros",
     ]);
   });
 

@@ -64,6 +64,10 @@ export async function TeamView({ surfaceKey, query }: { surfaceKey: SurfaceKey; 
           const max = maxOpen(ranked);
           const totalOpen = visible.reduce((sum, member) => sum + member.open, 0);
           const totalWaiting = visible.reduce((sum, member) => sum + member.waiting, 0);
+          const totalAwaitingRequester = visible.reduce((sum, member) => sum + member.awaitingRequester, 0);
+          // O filtro por setor só existe quando diferencia alguma coisa: se todo agente atende todos os setores (como
+          // vem do Zammad), cada chip mostraria o mesmo número e não filtraria nada.
+          const sectorFilterUseful = groups.length > 1 && groups.some((group) => members.filter((member) => member.groupIds.includes(group.id)).length !== members.length);
 
           return (
             <div className="space-y-5">
@@ -84,7 +88,7 @@ export async function TeamView({ surfaceKey, query }: { surfaceKey: SurfaceKey; 
                 </span>
               </Link>
 
-              {groups.length > 1 && (
+              {sectorFilterUseful && (
                 <nav aria-label="Filtrar por setor" className="flex flex-wrap gap-2">
                   <Chip href={surface.team} active={sectorId === undefined}>
                     Todos
@@ -116,7 +120,8 @@ export async function TeamView({ surfaceKey, query }: { surfaceKey: SurfaceKey; 
                 <div className="space-y-3">
                   <p className="text-sm text-muted-foreground" aria-live="polite">
                     {visible.length} {visible.length === 1 ? "agente" : "agentes"} · {totalOpen} {totalOpen === 1 ? "chamado aberto" : "chamados abertos"}
-                    {totalWaiting > 0 ? ` · ${totalWaiting} aguardando` : ""}
+                    {totalWaiting > 0 ? ` · ${totalWaiting} com resposta nova` : ""}
+                    {totalAwaitingRequester > 0 ? ` · ${totalAwaitingRequester} aguardando solicitante` : ""}
                   </p>
                   <ul className={LIST_CLASS}>
                     {ranked.map((agent) => {
@@ -131,7 +136,7 @@ export async function TeamView({ surfaceKey, query }: { surfaceKey: SurfaceKey; 
                             <span className="flex items-center gap-3">
                               <span className="min-w-0 flex-1">
                                 <span className="block truncate text-sm font-medium text-foreground">{agent.name}</span>
-                                {names.length > 0 && (
+                                {names.length > 0 && sectorFilterUseful && (
                                   <span className="block truncate text-xs text-muted-foreground">
                                     {names.slice(0, 2).join(", ")}
                                     {names.length > 2 ? ` +${names.length - 2}` : ""}
@@ -140,7 +145,8 @@ export async function TeamView({ surfaceKey, query }: { surfaceKey: SurfaceKey; 
                               </span>
                               <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                                 {agent.open} {agent.open === 1 ? "aberto" : "abertos"}
-                                {agent.waiting > 0 ? ` · ${agent.waiting} aguardando` : ""}
+                                {agent.waiting > 0 ? ` · ${agent.waiting} com resposta nova` : ""}
+                                {(agent.awaitingRequester ?? 0) > 0 ? ` · ${agent.awaitingRequester} aguardando solicitante` : ""}
                               </span>
                               <LevelPill level={agent.level} />
                               <ChevronRight className="size-4 shrink-0 text-muted-foreground rtl:rotate-180" aria-hidden />

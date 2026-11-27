@@ -30,7 +30,7 @@ describe("Em pausa no fluxo", () => {
   });
 
   it("botões: Pausar em Em andamento; Retomar em Em pausa", () => {
-    expect(staffActionsFor("em_andamento", gestor).map((action) => action.label)).toEqual(["Pausar"]);
+    expect(staffActionsFor("em_andamento", gestor).map((action) => action.label)).toEqual(["Pausar", "Aguardar solicitante"]);
     expect(staffActionsFor("em_pausa", agente)).toMatchObject([{ target: "em_andamento", label: "Retomar" }]);
     expect(staffHintFor("em_pausa", { ...agente, hasOwner: true })).toMatch(/Retomar/);
   });

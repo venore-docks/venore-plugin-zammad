@@ -48,8 +48,8 @@ describe("waitingLabel", () => {
     expect(waitingLabel("2026-11-12T14:59:50Z", NOW)).toBe("agora há pouco");
     expect(waitingLabel("2026-11-12T14:48:00Z", NOW)).toBe("há 12 min");
     expect(waitingLabel("2026-11-12T12:00:00Z", NOW)).toBe("há 3 h");
-    expect(waitingLabel("2026-11-11T10:00:00Z", NOW)).toBe("há 1 dia");
-    expect(waitingLabel("2026-11-09T10:00:00Z", NOW)).toBe("há 3 dias");
+    expect(waitingLabel("2026-11-11T10:00:00Z", NOW)).toBe("há 1 d");
+    expect(waitingLabel("2026-11-09T10:00:00Z", NOW)).toBe("há 3 d");
   });
 });
 
@@ -61,10 +61,10 @@ describe("computeAgentStats", () => {
       ticket(3, { priorityLabel: "Alta", updatedAt: "2026-11-01T10:00:00Z" }),
       ticket(4, { stateTone: "pending" }),
     ];
-    expect(computeAgentStats(list, NOW)).toEqual({ open: 4, awaiting: 2, urgent: 2, stale: 1, pending: 1 });
+    expect(computeAgentStats(list, NOW)).toEqual({ open: 4, awaiting: 2, awaitingRequester: 0, urgent: 2, stale: 1, pending: 1 });
   });
   it("lista vazia zera tudo", () => {
-    expect(computeAgentStats([], NOW)).toEqual({ open: 0, awaiting: 0, urgent: 0, stale: 0, pending: 0 });
+    expect(computeAgentStats([], NOW)).toEqual({ open: 0, awaiting: 0, awaitingRequester: 0, urgent: 0, stale: 0, pending: 0 });
   });
 });
 

@@ -2,7 +2,7 @@
 
 import { useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CircleCheck, Lock, Paperclip, RotateCcw, Send, X } from "lucide-react";
+import { CircleCheck, Hourglass, Lock, Paperclip, RotateCcw, Send, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -100,7 +100,7 @@ function writeDraft(ticketId: number, kind: DraftKind, text: string) {
   }
 }
 
-export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number; closed: boolean; agent?: { canWork: boolean; blockedMessage?: string } | null }) {
+export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number; closed: boolean; agent?: { canWork: boolean; canAwait?: boolean; blockedMessage?: string } | null }) {
   const router = useRouter();
   // Um rascunho por aba (resposta ao solicitante × nota interna): trocar de aba não perde o que foi escrito.
   // `edited` guarda o que foi digitado nesta visita; enquanto a aba não foi editada, vale o que estava no sessionStorage
@@ -134,7 +134,7 @@ export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number;
     );
   }
 
-  function submit(event: React.FormEvent) {
+  function submit(event: React.FormEvent, awaitReply = false) {
     event.preventDefault();
     const problem = validateReply(message) ?? validateAttachments(files);
     setError(problem);
@@ -146,6 +146,7 @@ export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number;
     if (quote) formData.set("quoteArticleId", String(quote.articleId));
     if (agent) formData.set("asAgent", "1");
     if (internal) formData.set("internal", "1");
+    if (awaitReply) formData.set("awaitReply", "1");
     files.forEach((file) => formData.append("attachments", file));
     startTransition(async () => {
       const result = await replyTicketAction(formData);
@@ -153,7 +154,9 @@ export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number;
         toast.error(result.error);
         return;
       }
-      toast.success(internal ? "Nota salva." : result.data.reopened ? "Mensagem enviada e chamado reaberto." : "Mensagem enviada.");
+      toast.success(
+        internal ? "Nota salva." : result.data.waiting ? "Mensagem enviada. O chamado aguarda a resposta do solicitante." : result.data.reopened ? "Mensagem enviada e chamado reaberto." : "Mensagem enviada.",
+      );
       setMessage("");
       setFiles([]);
       setQuote(null);
@@ -297,10 +300,24 @@ export function ReplyBox({ ticketId, closed, agent = null }: { ticketId: number;
             Anexar
           </Button>
         </div>
-        <Button type="submit" variant={internal ? "outline" : "default"} disabled={pending} title={agent ? "Ctrl+Enter (⌘+Enter) envia" : undefined}>
-          <Send className="size-4" />
-          {pending ? "Enviando…" : internal ? "Salvar nota" : "Enviar"}
-        </Button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {agent?.canAwait && !internal && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending}
+              title="Envia a mensagem e deixa o chamado aguardando a resposta do solicitante (o tempo de trabalho para de contar)"
+              onClick={(event) => submit(event, true)}
+            >
+              <Hourglass className="size-4" />
+              Enviar e aguardar resposta
+            </Button>
+          )}
+          <Button type="submit" variant={internal ? "outline" : "default"} disabled={pending} title={agent ? "Ctrl+Enter (⌘+Enter) envia" : undefined}>
+            <Send className="size-4" />
+            {pending ? "Enviando…" : internal ? "Salvar nota" : "Enviar"}
+          </Button>
+        </div>
       </div>
     </form>
   );

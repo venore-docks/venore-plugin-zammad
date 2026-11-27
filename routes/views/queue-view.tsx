@@ -3,8 +3,9 @@ import { Check, Layers, Tag } from "lucide-react";
 import { EmptyState, cn } from "@venore/plugin-sdk/ui";
 import { getQueueBoardHandler } from "../../features/get-manager-dashboard/handler";
 import type { QueueRow as QueueRowData, QueueBoardData } from "../../features/get-manager-dashboard/types";
-import { hrefWith, parseQueueSort, parseSectorFilter, shortGroupName, sortQueue, type QueueSort } from "../../shared/manager-stats";
-import { OPEN_STAGES, OPEN_TAB, QUEUE_BUCKETS, bucketParam, parseBucket, pendingDecisions, type QueueBucket } from "../../shared/queue-buckets";
+import { formatGroupName } from "../../shared/format";
+import { hrefWith, parseQueueSort, parseSectorFilter, sortQueue, type QueueSort } from "../../shared/manager-stats";
+import { OPEN_STAGES, OPEN_TAB, QUEUE_BUCKETS, STAGES, STAGE_GROUPS, bucketParam, parseBucket, pendingDecisions, type QueueBucket, type StageBucket } from "../../shared/queue-buckets";
 import { describeTags } from "../../shared/tag-labels";
 import { FLOW_BADGE, FLOW_EDGE } from "../public/palette";
 import { surfaceFor, type SurfaceKey, type Surface } from "../../shared/routes";
@@ -14,6 +15,7 @@ import { QueueRow } from "./dashboards/manager/queue-row";
 import { ColaboraFrame } from "./frame";
 import type { ViewQuery } from "./query";
 import { LinkPending } from "../public/link-pending";
+import { StageNav, type StageNavEntry, type StageNavGroup } from "./stage-nav";
 
 // Linhas por vez nas abas de etapa (o resto vem em "Mostrar mais", ?mais=<total>): menos HTML para o navegador.
 const PAGE_SIZE = 25;
@@ -31,23 +33,6 @@ const SORTS: { key: QueueSort; label: string }[] = [
   { key: "idade", label: "Mais antigos" },
   { key: "prioridade", label: "Prioridade" },
 ];
-
-function Chip({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? "true" : undefined}
-      className={cn(
-        // Etapas como segmentos discretos (regra de design: nada de pílula cheia na cor primária).
-        "inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-        active ? "border-foreground/30 bg-muted font-medium text-foreground" : "bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
-      )}
-    >
-      {children}
-      <LinkPending />
-    </Link>
-  );
-}
 
 // Filtro secundário (setor), mais discreto que as abas de etapa.
 function SectorChip({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
@@ -230,16 +215,32 @@ export async function QueueView({ surfaceKey, query }: { surfaceKey: SurfaceKey;
           const filteredBy = sectorId !== undefined || tag !== undefined;
           const etapa = bucketParam(bucket);
           const openTotal = result.data.filteredCounts.abertos;
+          // Navegação por etapa: "Em aberto" no topo e os grupos (de quem é a vez). A contagem de "Finalizado" não é
+          // lida na primeira tela; "Outros estados" só aparece com chamado.
+          const stageEntry = (key: StageBucket): StageNavEntry | null => {
+            const info = QUEUE_BUCKETS.find((candidate) => candidate.key === key);
+            const stage = STAGES.find((candidate) => candidate.key === key);
+            if (!info || !stage) return null;
+            const count = uncounted.includes(key) ? null : counts[key];
+            if (key === "outros" && !count && bucket !== key) return null;
+            return {
+              key,
+              label: info.label,
+              count,
+              href: hrefWith(surface.queue, { etapa: bucketParam(key), ordem }),
+              dot: FLOW_BADGE[stage.color].dot,
+              note: count === null ? "recentes" : undefined,
+            };
+          };
+          const navAll: StageNavEntry = { key: OPEN_TAB, label: "Em aberto", count: counts.abertos, href: hrefWith(surface.queue, { ordem }), dot: null };
+          const navGroups: StageNavGroup[] = STAGE_GROUPS.map((group) => ({
+            label: group.label,
+            entries: group.keys.flatMap((key) => stageEntry(key) ?? []),
+          })).filter((group) => group.entries.length > 0);
           return (
-            <div className="space-y-5">
-              <nav aria-label="Etapas" className="flex flex-wrap gap-2">
-                {QUEUE_BUCKETS.map((entry) => (
-                  <Chip key={entry.key} href={hrefWith(surface.queue, { etapa: entry.key === OPEN_TAB ? undefined : bucketParam(entry.key), ordem })} active={entry.key === bucket}>
-                    {entry.label}
-                    {!uncounted.includes(entry.key) && <span className="text-xs opacity-80">{counts[entry.key]}</span>}
-                  </Chip>
-                ))}
-              </nav>
+            <div className="md:grid md:grid-cols-[13.5rem_minmax(0,1fr)] md:items-start md:gap-6">
+              <StageNav all={navAll} groups={navGroups} activeKey={bucket} decisionCount={pendingDecisions(counts)} />
+              <div className="mt-5 min-w-0 space-y-5 md:mt-0">
               <div className="space-y-3">
                 {bucketInfo && <p className="text-sm text-muted-foreground">{bucketInfo.hint}</p>}
                 {sectors.length > 1 && (
@@ -253,7 +254,7 @@ export async function QueueView({ surfaceKey, query }: { surfaceKey: SurfaceKey;
                         href={hrefWith(surface.queue, { etapa: isOverview ? undefined : etapa, setor: chip.id, tag, ordem })}
                         active={chip.id === sectorId}
                       >
-                        {shortGroupName(chip.name)} · {chip.count}
+                        {formatGroupName(chip.name)} · {chip.count}
                       </SectorChip>
                     ))}
                   </nav>
@@ -338,6 +339,7 @@ export async function QueueView({ surfaceKey, query }: { surfaceKey: SurfaceKey;
                   )}
                 </>
               )}
+              </div>
             </div>
           );
         })()

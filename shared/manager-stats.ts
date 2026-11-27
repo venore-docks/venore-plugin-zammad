@@ -14,13 +14,6 @@ export function ageMs(iso: string, now: number): number {
   return Number.isNaN(at) ? 0 : Math.max(0, now - at);
 }
 
-// "agora", "5 h", "3 d" — curto para caber em linha de lista.
-export function formatAge(ms: number): string {
-  if (ms < HOUR_MS) return "menos de 1 h";
-  if (ms < DAY_MS) return `${Math.floor(ms / HOUR_MS)} h`;
-  return `${Math.floor(ms / DAY_MS)} d`;
-}
-
 export type AgeTone = "fresh" | "aging" | "stale";
 
 // Fila parada há mais de 1 dia pede atenção; mais de 3 dias, urgência.
@@ -30,7 +23,9 @@ export function ageTone(ms: number): AgeTone {
   return "fresh";
 }
 
-export type LoadInput = { id: number; name: string; open: number; waiting: number };
+// open = abertos do agente; waiting = o solicitante respondeu (a vez é do agente); awaitingRequester = esperando a
+// resposta do solicitante (a vez é dele; não pesa para o agente).
+export type LoadInput = { id: number; name: string; open: number; waiting: number; awaitingRequester?: number };
 export type LoadLevel = "idle" | "normal" | "heavy";
 
 const HEAVY_MIN_OPEN = 6;
@@ -75,7 +70,7 @@ export function pickLeastLoaded<T extends { id: number; open: number; waiting?: 
   return best;
 }
 
-export type KpiTicket = { ownerId: number | null; priority: string; customerWaiting: boolean; createdAt: string };
+export type KpiTicket = { id: number; ownerId: number | null; priority: string; customerWaiting: boolean; createdAt: string };
 
 export type ManagerKpis = {
   queue: number;
@@ -96,7 +91,8 @@ export function summarizeManager(queue: KpiTicket[], assigned: KpiTicket[], now:
     queueOldestMs: oldest,
     inService: assigned.length,
     awaitingSupport: assigned.filter((ticket) => ticket.customerWaiting).length,
-    urgent: [...queue, ...assigned].filter((ticket) => isUrgentPriority(ticket.priority)).length,
+    // Sem contar duas vezes o chamado que está nas duas listas (aguardando decisão E com responsável).
+    urgent: new Set([...queue, ...assigned].filter((ticket) => isUrgentPriority(ticket.priority)).map((ticket) => ticket.id)).size,
   };
 }
 

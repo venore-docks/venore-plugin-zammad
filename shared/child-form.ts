@@ -88,6 +88,7 @@ function toAnswer(field: WizardField, raw: unknown): AnswerValue | null {
       return Number.isNaN(instant.getTime()) ? null : localNow(instant);
     }
     case "text":
+    case "email":
     case "textarea": {
       const value = typeof raw === "string" ? raw : String(raw);
       return isEmptyAnswer(value) ? null : value;

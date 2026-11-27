@@ -18,6 +18,7 @@ const TYPE_LABELS: Record<string, string> = {
   date: "data",
   datetime: "data e hora",
   text: "texto curto",
+  email: "e-mail",
   textarea: "texto longo",
   integer: "número",
 };

@@ -11,5 +11,7 @@ export type ReplyTicketInput = {
   quoteArticleId?: number | null;
   asAgent?: boolean;
   internal?: boolean;
+  // "Enviar e aguardar resposta": a resposta pública vai junto da mudança para Aguardando solicitante (um só envio).
+  awaitReply?: boolean;
 };
-export type ReplyTicketResult = OperationResult<{ reopened: boolean }>;
+export type ReplyTicketResult = OperationResult<{ reopened: boolean; waiting: boolean }>;

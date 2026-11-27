@@ -367,7 +367,8 @@
           8,
           9,
           10,
-          11
+          11,
+          12
         ],
         "maxlength": 255
       },
@@ -386,7 +387,8 @@
               8,
               9,
               10,
-              11
+              11,
+              12
             ]
           },
           "ticket.customer": {
@@ -414,7 +416,8 @@
               8,
               9,
               10,
-              11
+              11,
+              12
             ]
           },
           "ticket.customer": {
@@ -429,7 +432,8 @@
               8,
               9,
               10,
-              11
+              11,
+              12
             ],
             "default": 2
           }
@@ -448,7 +452,8 @@
               8,
               9,
               10,
-              11
+              11,
+              12
             ]
           }
         }
@@ -1900,6 +1905,90 @@
       "screens": {
         "create_middle": {
           "ticket.customer": {
+            "shown": false,
+            "required": false,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": false,
+            "required": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "acesso_nome",
+      "object": "Ticket",
+      "display": "Nome completo de quem receberá o acesso",
+      "data_type": "input",
+      "active": true,
+      "editable": true,
+      "position": 926,
+      "data_option": {
+        "type": "text",
+        "maxlength": 120,
+        "null": true,
+        "default": "",
+        "linktemplate": "",
+        "options": {},
+        "relation": ""
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "acesso_email",
+      "object": "Ticket",
+      "display": "E-mail de quem receberá o acesso",
+      "data_type": "input",
+      "active": true,
+      "editable": true,
+      "position": 927,
+      "data_option": {
+        "type": "email",
+        "maxlength": 120,
+        "null": true,
+        "default": "",
+        "linktemplate": "",
+        "options": {},
+        "relation": ""
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
             "shown": true,
             "required": false,
             "item_class": "column"
@@ -3055,7 +3144,7 @@
     },
     {
       "id": 51,
-      "name": "Estado - Em andamento pode ir para Em pausa (agentes)",
+      "name": "Estado - Em andamento pode ir para Em pausa ou Aguardando solicitante (agentes)",
       "active": true,
       "object": "Ticket",
       "priority": 650,
@@ -3094,7 +3183,8 @@
           "set_fixed_to": [
             "6",
             "8",
-            "11"
+            "11",
+            "12"
           ]
         }
       }
@@ -3568,7 +3658,52 @@
           "show": "true"
         }
       }
+    },
+    {
+      "id": 62,
+      "name": "Estado - Aguardando solicitante só volta para Em andamento (agentes)",
+      "active": true,
+      "object": "Ticket",
+      "priority": 652,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "2",
+            "4",
+            "6",
+            "15"
+          ]
+        }
+      },
+      "condition_saved": {
+        "ticket.state_id": {
+          "operator": "is",
+          "value": [
+            "12"
+          ]
+        }
+      },
+      "perform": {
+        "ticket.state_id": {
+          "operator": [
+            "unset_readonly",
+            "set_fixed_to"
+          ],
+          "unset_readonly": "true",
+          "set_fixed_to": [
+            "8",
+            "12"
+          ]
+        }
+      }
     }
   ],
-  "fetchedAt": "2026-11-27T15:41:48.232Z"
+  "fetchedAt": "2026-11-27T20:39:33.836Z"
 }

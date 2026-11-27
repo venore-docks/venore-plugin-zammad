@@ -1,6 +1,9 @@
 import type { TicketSummary } from "../../contracts/types";
+import { formatGroupName } from "../../shared/format";
 import type { ZammadExpandedTicket } from "../../contracts/zammad";
 import { customerMustDecide } from "../../shared/flow";
+import { articleVisibleText, makeExcerpt } from "../../shared/html-text";
+import { loadPublicArticles } from "../../shared/own-ticket";
 import type { Requester } from "../../shared/requester";
 import { priorityLabel } from "../../shared/ticket-options";
 import { describeState, isAwaitingYou } from "../../shared/ticket-state";
@@ -22,19 +25,34 @@ export async function listMyTickets(requester: Requester): Promise<ListMyTickets
   const result = await zammadRequest<ZammadExpandedTicket[]>(`tickets/search?${query.toString()}`, { onBehalfOf: requester.email });
   if (!result.success) return result;
 
-  const tickets: TicketSummary[] = (Array.isArray(result.data) ? result.data : []).map((ticket) => {
+  const found = Array.isArray(result.data) ? result.data : [];
+  // A pergunta da equipe só dos chamados que esperam a resposta (poucos): uma leitura de artigos por chamado.
+  const waiting = found.filter((ticket) => describeState(ticket.state ?? "").step === "aguardando_solicitante").slice(0, 10);
+  const questions = new Map<number, string>();
+  await Promise.all(
+    waiting.map(async (ticket) => {
+      const articles = await loadPublicArticles(requester, ticket.id);
+      if (!articles.success) return;
+      const last = [...articles.data].reverse().find((article) => article.sender === "Agent");
+      const text = last ? makeExcerpt(articleVisibleText(last.body ?? "", last.content_type ?? "text/plain"), 160) : "";
+      if (text) questions.set(ticket.id, text);
+    }),
+  );
+
+  const tickets: TicketSummary[] = found.map((ticket) => {
     const state = describeState(ticket.state ?? "");
     return {
       id: ticket.id,
       number: String(ticket.number),
       title: ticket.title,
-      group: ticket.group,
+      group: formatGroupName(ticket.group),
       stateLabel: state.label,
       stateTone: state.tone,
       stateColor: state.color,
       closed: state.closed,
       // Concluído / Não autorizado esperam a decisão de quem abriu (fluxo da FEM).
       awaitingYou: isAwaitingYou(ticket, state.closed) || customerMustDecide(state.step),
+      question: questions.get(ticket.id) ?? null,
       priorityLabel: priorityLabel(ticket.priority ?? ""),
       requesterName: null,
       createdAt: ticket.created_at,

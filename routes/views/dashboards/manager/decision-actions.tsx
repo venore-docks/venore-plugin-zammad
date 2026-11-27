@@ -13,11 +13,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Textarea,
 } from "@venore/plugin-sdk/ui";
 import type { FlowStepKey } from "../../../../contracts/types";
@@ -41,10 +36,14 @@ type DecisionProps = {
 function useSend() {
   const router = useRouter();
   const [busy, startTransition] = useTransition();
+  // Erro da última tentativa, para mostrar junto do botão (além do toast): o diálogo continua aberto.
+  const [error, setError] = useState<string | null>(null);
   function send(update: { stateId?: number; ownerId?: number; reason?: string | null }, ticketId: number, done: string, after?: () => void) {
+    setError(null);
     startTransition(async () => {
       const result = await agentUpdateTicketAction({ ticketId, ...update });
       if (!result.ok) {
+        setError(result.error);
         toast.error(result.error);
         return;
       }
@@ -54,7 +53,55 @@ function useSend() {
       startTransition(() => router.refresh());
     });
   }
-  return { busy, send };
+  return { busy, send, error };
+}
+
+// Escolha do agente: <select> nativo. O Select do Radix dentro de um Dialog consumia o primeiro clique no botão de
+// confirmar logo depois de escolher (a camada da lista ainda estava saindo); o nativo não tem essa disputa e, no
+// celular, abre o seletor do próprio sistema.
+function AgentSelect({
+  value,
+  onChange,
+  disabled,
+  options,
+  suggestedId,
+  label,
+  className,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  options: AssigneeOption[];
+  suggestedId: number | null;
+  label: string;
+  className?: string;
+}) {
+  return (
+    <select
+      aria-label={label}
+      value={value}
+      disabled={disabled}
+      onChange={(event) => onChange(event.target.value)}
+      className={`h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50 ${className ?? ""}`}
+    >
+      <option value="" disabled>
+        Escolher agente
+      </option>
+      {options.map((person) => (
+        <option key={person.id} value={String(person.id)}>
+          {optionLabel(person, suggestedId)}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function ErrorLine({ message }: { message: string | null }) {
+  return message ? (
+    <p role="alert" className="text-sm font-medium text-destructive">
+      {message}
+    </p>
+  ) : null;
 }
 
 function optionLabel(person: AssigneeOption, suggestedId: number | null): string {
@@ -89,33 +136,34 @@ function AuthorizeAndAssign({
   onDone?: () => void;
 }) {
   const [value, setValue] = useState(suggestedId ? String(suggestedId) : "");
-  const { busy, send } = useSend();
+  const { busy, send, error } = useSend();
   if (!authorizedId) return null;
   if (options.length === 0) return <p className="text-xs text-muted-foreground">Nenhum agente atende o setor deste chamado.</p>;
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-      <Select value={value} onValueChange={setValue} disabled={busy}>
-        <SelectTrigger className="h-10 w-full sm:flex-1" aria-label="Atribuir a">
-          <SelectValue placeholder="Escolher agente" />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((person) => (
-            <SelectItem key={person.id} value={String(person.id)}>
-              {optionLabel(person, suggestedId)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Button
-        className="h-10 sm:shrink-0"
-        disabled={busy || !value}
-        onClick={() => send({ stateId: authorizedId, ownerId: Number(value) }, ticketId, doneMessage, onDone)}
-      >
-        <UserCheck className="size-4" />
-        {busy ? "Atribuindo…" : "Autorizar e atribuir"}
-      </Button>
+    <div className="space-y-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <AgentSelect value={value} onChange={setValue} disabled={busy} options={options} suggestedId={suggestedId} label="Atribuir a" className="sm:flex-1" />
+        <Button
+          className="h-10 sm:shrink-0"
+          disabled={busy || !value}
+          aria-busy={busy}
+          onClick={() => send({ stateId: authorizedId, ownerId: Number(value) }, ticketId, doneMessage, onDone)}
+        >
+          <UserCheck className="size-4" />
+          {busy ? "Atribuindo…" : "Autorizar e atribuir"}
+        </Button>
+      </div>
+      <ErrorLine message={error} />
     </div>
   );
+}
+
+// O botão diz o que a pessoa vai fazer: quem pega um Novo ASSUME a análise; quem volta a um chamado em análise CONTINUA.
+export function analyzeLabel(bucket: QueueBucket): string {
+  if (bucket === "novo") return "Assumir análise";
+  if (bucket === "analise") return "Continuar análise";
+  if (bucket === "reavaliacao") return "Reavaliar";
+  return "Analisar";
 }
 
 // Diálogo "Analisar": resumo do pedido e as decisões do gestor. A principal é "Autorizar e atribuir" (botão
@@ -173,7 +221,7 @@ function AnalyzeDialog({ props }: { props: DecisionProps }) {
   return (
     <Dialog open={open} onOpenChange={openDialog}>
       <Button type="button" variant="outline" className={ROW_BUTTON} onClick={() => openDialog(true)}>
-        Analisar
+        {analyzeLabel(bucket)}
       </Button>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
@@ -253,7 +301,7 @@ function AnalyzeDialog({ props }: { props: DecisionProps }) {
           </div>
         ) : (
           <div className="space-y-3 border-t pt-4">
-            <p className="text-sm text-muted-foreground">Atribuir já autoriza e coloca o chamado em andamento.</p>
+            <p className="text-sm text-muted-foreground">Atribuir já autoriza o chamado e o deixa com o agente escolhido.</p>
             <AuthorizeAndAssign ticketId={ticketId} authorizedId={authorizedId} options={options} suggestedId={suggestedId} onDone={close} doneMessage={afterAssign(flowStateIds).done} />
             <DialogFooter className="flex-row flex-wrap items-center gap-x-4 gap-y-2 pt-1 sm:justify-start">
               {authorizedId && (
@@ -294,7 +342,7 @@ function AssignDialog({
   const after = afterAssign(flowStateIds);
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(suggestedId ? String(suggestedId) : "");
-  const { busy, send } = useSend();
+  const { busy, send, error } = useSend();
   const chosen = options.find((person) => String(person.id) === value);
 
   function confirm() {
@@ -312,23 +360,13 @@ function AssignDialog({
           <DialogTitle>Atribuir responsável</DialogTitle>
           <DialogDescription>{after.description}</DialogDescription>
         </DialogHeader>
-        <Select value={value} onValueChange={setValue} disabled={busy}>
-          <SelectTrigger className="h-10 w-full" aria-label="Agente">
-            <SelectValue placeholder="Escolher agente" />
-          </SelectTrigger>
-          <SelectContent>
-            {options.map((person) => (
-              <SelectItem key={person.id} value={String(person.id)}>
-                {optionLabel(person, suggestedId)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <AgentSelect value={value} onChange={setValue} disabled={busy} options={options} suggestedId={suggestedId} label="Agente" />
+        <ErrorLine message={error} />
         <DialogFooter className="gap-2">
           <Button variant="outline" disabled={busy} onClick={() => setOpen(false)}>
             Voltar
           </Button>
-          <Button disabled={busy || !value} onClick={confirm}>
+          <Button disabled={busy || !value} aria-busy={busy} onClick={confirm}>
             <UserCheck className="size-4" />
             {busy ? "Atribuindo…" : chosen ? `Atribuir a ${chosen.name.split(" ")[0]}` : "Atribuir"}
           </Button>
@@ -342,7 +380,8 @@ function AssignDialog({
 //   Novo / Em análise / Reavaliação  Analisar (diálogo com resumo e todas as decisões)
 //   Autorizado                       Atribuir
 //   Não autorizado                   aguardando o solicitante (texto)
-//   Atribuído, Em andamento,
+//   Atribuído, Em andamento, Em pausa,
+//   Aguardando solicitante, Outros,
 //   Concluído, Finalizado            Abrir
 export function DecisionActions(props: DecisionProps) {
   const { bucket, options, suggestedId, detailHref, ticketId } = props;

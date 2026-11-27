@@ -1,4 +1,5 @@
 import type { TicketSummary } from "../contracts/types";
+import { elapsedSince } from "./format";
 
 // Estatísticas e ordenação dos chamados atribuídos ao agente. Puro: testado em agent-stats.test.ts.
 // Para quem atende, `awaitingYou` = o solicitante falou por último (o chamado espera a resposta do agente).
@@ -6,7 +7,6 @@ import type { TicketSummary } from "../contracts/types";
 export const STALE_HOURS = 24;
 
 const HOUR_MS = 60 * 60 * 1000;
-const MINUTE_MS = 60 * 1000;
 
 type Waitable = Pick<TicketSummary, "awaitingYou" | "priorityLabel" | "stateTone" | "updatedAt">;
 
@@ -41,14 +41,9 @@ export function waitingMs(ticket: Pick<TicketSummary, "updatedAt">, now: Date = 
   return Math.max(0, now.getTime() - timeOf(ticket.updatedAt));
 }
 
-// "agora há pouco", "há 12 min", "há 3 h", "há 2 dias".
+// "agora há pouco", "há 12 min", "há 3 h", "há 2 d" (a mesma forma de todas as telas: shared/format.ts).
 export function waitingLabel(iso: string, now: Date = new Date()): string {
-  const diff = Math.max(0, now.getTime() - timeOf(iso));
-  if (diff < MINUTE_MS) return "agora há pouco";
-  if (diff < HOUR_MS) return `há ${Math.floor(diff / MINUTE_MS)} min`;
-  if (diff < 24 * HOUR_MS) return `há ${Math.floor(diff / HOUR_MS)} h`;
-  const days = Math.floor(diff / (24 * HOUR_MS));
-  return days === 1 ? "há 1 dia" : `há ${days} dias`;
+  return elapsedSince(iso, now);
 }
 
 // O solicitante espera retorno há mais de `hours` horas.
@@ -63,6 +58,8 @@ export type AgentStats = {
   awaiting: number;
   /** Prioridade alta/urgente. */
   urgent: number;
+  /** Esperando a resposta do solicitante (Aguardando solicitante): a vez é dele, não pesa para o agente. */
+  awaitingRequester: number;
   /** Solicitante esperando retorno há mais de 24 h. */
   stale: number;
   /** Pendentes (aguardando retorno com data). */
@@ -73,6 +70,7 @@ export function computeAgentStats(tickets: TicketSummary[], now: Date = new Date
   return {
     open: tickets.length,
     awaiting: tickets.filter((ticket) => ticket.awaitingYou).length,
+    awaitingRequester: tickets.filter((ticket) => ticket.awaitingRequester).length,
     urgent: tickets.filter((ticket) => isUrgentPriority(ticket.priorityLabel)).length,
     stale: tickets.filter((ticket) => isStale(ticket, now)).length,
     pending: tickets.filter((ticket) => ticket.stateTone === "pending").length,
@@ -90,11 +88,16 @@ export function sortByAttention(tickets: TicketSummary[]): TicketSummary[] {
 }
 
 // "Precisam da sua resposta": os mais urgentes e mais antigos primeiro. "Em andamento": o resto, pela mesma regra.
-export function splitForDashboard(tickets: TicketSummary[], limit = 5): { needsReply: TicketSummary[]; inProgress: TicketSummary[] } {
+export function splitForDashboard(
+  tickets: TicketSummary[],
+  limit = 5,
+): { needsReply: TicketSummary[]; awaitingRequester: TicketSummary[]; inProgress: TicketSummary[] } {
   const sorted = sortByAttention(tickets);
   return {
     needsReply: sorted.filter((ticket) => ticket.awaitingYou).slice(0, limit),
-    inProgress: sorted.filter((ticket) => !ticket.awaitingYou).slice(0, limit),
+    // Esperando o solicitante: separado do resto, para não parecer trabalho pendente do agente.
+    awaitingRequester: sorted.filter((ticket) => ticket.awaitingRequester && !ticket.awaitingYou).slice(0, limit),
+    inProgress: sorted.filter((ticket) => !ticket.awaitingYou && !ticket.awaitingRequester).slice(0, limit),
   };
 }
 

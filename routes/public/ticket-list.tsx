@@ -42,6 +42,8 @@ export function TicketGroup({
                   {ticket.group}
                   {showRequester && ticket.requesterName ? ` · ${ticket.requesterName}` : ""} · {formatDateTime(ticket.updatedAt)}
                 </span>
+                {/* Aguardando solicitante: a pergunta da equipe, para a pessoa saber o que responder sem abrir. */}
+                {waiting && ticket.question && <span className="line-clamp-2 text-xs text-foreground/80">“{ticket.question}”</span>}
               </span>
               {waiting ? <AwaitingBadge label={waitingLabel} /> : <StateBadge label={ticket.stateLabel} tone={ticket.stateTone} color={ticket.stateColor} />}
               <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground rtl:rotate-180" />

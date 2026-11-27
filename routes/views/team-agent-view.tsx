@@ -68,7 +68,8 @@ export async function TeamAgentView({ surfaceKey, agentId }: { surfaceKey: Surfa
               waitingLabel="Aguardando resposta"
               showRequester
             />
-            <TicketGroup title="Em andamento" tickets={tickets.data.tickets.filter((t) => !t.awaitingYou)} hrefFor={surface.detail} showRequester />
+            <TicketGroup title="Aguardando solicitante" tickets={tickets.data.tickets.filter((t) => t.awaitingRequester && !t.awaitingYou)} hrefFor={surface.detail} showRequester />
+            <TicketGroup title="Em andamento" tickets={tickets.data.tickets.filter((t) => !t.awaitingYou && !t.awaitingRequester)} hrefFor={surface.detail} showRequester />
           </div>
         )}
       </div>
