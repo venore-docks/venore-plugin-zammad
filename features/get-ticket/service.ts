@@ -2,6 +2,7 @@ import { toTicketHistory, type RawHistory } from "../../shared/ticket-history";
 import { zammadRequest } from "../../shared/zammad-client";
 import type { AgentControls, CustomerActionOption, FieldOption, LinkedTicket, StaffFlowAction, TicketAttachmentInfo, TicketHistoryEntry, TicketMessage } from "../../contracts/types";
 import { DEADLINE_FIELD, deadlineToLocal } from "../../shared/deadline";
+import { listPluginNotes } from "../../shared/ticket-store";
 import { flattenOptions } from "../../shared/workflow";
 import { childGroupOptions, childrenBlockMessage, openChildren } from "../../shared/children";
 import { loadLinkedTickets } from "../../shared/ticket-links";
@@ -221,7 +222,7 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
   const open = openChildren(children);
   const childGroups = schema.success ? childGroupOptions(schema.data.groups, ticket.group_id) : [];
 
-  const [requesterPerson, ownerPerson, agent, canClose, tags, history] = await Promise.all([
+  const [requesterPerson, ownerPerson, agent, canClose, tags, history, pluginNotes] = await Promise.all([
     ticket.customer_id === meId ? Promise.resolve(null) : getPerson(ticket.customer_id),
     ticket.owner_id && ticket.owner_id !== meId ? getPerson(ticket.owner_id) : Promise.resolve(null),
     buildAgentControls(ticket, requester, mode, role, estimateChoices, { openChildren: open, childGroups, pauseReasons, hasDeadline }),
@@ -230,6 +231,8 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
     mode === "agent" ? loadTicketTags(requester, [ticket]).then((found) => found.get(ticket.id) ?? []) : Promise.resolve([] as string[]),
     // Histórico do Zammad (exige papel de agente): só na visão da equipe.
     mode === "agent" ? loadHistory(requester, ticket.id, estimateChoices) : Promise.resolve(null),
+    // Notas do plugin (banco do Colabora): só a equipe; banco indisponível não derruba a tela.
+    mode === "agent" ? loadPluginNotes(ticket.id) : Promise.resolve([]),
   ]);
   const unassigned = !ticket.owner_id || ticket.owner_id === 1;
   // Quem ABRIU o chamado decide sobre a entrega, mesmo sendo da equipe (gestor/agente que abriu o próprio
@@ -278,12 +281,23 @@ export async function getTicket(requester: Requester, input: GetTicketInput): Pr
       estimate,
       deadline,
       pauseReason,
+      pluginNotes,
       parent: parentLinked,
       children,
       openChildren: open,
       messages,
     },
   };
+}
+
+async function loadPluginNotes(ticketId: number): Promise<{ text: string; createdAt: string }[]> {
+  try {
+    const notes = await listPluginNotes(ticketId, 5);
+    return notes.map((note) => ({ text: note.note, createdAt: note.createdAt.toISOString() }));
+  } catch {
+    console.warn(`[colabora] notas do plugin indisponiveis (chamado ${ticketId})`);
+    return [];
+  }
 }
 
 // Histórico do chamado (ver shared/ticket-history.ts). Falha de leitura não derruba a tela: a seção some.

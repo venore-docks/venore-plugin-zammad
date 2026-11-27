@@ -224,6 +224,8 @@ export type TicketDetail = {
   deadline: { iso: string; local: string } | null;
   // Em pausa: o motivo (rótulo do Zammad). Só na visão da equipe.
   pauseReason: string | null;
+  // Anotações só do plugin (ex.: "Interrompido por #1234"), as mais recentes primeiro. Só na visão da equipe.
+  pluginNotes: { text: string; createdAt: string }[];
   // Vínculos (só na visão da equipe): chamado pai e chamados filhos. `openChildren` bloqueia concluir o pai.
   parent: LinkedTicket | null;
   children: LinkedTicket[];

@@ -53,6 +53,12 @@ export function TicketProperties({ ticket, surfaceKey, readOnly }: { ticket: Tic
           </span>
         </p>
         {ticket.pauseReason && <p className="text-sm text-muted-foreground">Motivo da pausa: <span className="text-foreground">{ticket.pauseReason}</span></p>}
+        {/* Anotações só do Colabora (ex.: pausa automática), discretas: a mais recente. */}
+        {ticket.pluginNotes.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            {ticket.pluginNotes[0].text} · {formatDateTime(ticket.pluginNotes[0].createdAt)}
+          </p>
+        )}
         {ticket.flowStep && <FlowProgress step={ticket.flowStep} />}
         {ticket.parent && <ParentLink parent={ticket.parent} surfaceKey={surfaceKey} />}
         {agent && <TagChips tags={ticket.tags} stateLabel={ticket.stateLabel} />}

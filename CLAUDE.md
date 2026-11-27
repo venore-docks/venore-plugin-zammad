@@ -30,6 +30,12 @@ O Colabora é a referência dessa regra.
   filho e no servidor (`create-ticket`, `create-child-ticket`). As regras vão ao navegador já recortadas
   (`formRules`: só atributos perguntáveis e workflows que mexem neles). Nunca montar a lista de campos de
   `sector.steps` no servidor: ela é a do formulário com as respostas VAZIAS.
+- **Banco do plugin (v1.13.0)**: schema `colabora` (`database/schema/index.ts`, migrations em `migrations/`). O Zammad
+  segue a fonte da verdade do estado ATUAL; o banco guarda eventos (idempotentes por `event_id`), intervalos
+  (derivados, trocados por inteiro em transação) e notas do plugin. Acesso só por `shared/ticket-store.ts`. Migration
+  nova: mudar o schema e rodar `scripts\db-generate.ps1 -Name <nome>` (nunca editar `_journal.json`); testar com
+  `scripts\run-tests.ps1 -Integration` (PGlite). Leitura do banco que falha não pode derrubar tela (try/catch).
+  Scripts `.ps1` só em ASCII.
 - **Escrita exige a pessoa**: `zammadRequest` com POST/PUT exige `onBehalfOf` no tipo e recusa e-mail vazio.
 - **O servidor remonta o formulário** em `create-ticket` (setor, campos visíveis e obrigatórios)
   e não confia no que vem do navegador. As regras de validação ficam em `shared/answers.ts`, que é

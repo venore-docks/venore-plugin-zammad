@@ -26,6 +26,7 @@ import { loadSchema } from "../../shared/schema";
 import { resolveAllocation } from "../../shared/team-rules";
 import { loadLinkedTickets } from "../../shared/ticket-links";
 import { searchOpenTicketsByOwner } from "../../shared/ticket-search";
+import { addPluginNote, interruptedNote } from "../../shared/ticket-store";
 import { pendingTimeToIso, validatePending } from "../../shared/ticket-options";
 import { describeState } from "../../shared/ticket-state";
 import { missingForChange } from "../../shared/transition";
@@ -221,6 +222,22 @@ export async function agentUpdateTicket(requester: Requester, input: AgentUpdate
     return finish(updated);
   }
   outcome.paused = pausedTickets.map((other) => ({ id: other.id, number: String(other.number) }));
+  // Anotação só do plugin em cada chamado pausado: "Interrompido por #N". Melhor esforço: o banco fora do ar não
+  // desfaz o atendimento (o Zammad já mudou).
+  for (const other of outcome.paused) {
+    try {
+      await addPluginNote({
+        ticketId: other.id,
+        kind: "interrupted",
+        note: interruptedNote(String(ticket.number)),
+        relatedTicketId: ticket.id,
+        relatedNumber: String(ticket.number),
+        actorId: requester.actorId,
+      });
+    } catch {
+      console.warn(`[colabora] nao gravou a nota de interrupcao do chamado ${other.id}`);
+    }
+  }
   return finish({ success: true, data: outcome });
 }
 

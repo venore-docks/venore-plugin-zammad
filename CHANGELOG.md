@@ -2,6 +2,29 @@
 
 Versões anteriores: ver o histórico do git (tags `vX.Y.Z`).
 
+## v1.13.0
+
+### Novidades
+- **Banco próprio do Colabora** (schema Postgres `colabora`, migration `0000_colabora_inicial`):
+  - `ticket_events`: cada mudança de um chamado vinda do Zammad (histórico ou webhook), com chave natural única
+    (`event_id`): evento repetido não duplica; fora de ordem não importa (os intervalos são recalculados pela data);
+  - `ticket_intervals`: tempo em cada estado (chamado, estado, setor, agente, início, fim, motivo da pausa, nota do
+    plugin, segundos corridos e úteis), trocados por inteiro numa transação a cada recálculo;
+  - `plugin_notes`: anotações só do plugin.
+- **"Interrompido por #N"**: o chamado pausado automaticamente (um Em andamento por agente) ganha essa anotação do
+  plugin, que a equipe vê no chamado. Falha no banco não desfaz o atendimento.
+- `scripts/run-tests.ps1 -Integration`: testes do banco contra Postgres em memória (PGlite). `scripts/db-generate.ps1`
+  gera migrations com o drizzle-kit do core.
+
+### Atenção
+- **No próximo deploy o core cria o schema `colabora`** no banco do portal (o `prebuild` aplica as migrations dos
+  plugins instalados; migration com erro falha o build).
+- Os eventos e intervalos ainda não são preenchidos: a ingestão (webhook e conferência pelo histórico) é a próxima
+  versão.
+- Correção nos scripts: `run-tests.ps1` sobrescrevia a variável automática `$args` do PowerShell (o vitest não rodava)
+  e passa a usar o mesmo mutex do `verify.ps1`; scripts `.ps1` só em ASCII (o PowerShell 5.1 lê arquivo sem BOM como
+  ANSI).
+
 ## v1.12.0
 
 ### Novidades

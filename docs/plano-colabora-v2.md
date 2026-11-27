@@ -24,7 +24,7 @@ testes, CHANGELOG e (quando houver) migration.
 | 0 | Fundação: escrita exige `X-On-Behalf-Of`; script de exportação do recorte | v1.11.0 |
 | 1 | Campos condicionais por valor (Core Workflows completos) | v1.11.0 |
 | 2 | Em pausa (Pausar/Retomar), campos obrigatórios da transição pelo avaliador na tela `edit`, prazo e tempo previsto no detalhe e na fila, padrão de 1 dia útil, um Em andamento por agente | v1.12.0 |
-| 3 | Banco do plugin (schema `colabora`): eventos, intervalos, notas do plugin | |
+| 3 | Banco do plugin (schema `colabora`): eventos, intervalos, notas do plugin | v1.13.0 |
 | 4 | Horas úteis pelo calendário do Zammad (Calendários como fonte opcional de feriados) | |
 | 5 | Webhook `/api/colabora/webhook/zammad` (HMAC, `COLABORA_WEBHOOK_SECRET`) e conferência pelo histórico | |
 | 6 | Relógios: esforço, prazo, risco, contador regressivo, idade útil e corrida | |

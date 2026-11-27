@@ -1,6 +1,6 @@
 {
   "name": "@venore/plugin-colabora",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "description": "Colabora: chamados do Venore Docks em passos guiados, com o Zammad como motor (campos, regras e fila lidos do próprio Zammad).",
   "repository": {
     "type": "git",
@@ -13,12 +13,17 @@
     "./manifest": "./manifest.ts",
     "./route-table": "./routes/route-table.ts",
     "./contributions": "./contributions.ts",
+    "./migrations/*": "./migrations/*",
     "./package.json": "./package.json"
   },
   "peerDependencies": {
+    "drizzle-orm": ">=0.45",
     "next": ">=16",
     "react": ">=19",
     "sonner": ">=2",
     "zod": ">=4"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.10"
   }
 }
