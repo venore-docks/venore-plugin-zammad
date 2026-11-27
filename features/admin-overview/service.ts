@@ -1,7 +1,7 @@
 import { staffRoleOf } from "../../shared/access-rules";
 import { audienceBadge } from "../../shared/audience";
 import { loadDirRoles, loadDirUsers } from "../../shared/directory";
-import { buildSectorForms, groupConfigFor } from "../../shared/form";
+import { buildSectorForms, groupConfigFor, sectorFieldCatalog } from "../../shared/form";
 import { sectorsUsingGroup } from "../../shared/people-groups";
 import { getTokenOwner, loadSchema } from "../../shared/schema";
 import { readPeopleGroups, readWizardConfig } from "../../shared/wizard-config";
@@ -84,9 +84,14 @@ export async function getAdminOverview(input: AdminOverviewInput = {}): Promise<
     config: groupConfigFor(config, sector.groupId),
     stepCount: sector.steps.length,
     audience: audienceBadge(sector.groupId, tree, config, groups),
-    fields: sector.steps.flatMap((step) =>
-      step.fields.map((field) => ({ name: field.name, label: field.label, type: field.type, required: field.required })),
-    ),
+    // Inclui os campos condicionais (aparecem conforme outra resposta), para o admin poder dar ajuda a eles também.
+    fields: sectorFieldCatalog(built.rules, sector.groupId, sector.presentation).map(({ field, conditional }) => ({
+      name: field.name,
+      label: field.label,
+      type: field.type,
+      required: field.required,
+      conditional,
+    })),
   }));
   return { success: true, data: overview };
 }

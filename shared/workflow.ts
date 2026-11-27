@@ -1,6 +1,6 @@
 import type { ZammadAttribute, ZammadCondition, ZammadWorkflow } from "../contracts/zammad";
 
-// Avaliador local dos Core Workflows do Zammad para a tela de criação de ticket.
+// Avaliador local dos Core Workflows do Zammad.
 //
 // Por que local: o endpoint do próprio Zammad (`POST /core_workflows/perform`) só aceita sessão de
 // navegador — com token ele responde "Token authorization failed" (testado no 7.2.2). Então o plugin
@@ -8,10 +8,16 @@ import type { ZammadAttribute, ZammadCondition, ZammadWorkflow } from "../contra
 // de `screens` do atributo, depois cada workflow ativo por prioridade crescente (o último que mexe
 // num campo vence). Condição ou ação que não sabemos avaliar entra em `unsupported` — a tela de admin
 // mostra, para ninguém confiar num formulário que diverge do Zammad sem saber.
+//
+// Condições sobre VALORES de campos (ex.: "sistema_afetado é portal → mostra ferramenta_portal") só casam se as
+// respostas já dadas entram em `ticket`. Quem monta o formulário reavalia a cada resposta (`resolveForm` em
+// form.ts); avaliar uma vez só com o grupo deixa esses campos sempre ocultos (bug da v1.10.1).
+// Puro e sem dependência de servidor: o wizard (navegador) usa o mesmo código.
 
 export type FieldState = {
   visible: boolean;
   mandatory: boolean;
+  readonly: boolean;
   // null = todas as opções do atributo; lista = só estas (set_fixed_to / remove_option / add_option).
   allowed: string[] | null;
   fill: unknown;
@@ -19,11 +25,17 @@ export type FieldState = {
 
 export type EvaluationContext = {
   screen: string;
-  // Valores já escolhidos no formulário (`group_id` é o que importa na criação).
+  // Valores escolhidos no formulário (condition_selected): `group_id` e as respostas já dadas.
   ticket: Record<string, unknown>;
-  session: { roleIds: number[] };
+  // Valores do ticket já salvo (condition_saved). Na criação não há ticket salvo: vazio.
+  saved?: Record<string, unknown>;
+  // userId: quem age, para condições com `pre_condition: "current_user.id"` (ex.: "cliente não é quem está editando").
+  session: { roleIds: number[]; userId?: number };
   // Que coluna de `screens` vale: cliente ou agente (quem abre pelo portal é tratado como cliente).
   role: "ticket.customer" | "ticket.agent";
+  // Só para listar os campos que PODEM aparecer (visão do admin): condição sobre o valor de um campo do ticket
+  // (fora grupo e estado) conta como verdadeira.
+  assumeFieldConditions?: boolean;
 };
 
 export type EvaluationResult = { fields: Record<string, FieldState>; unsupported: string[] };
@@ -34,9 +46,18 @@ export function isWizardAttribute(attribute: ZammadAttribute): boolean {
   return attribute.object === "Ticket" && attribute.active && attribute.editable;
 }
 
+// Campos do ticket cujas condições dependem do contexto e não da resposta da pessoa.
+const CONTEXT_FIELDS = new Set(["group_id", "state_id", "owner_id", "customer_id", "organization_id", "priority_id"]);
+
+export function applicableWorkflows(workflows: readonly ZammadWorkflow[], screen: string): ZammadWorkflow[] {
+  return workflows
+    .filter((workflow) => workflow.active && workflow.object === "Ticket" && appliesToScreen(workflow, screen))
+    .sort((a, b) => a.priority - b.priority || a.id - b.id);
+}
+
 export function evaluateWorkflows(
-  attributes: ZammadAttribute[],
-  workflows: ZammadWorkflow[],
+  attributes: readonly ZammadAttribute[],
+  workflows: readonly ZammadWorkflow[],
   context: EvaluationContext,
 ): EvaluationResult {
   const unsupported = new Set<string>();
@@ -49,16 +70,11 @@ export function evaluateWorkflows(
     fields[attribute.name] = baseState(attribute, context);
   }
 
-  const applicable = workflows
-    .filter((workflow) => workflow.active && workflow.object === "Ticket" && appliesToScreen(workflow, context.screen))
-    .sort((a, b) => a.priority - b.priority || a.id - b.id);
-
-  for (const workflow of applicable) {
+  for (const workflow of applicableWorkflows(workflows, context.screen)) {
     const label = `workflow #${workflow.id} "${workflow.name}"`;
     const matched =
       matchesConditions(workflow.condition_selected, context, context.ticket, label, unsupported) &&
-      // Na criação ainda não há ticket salvo: condição "salva" só casa se não exigir valor.
-      matchesConditions(workflow.condition_saved, context, {}, label, unsupported);
+      matchesConditions(workflow.condition_saved, context, context.saved ?? {}, label, unsupported);
     if (!matched) continue;
 
     for (const [key, action] of Object.entries(workflow.perform ?? {})) {
@@ -67,8 +83,7 @@ export function evaluateWorkflows(
       const state = fields[name];
       const attribute = byName.get(name);
       if (!state || !attribute) continue;
-      const operators = Array.isArray(action.operator) ? action.operator : [action.operator];
-      for (const operator of operators) {
+      for (const operator of operatorsOf(action)) {
         applyOperator(state, attribute, operator, action[operator], label, unsupported);
       }
     }
@@ -81,13 +96,73 @@ export function evaluateWorkflows(
   return { fields, unsupported: [...unsupported] };
 }
 
+// De que campos (respostas) depende cada campo: o alvo de uma ação ← os campos do ticket citados nas condições da
+// mesma regra (fora os de contexto, como grupo e estado). O wizard usa isto para mostrar o campo dependente na
+// mesma etapa do campo que o libera.
+export function fieldDependencies(workflows: readonly ZammadWorkflow[], screen: string): Map<string, Set<string>> {
+  const dependencies = new Map<string, Set<string>>();
+  for (const workflow of applicableWorkflows(workflows, screen)) {
+    const sources = new Set<string>();
+    collectConditionFields(workflow.condition_selected, sources);
+    collectConditionFields(workflow.condition_saved, sources);
+    if (sources.size === 0) continue;
+    for (const key of Object.keys(workflow.perform ?? {})) {
+      if (!key.startsWith("ticket.")) continue;
+      const target = key.slice("ticket.".length);
+      const set = dependencies.get(target) ?? new Set<string>();
+      sources.forEach((source) => source !== target && set.add(source));
+      if (set.size > 0) dependencies.set(target, set);
+    }
+  }
+  return dependencies;
+}
+
+// A regra casa neste contexto? (as mesmas condições do `evaluateWorkflows`, sem aplicar ações)
+export function workflowMatches(workflow: ZammadWorkflow, context: EvaluationContext): boolean {
+  const ignored = new Set<string>();
+  const label = `workflow #${workflow.id}`;
+  return (
+    matchesConditions(workflow.condition_selected, context, context.ticket, label, ignored) &&
+    matchesConditions(workflow.condition_saved, context, context.saved ?? {}, label, ignored)
+  );
+}
+
+export function hasFieldConditions(workflow: ZammadWorkflow): boolean {
+  const sources = new Set<string>();
+  collectConditionFields(workflow.condition_selected, sources);
+  collectConditionFields(workflow.condition_saved, sources);
+  return sources.size > 0;
+}
+
+function collectConditionFields(conditions: Record<string, unknown> | null | undefined, out: Set<string>): void {
+  if (!conditions) return;
+  const visit = (name: string | undefined) => {
+    if (!name?.startsWith("ticket.")) return;
+    const field = name.slice("ticket.".length);
+    if (!CONTEXT_FIELDS.has(field)) out.add(field);
+  };
+  const walk = (node: ZammadCondition) => {
+    if (Array.isArray(node.conditions)) node.conditions.forEach(walk);
+    else visit(node.name);
+  };
+  if (typeof conditions.operator === "string" && Array.isArray(conditions.conditions)) {
+    walk(conditions as unknown as ZammadCondition);
+    return;
+  }
+  Object.keys(conditions).forEach(visit);
+}
+
+function operatorsOf(action: { operator: string | string[] }): string[] {
+  return Array.isArray(action.operator) ? action.operator : [action.operator];
+}
+
 function baseState(attribute: ZammadAttribute, context: EvaluationContext): FieldState {
   const screen = attribute.screens?.[context.screen] ?? {};
   const config = screen[context.role] ?? screen["-all-"];
-  if (!config) return { visible: false, mandatory: false, allowed: null, fill: null };
+  if (!config) return { visible: false, mandatory: false, readonly: false, allowed: null, fill: null };
   const visible = config.shown ?? true;
   const mandatory = config.required ?? config.null === false;
-  return { visible, mandatory, allowed: null, fill: null };
+  return { visible, mandatory, readonly: false, allowed: null, fill: null };
 }
 
 function appliesToScreen(workflow: ZammadWorkflow, screen: string): boolean {
@@ -132,6 +207,11 @@ function matchesExpert(
   return matchesOne(node.name ?? "", node, context, ticket, label, unsupported);
 }
 
+// "is_not", "Is Not" e "is not" são o mesmo operador.
+export function normalizeOperator(operator: string): string {
+  return operator.toLowerCase().replaceAll("_", " ").replace(/\s+/g, " ").trim();
+}
+
 function matchesOne(
   name: string,
   condition: ZammadCondition,
@@ -142,7 +222,9 @@ function matchesOne(
 ): boolean {
   let actual: unknown;
   if (name.startsWith("ticket.")) {
-    actual = ticket[name.slice("ticket.".length)];
+    const field = name.slice("ticket.".length);
+    if (context.assumeFieldConditions && !CONTEXT_FIELDS.has(field)) return true;
+    actual = ticket[field];
   } else if (name === "session.role_ids") {
     actual = context.session.roleIds;
   } else {
@@ -150,20 +232,84 @@ function matchesOne(
     return false;
   }
 
-  const actualValues = toStringList(actual);
-  const expected = toStringList(condition.value);
-  switch (condition.operator) {
-    case "is":
-      return actualValues.some((value) => expected.includes(value));
-    case "is not":
-      return !actualValues.some((value) => expected.includes(value));
-    case "is set":
-      return actualValues.length > 0;
-    case "not set":
-      return actualValues.length === 0;
-    default:
-      unsupported.add(`${label}: operador "${condition.operator}" em "${name}" não é avaliado (a regra é ignorada)`);
+  // `pre_condition` (campos de usuário/organização): "current_user.id" compara com quem age; "not_set" com vazio;
+  // "specific" (ou ausente) com `value`.
+  let expectedValue: unknown = condition.value;
+  if (condition.pre_condition === "current_user.id") {
+    if (context.session.userId === undefined) {
+      unsupported.add(`${label}: condição "${name}" com o usuário atual, sem usuário no contexto (a regra é ignorada)`);
       return false;
+    }
+    expectedValue = [context.session.userId];
+  } else if (condition.pre_condition === "not_set") {
+    expectedValue = [];
+  }
+
+  const result = compare(normalizeOperator(condition.operator ?? ""), toStringList(actual), toStringList(expectedValue));
+  if (result === null) {
+    unsupported.add(`${label}: operador "${condition.operator}" em "${name}" não é avaliado (a regra é ignorada)`);
+    return false;
+  }
+  return result;
+}
+
+// Operadores de condição do Zammad que dependem só do valor. null = operador não avaliado (ex.: "has changed",
+// datas relativas): a regra não casa e vai para `unsupported`.
+function compare(operator: string, actual: string[], expected: string[]): boolean | null {
+  const lower = (list: string[]) => list.map((value) => value.toLowerCase());
+  const any = (predicate: (value: string) => boolean) => actual.some(predicate);
+  switch (operator) {
+    case "is":
+    case "is any of":
+      return any((value) => expected.includes(value));
+    case "is not":
+    case "is none of":
+      return !any((value) => expected.includes(value));
+    case "is set":
+      return actual.length > 0;
+    case "not set":
+    case "is not set":
+      return actual.length === 0;
+    case "contains": {
+      const needles = lower(expected);
+      return lower(actual).some((value) => needles.some((needle) => value.includes(needle)));
+    }
+    case "contains not": {
+      const needles = lower(expected);
+      return !lower(actual).some((value) => needles.some((needle) => value.includes(needle)));
+    }
+    case "contains all":
+      return expected.every((value) => actual.includes(value));
+    case "contains one":
+      return expected.some((value) => actual.includes(value));
+    case "contains all not":
+      return !expected.every((value) => actual.includes(value));
+    case "contains one not":
+      return !expected.some((value) => actual.includes(value));
+    case "starts with":
+    case "starts with one of": {
+      const prefixes = lower(expected);
+      return lower(actual).some((value) => prefixes.some((prefix) => value.startsWith(prefix)));
+    }
+    case "ends with":
+    case "ends with one of": {
+      const suffixes = lower(expected);
+      return lower(actual).some((value) => suffixes.some((suffix) => value.endsWith(suffix)));
+    }
+    case "regex match":
+    case "regex mismatch": {
+      const matched = expected.some((pattern) => {
+        try {
+          const regex = new RegExp(pattern, "i");
+          return actual.some((value) => regex.test(value));
+        } catch {
+          return false;
+        }
+      });
+      return operator === "regex match" ? matched : !matched;
+    }
+    default:
+      return null;
   }
 }
 
@@ -189,11 +335,21 @@ function applyOperator(
     case "set_optional":
       state.mandatory = false;
       return;
+    case "set_readonly":
+      state.readonly = true;
+      return;
+    case "unset_readonly":
+      state.readonly = false;
+      return;
     case "set_fixed_to":
       state.allowed = toStringList(value);
       return;
     case "add_option":
-      if (state.allowed) state.allowed = [...new Set([...state.allowed, ...toStringList(value)])];
+      // Sem restrição anterior, todas as opções já valem.
+      if (state.allowed) {
+        const add = toStringList(value).filter((option) => optionValues(attribute).includes(option));
+        state.allowed = [...new Set([...state.allowed, ...add])];
+      }
       return;
     case "remove_option": {
       const remove = toStringList(value);
@@ -207,9 +363,6 @@ function applyOperator(
     case "auto_select":
       state.fill = value;
       return;
-    case "set_readonly":
-    case "unset_readonly":
-      return;
     default:
       unsupported.add(`${label}: ação "${operator}" em "${attribute.name}" não é aplicada`);
   }
@@ -222,17 +375,14 @@ function applyOperator(
 //   lista = só estes ids (string), já com add/remove aplicados.
 // `allGroupIds` é a base para "remover opção" quando nada fixou a lista antes.
 export function allowedGroupIds(
-  workflows: ZammadWorkflow[],
+  workflows: readonly ZammadWorkflow[],
   context: Omit<EvaluationContext, "ticket">,
   allGroupIds: readonly string[],
 ): { allowed: string[] | null; unsupported: string[] } {
   const unsupported = new Set<string>();
   let allowed: string[] | null = null;
-  const applicable = workflows
-    .filter((workflow) => workflow.active && workflow.object === "Ticket" && appliesToScreen(workflow, context.screen))
-    .sort((a, b) => a.priority - b.priority || a.id - b.id);
 
-  for (const workflow of applicable) {
+  for (const workflow of applicableWorkflows(workflows, context.screen)) {
     const label = `workflow #${workflow.id} "${workflow.name}"`;
     const action = workflow.perform?.["ticket.group_id"];
     const fullContext = { ...context, ticket: {} };
@@ -241,8 +391,7 @@ export function allowedGroupIds(
       matchesConditions(workflow.condition_saved, fullContext, {}, label, unsupported);
     if (!matched) continue;
     if (action) {
-      const operators = Array.isArray(action.operator) ? action.operator : [action.operator];
-      for (const operator of operators) {
+      for (const operator of operatorsOf(action)) {
         const value = toStringList(action[operator]);
         if (operator === "set_fixed_to") allowed = value;
         else if (operator === "remove_option") allowed = (allowed ?? [...allGroupIds]).filter((id) => !value.includes(id));

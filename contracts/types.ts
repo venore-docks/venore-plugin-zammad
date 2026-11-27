@@ -1,5 +1,7 @@
 // Tipos que a interface usa. Nada aqui depende de servidor: o wizard (cliente) importa daqui.
 
+import type { ZammadAttribute, ZammadWorkflow } from "./zammad";
+
 export type FieldType = "select" | "multiselect" | "boolean" | "date" | "datetime" | "text" | "textarea" | "integer";
 export type FieldOption = { value: string; label: string };
 export type AnswerValue = string | string[] | boolean | number;
@@ -21,6 +23,24 @@ export type WizardField = {
 // optional: todos os campos da etapa são opcionais (a interface avisa que pode seguir sem responder).
 export type WizardStep = { key: string; title: string; fields: WizardField[]; optional: boolean };
 
+// Regras do formulário vindas do Zammad, já recortadas para quem pede: os atributos que o wizard pode perguntar e
+// os Core Workflows da tela. O wizard reavalia com elas a cada resposta (`resolveForm` em shared/form.ts): campos
+// que dependem de outra resposta (ex.: ferramenta_portal quando sistema_afetado = portal) aparecem e somem na hora.
+export type FormRules = {
+  screen: string;
+  role: "ticket.customer" | "ticket.agent";
+  roleIds: number[];
+  attributes: ZammadAttribute[];
+  workflows: ZammadWorkflow[];
+};
+
+// Apresentação dos campos de um setor (configurada no admin do Colabora).
+export type FieldPresentation = {
+  fieldHelp: Record<string, string>;
+  fieldSteps: Record<string, number>;
+  stepTitles: Record<string, string>;
+};
+
 export type SectorForm = {
   groupId: number;
   parentId: number | null;
@@ -28,12 +48,15 @@ export type SectorForm = {
   description: string | null;
   bodyHint: string | null;
   order: number | null;
+  // Etapas com as respostas ainda vazias; os campos condicionais entram conforme as respostas (`resolveForm`).
   steps: WizardStep[];
+  presentation: FieldPresentation;
 };
 
 export type WizardData = {
   intro: string | null;
   sectors: SectorForm[];
+  rules: FormRules;
   limits: AttachmentLimits;
 };
 

@@ -24,6 +24,13 @@ O Colabora é a referência dessa regra.
 - **`/core_workflows/perform` não aceita token** (testado no 7.2.2: "Token authorization failed").
   Por isso existe `shared/workflow.ts`. Ao estender esse avaliador, adicione um caso em
   `workflow.test.ts`, que roda contra o recorte real em `shared/__fixtures__/fem-schema.ts`.
+- **Campos condicionais (v1.11.0)**: o formulário NÃO é fixo por setor. `resolveForm(rules, setor, apresentação,
+  respostas)` (`shared/form.ts`, puro) reavalia os Core Workflows com as respostas até estabilizar, descarta resposta de
+  campo oculto e encaixa o campo dependente na etapa de quem o libera. Roda no wizard (a cada resposta), no diálogo do
+  filho e no servidor (`create-ticket`, `create-child-ticket`). As regras vão ao navegador já recortadas
+  (`formRules`: só atributos perguntáveis e workflows que mexem neles). Nunca montar a lista de campos de
+  `sector.steps` no servidor: ela é a do formulário com as respostas VAZIAS.
+- **Escrita exige a pessoa**: `zammadRequest` com POST/PUT exige `onBehalfOf` no tipo e recusa e-mail vazio.
 - **O servidor remonta o formulário** em `create-ticket` (setor, campos visíveis e obrigatórios)
   e não confia no que vem do navegador. As regras de validação ficam em `shared/answers.ts`, que é
   puro e é usado pelos dois lados.

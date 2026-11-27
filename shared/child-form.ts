@@ -1,7 +1,7 @@
-import type { AnswerValue, WizardConfig, WizardField } from "../contracts/types";
+import type { AnswerValue, FieldPresentation, FormRules, WizardConfig, WizardField } from "../contracts/types";
 import type { ZammadGroup, ZammadSchema } from "../contracts/zammad";
 import { isEmptyAnswer, localNow, validateField, type Answers } from "./answers";
-import { buildSectorForms } from "./form";
+import { buildSectorForms, resolveForm, type ResolvedForm } from "./form";
 
 // Formulário do chamado filho: os campos do setor que vai RECEBER o filho, lidos do schema e dos Core Workflows do
 // Zammad (como na abertura). Puro: testado em child-form.test.ts contra o recorte real em __fixtures__.
@@ -13,7 +13,9 @@ import { buildSectorForms } from "./form";
 // Os campos que ninguém responde na abertura (NEVER_ASKED) continuam fora.
 
 export type ChildFormContext = { roleIds: number[] };
-export type ChildForm = { groupId: number; label: string; fields: WizardField[] };
+// `fields` = com as respostas vazias; `rules`/`presentation` reavaliam com as respostas (`resolveForm`): campos
+// condicionados a outra resposta entram e saem como na abertura.
+export type ChildForm = { groupId: number; label: string; fields: WizardField[]; rules: FormRules; presentation: FieldPresentation };
 
 export const SUBJECT_REQUIRED_PREFIX = "Escolha o assunto em";
 
@@ -29,10 +31,22 @@ export function subjectRequiredMessage(groups: readonly ZammadGroup[], groupId: 
 }
 
 export function buildChildForm(schema: ZammadSchema, config: WizardConfig, groupId: number, context: ChildFormContext): ChildForm | null {
-  const { sectors } = buildSectorForms(schema, config, { roleIds: context.roleIds, role: "ticket.agent", includeDisabled: true });
+  const { sectors, rules } = buildSectorForms(schema, config, { roleIds: context.roleIds, role: "ticket.agent", includeDisabled: true });
   const sector = sectors.find((candidate) => candidate.groupId === groupId);
   if (!sector) return null;
-  return { groupId: sector.groupId, label: sector.label, fields: sector.steps.flatMap((step) => step.fields) };
+  return { groupId: sector.groupId, label: sector.label, fields: sector.steps.flatMap((step) => step.fields), rules, presentation: sector.presentation };
+}
+
+// Respostas iniciais já com os campos condicionais: o valor herdado do pai pode liberar outro campo (ex.: pai com
+// sistema_afetado = portal libera ferramenta_portal, que também é herdada). Duas passadas bastam para um nível.
+export function resolvedChildDefaults(form: ChildForm, parent: Record<string, unknown>, now: Date = new Date()): ResolvedForm {
+  let answers = childDefaults(form.fields, parent, now);
+  let resolved = resolveForm(form.rules, form.groupId, form.presentation, answers);
+  for (let pass = 0; pass < 2; pass += 1) {
+    answers = { ...childDefaults(resolved.fields, parent, now), ...resolved.answers };
+    resolved = resolveForm(form.rules, form.groupId, form.presentation, answers);
+  }
+  return resolved;
 }
 
 // Respostas iniciais: o padrão do Zammad e, por cima, o valor que o chamado PAI já tem no mesmo campo (ex.: o

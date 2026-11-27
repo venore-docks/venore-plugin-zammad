@@ -1,5 +1,5 @@
 import type { OperationResult } from "@venore/plugin-sdk";
-import type { AnswerValue, WizardField } from "../../contracts/types";
+import type { AnswerValue, FieldPresentation, FormRules, WizardField } from "../../contracts/types";
 import type { ChildMode } from "../../shared/children";
 
 // Campos do setor que vai receber o chamado filho (lidos do Zammad) e as respostas iniciais herdadas do pai.
@@ -15,6 +15,8 @@ export type ChildFormData = {
   groupId: number;
   fields: WizardField[];
   defaults: Record<string, AnswerValue | null>;
+  rules: FormRules;
+  presentation: FieldPresentation;
 };
 
 export type GetChildFormResult = OperationResult<ChildFormData>;

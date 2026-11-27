@@ -237,7 +237,7 @@ export function SectorEditor({ sector, parentName, peopleGroups }: Props) {
                     <p className="text-sm text-foreground">
                       <span className="break-words">{field.label}</span>
                       <span className="ms-2 text-xs text-muted-foreground">
-                        {TYPE_LABELS[field.type] ?? field.type} · {field.required ? "obrigatório" : "opcional"}
+                        {TYPE_LABELS[field.type] ?? field.type} · {field.conditional ? "condicional (conforme outra resposta)" : field.required ? "obrigatório" : "opcional"}
                       </span>
                     </p>
                     <Input

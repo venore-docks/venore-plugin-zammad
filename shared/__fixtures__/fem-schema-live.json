@@ -1,0 +1,3574 @@
+{
+  "groups": [
+    {
+      "id": 1,
+      "name": "Manutenção",
+      "name_last": "Manutenção",
+      "parent_id": null,
+      "active": true,
+      "note": "Grupo para Tickets da Manutenção"
+    },
+    {
+      "id": 2,
+      "name": "Tecnologia",
+      "name_last": "Tecnologia",
+      "parent_id": null,
+      "active": true,
+      "note": "Grupo para Tickets da Tecnologia"
+    },
+    {
+      "id": 3,
+      "name": "Sugestões para o sistema",
+      "name_last": "Sugestões para o sistema",
+      "parent_id": null,
+      "active": false,
+      "note": ""
+    },
+    {
+      "id": 4,
+      "name": "Inspetoria",
+      "name_last": "Inspetoria",
+      "parent_id": null,
+      "active": false,
+      "note": ""
+    },
+    {
+      "id": 6,
+      "name": "Marketing",
+      "name_last": "Marketing",
+      "parent_id": null,
+      "active": true,
+      "note": "Grupo para Tickets do Marketing"
+    },
+    {
+      "id": 11,
+      "name": "Recursos Humanos",
+      "name_last": "Recursos Humanos",
+      "parent_id": null,
+      "active": true,
+      "note": "Grupo para Tickets do Recursos Humanos"
+    },
+    {
+      "id": 14,
+      "name": "Recursos Humanos::Benefícios",
+      "name_last": "Benefícios",
+      "parent_id": 11,
+      "active": true,
+      "note": ""
+    },
+    {
+      "id": 15,
+      "name": "Recursos Humanos::Plano de Cargos e Salários (PCS)",
+      "name_last": "Plano de Cargos e Salários (PCS)",
+      "parent_id": 11,
+      "active": true,
+      "note": ""
+    },
+    {
+      "id": 16,
+      "name": "Recursos Humanos::Atualizações Cadastrais",
+      "name_last": "Atualizações Cadastrais",
+      "parent_id": 11,
+      "active": true,
+      "note": ""
+    },
+    {
+      "id": 17,
+      "name": "Recursos Humanos::Afastamento",
+      "name_last": "Afastamento",
+      "parent_id": 11,
+      "active": true,
+      "note": ""
+    },
+    {
+      "id": 19,
+      "name": "Tecnologia::Suporte",
+      "name_last": "Suporte",
+      "parent_id": 2,
+      "active": true,
+      "note": "Subgrupo de Tecnologia - Suporte"
+    },
+    {
+      "id": 20,
+      "name": "Tecnologia::Infraestrutura",
+      "name_last": "Infraestrutura",
+      "parent_id": 2,
+      "active": true,
+      "note": "Subgrupo de Tecnologia - Infraestrutura"
+    },
+    {
+      "id": 21,
+      "name": "Tecnologia::Desenvolvimento",
+      "name_last": "Desenvolvimento",
+      "parent_id": 2,
+      "active": true,
+      "note": "Subgrupo de Tecnologia - Desenvolvimento"
+    },
+    {
+      "id": 22,
+      "name": "Tecnologia::Acesso a sistemas",
+      "name_last": "Acesso a sistemas",
+      "parent_id": 2,
+      "active": true,
+      "note": ""
+    }
+  ],
+  "attributes": [
+    {
+      "name": "number",
+      "object": "Ticket",
+      "display": "#",
+      "data_type": "input",
+      "active": true,
+      "editable": false,
+      "position": 5,
+      "data_option": {
+        "display_config": "ticket_hook",
+        "type": "text",
+        "readonly": 1,
+        "null": true,
+        "maxlength": 60,
+        "width": "68px"
+      },
+      "screens": {
+        "create_top": {},
+        "edit": {}
+      }
+    },
+    {
+      "name": "title",
+      "object": "Ticket",
+      "display": "Title",
+      "data_type": "input",
+      "active": true,
+      "editable": false,
+      "position": 8,
+      "data_option": {
+        "type": "text",
+        "maxlength": 200,
+        "null": false,
+        "translate": false
+      },
+      "screens": {
+        "create_top": {
+          "-all-": {
+            "null": false
+          }
+        },
+        "edit": {}
+      }
+    },
+    {
+      "name": "customer_id",
+      "object": "Ticket",
+      "display": "Customer",
+      "data_type": "user_autocompletion",
+      "active": true,
+      "editable": false,
+      "position": 10,
+      "data_option": {
+        "relation": "User",
+        "autocapitalize": false,
+        "multiple": false,
+        "guess": true,
+        "null": false,
+        "limit": 200,
+        "placeholder": "Enter Person or Organization/Company",
+        "minLengt": 2,
+        "translate": false,
+        "permission": [
+          "ticket.agent",
+          "ticket.customer"
+        ]
+      },
+      "screens": {
+        "create_top": {
+          "ticket.agent": {
+            "null": false
+          }
+        },
+        "edit": {}
+      }
+    },
+    {
+      "name": "organization_id",
+      "object": "Ticket",
+      "display": "Organization",
+      "data_type": "autocompletion_ajax_customer_organization",
+      "active": true,
+      "editable": false,
+      "position": 12,
+      "data_option": {
+        "relation": "Organization",
+        "autocapitalize": false,
+        "multiple": false,
+        "null": true,
+        "translate": false,
+        "permission": [
+          "ticket.agent",
+          "ticket.customer"
+        ]
+      },
+      "screens": {
+        "create_top": {
+          "-all-": {
+            "null": false
+          }
+        },
+        "edit": {}
+      }
+    },
+    {
+      "name": "type",
+      "object": "Ticket",
+      "display": "Type",
+      "data_type": "select",
+      "active": false,
+      "editable": true,
+      "position": 20,
+      "data_option": {
+        "default": "",
+        "options": {
+          "Incident": "Incident",
+          "Problem": "Problem",
+          "Request for Change": "Request for Change"
+        },
+        "nulloption": true,
+        "multiple": false,
+        "null": true,
+        "translate": true,
+        "maxlength": 255
+      },
+      "screens": {
+        "create_middle": {
+          "-all-": {
+            "null": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.agent": {
+            "null": false
+          }
+        }
+      }
+    },
+    {
+      "name": "group_id",
+      "object": "Ticket",
+      "display": "Group",
+      "data_type": "tree_select",
+      "active": true,
+      "editable": false,
+      "position": 25,
+      "data_option": {
+        "default": "",
+        "relation": "Group",
+        "relation_condition": {
+          "access": "full"
+        },
+        "nulloption": true,
+        "multiple": false,
+        "null": false,
+        "translate": false,
+        "only_shown_if_selectable": true,
+        "permission": [
+          "ticket.agent",
+          "ticket.customer"
+        ],
+        "maxlength": 255
+      },
+      "screens": {
+        "create_middle": {
+          "-all-": {
+            "null": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.agent": {
+            "null": false
+          }
+        },
+        "overview_bulk": {
+          "ticket.agent": {
+            "nulloption": true,
+            "null": true,
+            "default": "",
+            "direction": "up"
+          }
+        }
+      }
+    },
+    {
+      "name": "owner_id",
+      "object": "Ticket",
+      "display": "Owner",
+      "data_type": "select",
+      "active": true,
+      "editable": false,
+      "position": 30,
+      "data_option": {
+        "default": "",
+        "relation": "User",
+        "relation_condition": {
+          "roles": "Agent"
+        },
+        "nulloption": true,
+        "multiple": false,
+        "null": true,
+        "translate": false,
+        "permission": [
+          "ticket.agent"
+        ],
+        "maxlength": 255
+      },
+      "screens": {
+        "create_middle": {
+          "-all-": {
+            "null": true,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "-all-": {
+            "null": true
+          }
+        },
+        "overview_bulk": {
+          "ticket.agent": {
+            "null": true
+          }
+        }
+      }
+    },
+    {
+      "name": "state_id",
+      "object": "Ticket",
+      "display": "State",
+      "data_type": "select",
+      "active": true,
+      "editable": false,
+      "position": 40,
+      "data_option": {
+        "relation": "TicketState",
+        "nulloption": true,
+        "multiple": false,
+        "null": false,
+        "default": 2,
+        "translate": true,
+        "filter": [
+          1,
+          2,
+          3,
+          4,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "maxlength": 255
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.agent": {
+            "null": false,
+            "item_class": "column",
+            "filter": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ]
+          },
+          "ticket.customer": {
+            "item_class": "column",
+            "nulloption": false,
+            "null": true,
+            "filter": [
+              1,
+              3,
+              4
+            ],
+            "default": 1
+          }
+        },
+        "edit": {
+          "ticket.agent": {
+            "nulloption": false,
+            "null": false,
+            "filter": [
+              2,
+              3,
+              4,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ]
+          },
+          "ticket.customer": {
+            "nulloption": false,
+            "null": true,
+            "filter": [
+              2,
+              3,
+              4,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "default": 2
+          }
+        },
+        "overview_bulk": {
+          "ticket.agent": {
+            "nulloption": true,
+            "null": true,
+            "default": "",
+            "filter": [
+              2,
+              3,
+              4,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "pending_time",
+      "object": "Ticket",
+      "display": "Pending till",
+      "data_type": "datetime",
+      "active": true,
+      "editable": false,
+      "position": 41,
+      "data_option": {
+        "future": true,
+        "past": false,
+        "diff": null,
+        "null": true,
+        "translate": true,
+        "permission": [
+          "ticket.agent"
+        ]
+      },
+      "screens": {
+        "create_middle": {
+          "-all-": {
+            "null": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "-all-": {
+            "null": false
+          }
+        },
+        "overview_bulk": {
+          "ticket.agent": {
+            "nulloption": true,
+            "null": true,
+            "default": "",
+            "orientation": "top",
+            "disableScroll": true
+          }
+        }
+      }
+    },
+    {
+      "name": "priority_id",
+      "object": "Ticket",
+      "display": "Priority",
+      "data_type": "select",
+      "active": true,
+      "editable": false,
+      "position": 80,
+      "data_option": {
+        "relation": "TicketPriority",
+        "nulloption": false,
+        "multiple": false,
+        "null": false,
+        "default": 2,
+        "translate": true,
+        "maxlength": 255
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.agent": {
+            "null": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.agent": {
+            "null": false
+          }
+        },
+        "overview_bulk": {
+          "ticket.agent": {
+            "nulloption": true,
+            "null": true,
+            "default": ""
+          }
+        }
+      }
+    },
+    {
+      "name": "tags",
+      "object": "Ticket",
+      "display": "Tags",
+      "data_type": "tag",
+      "active": true,
+      "editable": false,
+      "position": 900,
+      "data_option": {
+        "type": "text",
+        "null": true,
+        "translate": false
+      },
+      "screens": {
+        "create_bottom": {
+          "ticket.agent": {
+            "null": true
+          }
+        },
+        "edit": {}
+      }
+    },
+    {
+      "name": "local_fisico",
+      "object": "Ticket",
+      "display": "Local de uso",
+      "data_type": "select",
+      "active": true,
+      "editable": true,
+      "position": 901,
+      "data_option": {
+        "options": {
+          "101": "Sala 101",
+          "102": "Sala 102",
+          "103": "Sala 103",
+          "104": "Sala 104",
+          "105": "Sala 105",
+          "106": "Sala 106",
+          "107": "Sala 107",
+          "108": "Sala 108",
+          "109": "Sala 109",
+          "110": "Sala 110",
+          "201": "Sala 201",
+          "202": "Sala 202",
+          "203": "Sala 203",
+          "204": "Sala 204",
+          "205": "Sala 205",
+          "206": "Sala 206",
+          "509": "Sala 509",
+          "701": "Sala 701",
+          "702": "Sala 702",
+          "703": "Sala 703",
+          "704": "Sala 704",
+          "705": "Sala 705",
+          "715": "Sala 715",
+          "bib_casa_memoria": "Biblioteca - Casa da Memória",
+          "bl1_banheiro_superior": "Bloco 1 - Banheiro Superior",
+          "bl1_banheiro_terreo": "Bloco 1 - Banheiro Térreo",
+          "ginasio_antigo": "Ginásio Antigo",
+          "outro": "Outro - Informar no campo texto",
+          "recepcao": "Recepção",
+          "Administrativo": "Administrativo",
+          "Comercial": "Comercial",
+          "Marketing": "Marketing"
+        },
+        "linktemplate": "",
+        "translate": false,
+        "default": "",
+        "null": true,
+        "relation": "",
+        "nulloption": true,
+        "maxlength": 255,
+        "historical_options": {
+          "101": "Sala 101",
+          "102": "Sala 102",
+          "103": "Sala 103",
+          "104": "Sala 104",
+          "105": "Sala 105",
+          "106": "Sala 106",
+          "107": "Sala 107",
+          "108": "Sala 108",
+          "109": "Sala 109",
+          "110": "Sala 110",
+          "201": "Sala 201",
+          "202": "Sala 202",
+          "203": "Sala 203",
+          "204": "Sala 204",
+          "205": "Sala 205",
+          "206": "Sala 206",
+          "509": "Sala 509",
+          "701": "Sala 701",
+          "702": "Sala 702",
+          "703": "Sala 703",
+          "704": "Sala 704",
+          "705": "Sala 705",
+          "715": "Sala 715",
+          "ginasio_antigo": "Ginásio Antigo",
+          "recepcao": "Recepção",
+          "bl1_banheiro_superior": "Bloco 1 - Banheiro Superior",
+          "bl1_banheiro_terreo": "Bloco 1 - Banheiro Térreo",
+          "outro": "Outro - Informar no campo texto",
+          "bib_casa_memoria": "Biblioteca - Casa da Memória",
+          "Administrativo": "Administrativo",
+          "Comercial": "Comercial",
+          "Marketing": "Marketing"
+        }
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "prioridade_cliente",
+      "object": "Ticket",
+      "display": "Prioridade sugerida",
+      "data_type": "select",
+      "active": true,
+      "editable": true,
+      "position": 902,
+      "data_option": {
+        "options": [
+          {
+            "name": "1 Baixa",
+            "value": "1"
+          },
+          {
+            "name": "2 Normal",
+            "value": "2"
+          },
+          {
+            "name": "3 Alta",
+            "value": "3"
+          },
+          {
+            "name": "4 Urgente",
+            "value": "4"
+          }
+        ],
+        "default": "1",
+        "customsort": "on",
+        "linktemplate": "",
+        "translate": false,
+        "null": true,
+        "relation": "",
+        "nulloption": true,
+        "maxlength": 255,
+        "historical_options": {
+          "1": "1 Baixa",
+          "2": "2 Normal",
+          "3": "3 Alta",
+          "4": "4 Urgente"
+        }
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": true,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": false,
+            "required": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": false,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": false,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "data_atendimento",
+      "object": "Ticket",
+      "display": "Data sugerida para atendimento",
+      "data_type": "date",
+      "active": true,
+      "editable": true,
+      "position": 903,
+      "data_option": {
+        "diff": null,
+        "default": null,
+        "null": true,
+        "options": {},
+        "relation": ""
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "materiais_desejados",
+      "object": "Ticket",
+      "display": "Materiais desejados",
+      "data_type": "multiselect",
+      "active": true,
+      "editable": true,
+      "position": 904,
+      "data_option": {
+        "options": {
+          "banner": "banner",
+          "cobertura fotográfica": "cobertura fotográfica",
+          "flyer": "flyer",
+          "folder": "folder",
+          "postagem": "postagem",
+          "video": "vídeo"
+        },
+        "linktemplate": "",
+        "translate": false,
+        "default": [],
+        "null": true,
+        "relation": "",
+        "nulloption": true,
+        "maxlength": 255,
+        "historical_options": {
+          "folder": "folder",
+          "flyer": "flyer",
+          "banner": "banner",
+          "postagem": "postagem",
+          "video": "vídeo",
+          "cobertura fotográfica": "cobertura fotográfica"
+        },
+        "multiple": true
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": true,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": true,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "orcamento_previo",
+      "object": "Ticket",
+      "display": "O orçamento da produção/impressão do material, precisa ser orçado previamente?",
+      "data_type": "boolean",
+      "active": true,
+      "editable": true,
+      "position": 905,
+      "data_option": {
+        "options": {
+          "false": "não",
+          "true": "sim"
+        },
+        "default": false,
+        "translate": false,
+        "null": true,
+        "relation": ""
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": true,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": true,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "publico_alvo",
+      "object": "Ticket",
+      "display": "Quem é o público alvo?",
+      "data_type": "multiselect",
+      "active": true,
+      "editable": true,
+      "position": 906,
+      "data_option": {
+        "options": {
+          "Alunos": "alunos",
+          "colaboradores": "colaboradores",
+          "comunidade": "comunidade",
+          "outros": "outros (informar no texto)",
+          "pais": "pais",
+          "professores": "professores"
+        },
+        "linktemplate": "",
+        "translate": false,
+        "default": [],
+        "null": true,
+        "relation": "",
+        "nulloption": true,
+        "maxlength": 255,
+        "historical_options": {
+          "Alunos": "alunos",
+          "pais": "pais",
+          "professores": "professores",
+          "colaboradores": "colaboradores",
+          "comunidade": "comunidade",
+          "outros": "outros (informar no texto)"
+        },
+        "multiple": true
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": true,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": true,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "data_de_uso",
+      "object": "Ticket",
+      "display": "Em qual data será usado?",
+      "data_type": "datetime",
+      "active": true,
+      "editable": true,
+      "position": 907,
+      "data_option": {
+        "future": true,
+        "past": false,
+        "diff": null,
+        "default": null,
+        "null": true,
+        "options": {},
+        "relation": ""
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": true,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": true,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "data_material_pronto",
+      "object": "Ticket",
+      "display": "Em qual data o material precisa estar pronto?",
+      "data_type": "datetime",
+      "active": true,
+      "editable": true,
+      "position": 908,
+      "data_option": {
+        "future": true,
+        "past": false,
+        "diff": null,
+        "default": null,
+        "null": true,
+        "options": {},
+        "relation": ""
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": true,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": true,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "material_referencia",
+      "object": "Ticket",
+      "display": "Existe algum material de referencia? Anexe no campo texto.",
+      "data_type": "boolean",
+      "active": true,
+      "editable": true,
+      "position": 909,
+      "data_option": {
+        "options": {
+          "false": "não",
+          "true": "sim"
+        },
+        "default": false,
+        "translate": false,
+        "null": true,
+        "relation": ""
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": true,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": true,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "orientacao_especifica_comunicacao",
+      "object": "Ticket",
+      "display": "Existe alguma orientação específica de comunicação? (Texto, cores, linguagem, tamanho, identidade visual, informações obrigatórias etc.)",
+      "data_type": "input",
+      "active": true,
+      "editable": true,
+      "position": 910,
+      "data_option": {
+        "default": "",
+        "type": "text",
+        "maxlength": 200,
+        "linktemplate": "",
+        "null": true,
+        "options": {},
+        "relation": ""
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": true,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": true,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "prazo_entrega",
+      "object": "Ticket",
+      "display": "Prazo de entrega",
+      "data_type": "datetime",
+      "active": true,
+      "editable": true,
+      "position": 912,
+      "data_option": {
+        "future": true,
+        "past": true,
+        "diff": null,
+        "null": true,
+        "permission": [],
+        "default": null,
+        "options": {},
+        "relation": ""
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.agent": {
+            "shown": false,
+            "required": false,
+            "item_class": "column"
+          },
+          "ticket.customer": {
+            "shown": false,
+            "required": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.agent": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          },
+          "ticket.customer": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          }
+        }
+      }
+    },
+    {
+      "name": "tempo_previsto",
+      "object": "Ticket",
+      "display": "Tempo previsto",
+      "data_type": "select",
+      "active": true,
+      "editable": true,
+      "position": 912,
+      "data_option": {
+        "options": {
+          "30m": "30 minutos",
+          "1h": "1 hora",
+          "2h": "2 horas",
+          "3h": "3 horas",
+          "4h": "4 horas",
+          "1d": "1 dia",
+          "2d": "2 dias",
+          "3d ": "3 dias",
+          "1sem": "1 semana",
+          "2sem": "2 semanas",
+          "3sem": "3 semanas"
+        },
+        "default": "",
+        "linktemplate": "",
+        "translate": false,
+        "null": true,
+        "relation": "",
+        "nulloption": true,
+        "maxlength": 255,
+        "historical_options": {
+          "30m": "30 minutos",
+          "1h": "1 hora",
+          "2h": "2 horas",
+          "3h": "3 horas",
+          "4h": "4 horas",
+          "1d": "1 dia",
+          "2d": "2 dias",
+          "3d ": "3 dias",
+          "1sem": "1 semana",
+          "2sem": "2 semanas",
+          "3sem": "3 semanas"
+        }
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.agent": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          },
+          "ticket.customer": {
+            "shown": false,
+            "required": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.customer": {
+            "shown": false,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "motivo_pausa",
+      "object": "Ticket",
+      "display": "Motivo da pausa",
+      "data_type": "select",
+      "active": true,
+      "editable": true,
+      "position": 913,
+      "data_option": {
+        "options": {
+          "urgencia": "Urgência / outro chamado",
+          "aguardando_solicitante": "Aguardando solicitante, terceiro ou material",
+          "outro": "Outro"
+        },
+        "default": "",
+        "null": true,
+        "nulloption": true,
+        "maxlength": 255,
+        "translate": false,
+        "relation": "",
+        "linktemplate": "",
+        "historical_options": {
+          "urgencia": "Urgência / outro chamado",
+          "aguardando_solicitante": "Aguardando solicitante, terceiro ou material",
+          "outro": "Outro"
+        }
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.agent": {
+            "shown": false,
+            "required": false,
+            "item_class": "column"
+          },
+          "ticket.customer": {
+            "shown": false,
+            "required": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.agent": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          },
+          "ticket.customer": {
+            "shown": false,
+            "required": false,
+            "item_class": "column"
+          }
+        }
+      }
+    },
+    {
+      "name": "tipo_demanda",
+      "object": "Ticket",
+      "display": "Tipo de demanda",
+      "data_type": "select",
+      "active": true,
+      "editable": true,
+      "position": 914,
+      "data_option": {
+        "linktemplate": "",
+        "translate": false,
+        "null": true,
+        "relation": "",
+        "nulloption": true,
+        "maxlength": 255,
+        "options": {
+          "novo_recurso": "Novo sistema ou recurso",
+          "melhoria": "Melhoria em algo existente",
+          "erro": "Correção de erro",
+          "integracao": "Integração ou automação",
+          "conteudo": "Publicação de conteúdo",
+          "duvida": "Dúvida ou consultoria"
+        },
+        "default": "",
+        "historical_options": {
+          "novo_recurso": "Novo sistema ou recurso",
+          "melhoria": "Melhoria em algo existente",
+          "erro": "Correção de erro",
+          "integracao": "Integração ou automação",
+          "conteudo": "Publicação de conteúdo",
+          "duvida": "Dúvida ou consultoria"
+        }
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "sistema_afetado",
+      "object": "Ticket",
+      "display": "Sistema ou área afetada",
+      "data_type": "select",
+      "active": true,
+      "editable": true,
+      "position": 915,
+      "data_option": {
+        "linktemplate": "",
+        "translate": false,
+        "null": true,
+        "relation": "",
+        "nulloption": true,
+        "maxlength": 255,
+        "options": {
+          "portal": "Portal do Colaborador",
+          "nest_pro": "Nest Pro",
+          "prime": "Prime",
+          "broadcast": "Broadcast e TVs",
+          "outro": "Outro (descrever no texto)"
+        },
+        "default": "",
+        "historical_options": {
+          "portal": "Portal do Colaborador",
+          "nest_pro": "Nest Pro",
+          "prime": "Prime",
+          "broadcast": "Broadcast e TVs",
+          "outro": "Outro (descrever no texto)"
+        }
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "ferramenta_portal",
+      "object": "Ticket",
+      "display": "Ferramenta do Portal",
+      "data_type": "select",
+      "active": true,
+      "editable": true,
+      "position": 916,
+      "data_option": {
+        "linktemplate": "",
+        "translate": false,
+        "null": true,
+        "relation": "",
+        "nulloption": true,
+        "maxlength": 255,
+        "options": {
+          "colabora": "Colabora",
+          "aniversariantes": "Aniversariantes",
+          "lista_materiais": "Lista de Materiais",
+          "calendarios": "Calendários",
+          "novas_vagas": "Novas Vagas",
+          "outra": "Outra (descrever no texto)"
+        },
+        "default": "",
+        "historical_options": {
+          "colabora": "Colabora",
+          "aniversariantes": "Aniversariantes",
+          "lista_materiais": "Lista de Materiais",
+          "calendarios": "Calendários",
+          "novas_vagas": "Novas Vagas",
+          "outra": "Outra (descrever no texto)"
+        }
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "telas_afetadas",
+      "object": "Ticket",
+      "display": "Telas envolvidas",
+      "data_type": "multiselect",
+      "active": true,
+      "editable": true,
+      "position": 917,
+      "data_option": {
+        "linktemplate": "",
+        "translate": false,
+        "null": true,
+        "relation": "",
+        "nulloption": true,
+        "maxlength": 255,
+        "options": {
+          "administrativo": "Administrativo",
+          "recepcao": "Recepção",
+          "painel_catracas": "Painel Catracas",
+          "painel_espaco_memoria": "Painel Espaço da Memória"
+        },
+        "default": [],
+        "multiple": true,
+        "historical_options": {
+          "administrativo": "Administrativo",
+          "recepcao": "Recepção",
+          "painel_catracas": "Painel Catracas",
+          "painel_espaco_memoria": "Painel Espaço da Memória"
+        }
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "item_atendimento",
+      "object": "Ticket",
+      "display": "O que precisa de atendimento",
+      "data_type": "select",
+      "active": true,
+      "editable": true,
+      "position": 918,
+      "data_option": {
+        "linktemplate": "",
+        "translate": false,
+        "null": true,
+        "relation": "",
+        "nulloption": true,
+        "maxlength": 255,
+        "options": {
+          "computador": "Computador ou notebook",
+          "projetor_tv": "Projetor ou TV",
+          "som": "Som e áudio",
+          "impressora": "Impressora",
+          "internet_wifi": "Internet ou Wi-Fi",
+          "telefone": "Telefone ou ramal",
+          "outro": "Outro (descrever no texto)"
+        },
+        "default": "",
+        "historical_options": {
+          "computador": "Computador ou notebook",
+          "projetor_tv": "Projetor ou TV",
+          "som": "Som e áudio",
+          "impressora": "Impressora",
+          "internet_wifi": "Internet ou Wi-Fi",
+          "telefone": "Telefone ou ramal",
+          "outro": "Outro (descrever no texto)"
+        }
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "identificacao_equipamento",
+      "object": "Ticket",
+      "display": "Identificação do equipamento (patrimônio ou nome)",
+      "data_type": "input",
+      "active": true,
+      "editable": true,
+      "position": 919,
+      "data_option": {
+        "type": "text",
+        "maxlength": 120,
+        "null": true,
+        "default": "",
+        "linktemplate": "",
+        "options": {},
+        "relation": ""
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "natureza_chamado",
+      "object": "Ticket",
+      "display": "Natureza do chamado",
+      "data_type": "select",
+      "active": true,
+      "editable": true,
+      "position": 920,
+      "data_option": {
+        "linktemplate": "",
+        "translate": false,
+        "null": true,
+        "relation": "",
+        "nulloption": true,
+        "maxlength": 255,
+        "options": {
+          "incidente": "Algo fora do ar ou lento",
+          "instalacao": "Instalação ou mudança planejada",
+          "preventiva": "Manutenção preventiva",
+          "novo_recurso": "Pedido de novo recurso"
+        },
+        "default": "",
+        "historical_options": {
+          "incidente": "Algo fora do ar ou lento",
+          "instalacao": "Instalação ou mudança planejada",
+          "preventiva": "Manutenção preventiva",
+          "novo_recurso": "Pedido de novo recurso"
+        }
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "servico_afetado",
+      "object": "Ticket",
+      "display": "Serviço afetado",
+      "data_type": "select",
+      "active": true,
+      "editable": true,
+      "position": 921,
+      "data_option": {
+        "linktemplate": "",
+        "translate": false,
+        "null": true,
+        "relation": "",
+        "nulloption": true,
+        "maxlength": 255,
+        "options": {
+          "internet_wifi": "Internet e Wi-Fi",
+          "rede_cabeada": "Rede cabeada",
+          "servidores": "Servidores e sistemas internos",
+          "email_microsoft": "E-mail e contas Microsoft",
+          "telefonia": "Telefonia",
+          "energia": "Energia e nobreaks",
+          "outro": "Outro (descrever no texto)"
+        },
+        "default": "",
+        "historical_options": {
+          "internet_wifi": "Internet e Wi-Fi",
+          "rede_cabeada": "Rede cabeada",
+          "servidores": "Servidores e sistemas internos",
+          "email_microsoft": "E-mail e contas Microsoft",
+          "telefonia": "Telefonia",
+          "energia": "Energia e nobreaks",
+          "outro": "Outro (descrever no texto)"
+        }
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "alcance",
+      "object": "Ticket",
+      "display": "Alcance",
+      "data_type": "select",
+      "active": true,
+      "editable": true,
+      "position": 922,
+      "data_option": {
+        "linktemplate": "",
+        "translate": false,
+        "null": true,
+        "relation": "",
+        "nulloption": true,
+        "maxlength": 255,
+        "options": {
+          "pessoa": "Uma pessoa",
+          "sala_setor": "Uma sala ou setor",
+          "bloco": "Um bloco ou prédio",
+          "instituicao": "Toda a instituição"
+        },
+        "default": "",
+        "historical_options": {
+          "pessoa": "Uma pessoa",
+          "sala_setor": "Uma sala ou setor",
+          "bloco": "Um bloco ou prédio",
+          "instituicao": "Toda a instituição"
+        }
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "tipo_solicitacao",
+      "object": "Ticket",
+      "display": "Tipo de solicitação",
+      "data_type": "select",
+      "active": true,
+      "editable": true,
+      "position": 923,
+      "data_option": {
+        "linktemplate": "",
+        "translate": false,
+        "null": true,
+        "relation": "",
+        "nulloption": true,
+        "maxlength": 255,
+        "options": {
+          "criar": "Criar acesso",
+          "alterar": "Alterar permissões",
+          "remover": "Remover acesso",
+          "redefinir": "Redefinir senha ou desbloquear conta"
+        },
+        "default": "",
+        "historical_options": {
+          "criar": "Criar acesso",
+          "alterar": "Alterar permissões",
+          "remover": "Remover acesso",
+          "redefinir": "Redefinir senha ou desbloquear conta"
+        }
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "sistema_acesso",
+      "object": "Ticket",
+      "display": "Sistema",
+      "data_type": "select",
+      "active": true,
+      "editable": true,
+      "position": 924,
+      "data_option": {
+        "linktemplate": "",
+        "translate": false,
+        "null": true,
+        "relation": "",
+        "nulloption": true,
+        "maxlength": 255,
+        "options": {
+          "microsoft": "Conta Microsoft (e-mail e Teams)",
+          "prime": "Prime",
+          "portal": "Portal do Colaborador",
+          "colabora": "Colabora",
+          "nest_pro": "Nest Pro",
+          "wifi": "Wi-Fi",
+          "outro": "Outro (descrever no texto)"
+        },
+        "default": "",
+        "historical_options": {
+          "microsoft": "Conta Microsoft (e-mail e Teams)",
+          "prime": "Prime",
+          "portal": "Portal do Colaborador",
+          "colabora": "Colabora",
+          "nest_pro": "Nest Pro",
+          "wifi": "Wi-Fi",
+          "outro": "Outro (descrever no texto)"
+        }
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    },
+    {
+      "name": "acesso_para_quem",
+      "object": "Ticket",
+      "display": "Para quem é o acesso (nome completo e e-mail)",
+      "data_type": "input",
+      "active": true,
+      "editable": true,
+      "position": 925,
+      "data_option": {
+        "type": "text",
+        "maxlength": 120,
+        "null": true,
+        "default": "",
+        "linktemplate": "",
+        "options": {},
+        "relation": ""
+      },
+      "screens": {
+        "create_middle": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false,
+            "item_class": "column"
+          }
+        },
+        "edit": {
+          "ticket.customer": {
+            "shown": true,
+            "required": false
+          },
+          "ticket.agent": {
+            "shown": true,
+            "required": false
+          }
+        }
+      }
+    }
+  ],
+  "workflows": [
+    {
+      "id": 11,
+      "name": "Definições para todos e ocultar campos específicos",
+      "active": true,
+      "object": "Ticket",
+      "priority": 501,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {},
+      "condition_saved": {},
+      "perform": {
+        "ticket.priority_id": {
+          "operator": "show",
+          "show": "true"
+        },
+        "ticket.materiais_desejados": {
+          "operator": "hide",
+          "hide": "true"
+        },
+        "ticket.orcamento_previo": {
+          "operator": "hide",
+          "hide": "true"
+        },
+        "ticket.publico_alvo": {
+          "operator": "hide",
+          "hide": "true"
+        },
+        "ticket.data_de_uso": {
+          "operator": "hide",
+          "hide": "true"
+        },
+        "ticket.data_material_pronto": {
+          "operator": "hide",
+          "hide": "true"
+        },
+        "ticket.material_referencia": {
+          "operator": "hide",
+          "hide": "true"
+        },
+        "ticket.orientacao_especifica_comunicacao": {
+          "operator": "hide",
+          "hide": "true"
+        },
+        "ticket.local_fisico": {
+          "operator": "hide",
+          "hide": "true"
+        },
+        "ticket.data_atendimento": {
+          "operator": "show",
+          "show": "true"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "name": "Formulário - Marketing",
+      "active": true,
+      "object": "Ticket",
+      "priority": 710,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "ticket.group_id": {
+          "operator": "is",
+          "value": [
+            "6"
+          ],
+          "value_completion": ""
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.materiais_desejados": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        },
+        "ticket.orcamento_previo": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        },
+        "ticket.publico_alvo": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        },
+        "ticket.data_de_uso": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        },
+        "ticket.data_material_pronto": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        },
+        "ticket.material_referencia": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        },
+        "ticket.orientacao_especifica_comunicacao": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        },
+        "ticket.data_atendimento": {
+          "operator": "hide",
+          "hide": "true"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "name": "Formulário - Manutenção",
+      "active": true,
+      "object": "Ticket",
+      "priority": 700,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "ticket.group_id": {
+          "operator": "is",
+          "value": [
+            "1"
+          ],
+          "value_completion": ""
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.local_fisico": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        },
+        "ticket.data_atendimento": {
+          "operator": "show",
+          "show": "true"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "name": "Formulário - Tecnologia",
+      "active": true,
+      "object": "Ticket",
+      "priority": 720,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "ticket.group_id": {
+          "operator": "is",
+          "value": [
+            "2",
+            "19"
+          ],
+          "value_completion": ""
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.local_fisico": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        },
+        "ticket.data_atendimento": {
+          "operator": "show",
+          "show": "true"
+        }
+      }
+    },
+    {
+      "id": 16,
+      "name": "Estado - Somente leitura para todos",
+      "active": true,
+      "object": "Ticket",
+      "priority": 600,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {},
+      "condition_saved": {},
+      "perform": {
+        "ticket.state_id": {
+          "operator": "set_readonly",
+          "set_readonly": "true"
+        }
+      }
+    },
+    {
+      "id": 17,
+      "name": "Formulário - Recursos Humanos",
+      "active": true,
+      "object": "Ticket",
+      "priority": 730,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {},
+      "condition_saved": {},
+      "perform": {}
+    },
+    {
+      "id": 22,
+      "name": "Estado - Habilitado para funções de Manutenção - Administrador",
+      "active": true,
+      "object": "Ticket",
+      "priority": 601,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "ticket.group_id": {
+          "operator": "is",
+          "value": [
+            "1"
+          ],
+          "value_completion": ""
+        },
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "8"
+          ]
+        },
+        "ticket.state_id": {
+          "operator": "is",
+          "value": [
+            "7",
+            "2",
+            "3",
+            "1",
+            "9"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.state_id": {
+          "operator": [
+            "unset_readonly",
+            "set_fixed_to"
+          ],
+          "unset_readonly": "true",
+          "set_fixed_to": [
+            "7",
+            "2",
+            "3",
+            "1",
+            "9"
+          ]
+        }
+      }
+    },
+    {
+      "id": 29,
+      "name": "Grupo ocultos para todos para clientes",
+      "active": true,
+      "object": "Ticket",
+      "priority": 520,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "10",
+            "11",
+            "3",
+            "14",
+            "12"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.group_id": {
+          "operator": "remove_option",
+          "remove_option": [
+            "1",
+            "2",
+            "6",
+            "11",
+            "14",
+            "15",
+            "16",
+            "17",
+            "19",
+            "20",
+            "21"
+          ],
+          "remove_option_completion": ""
+        }
+      }
+    },
+    {
+      "id": 30,
+      "name": "Grupo Marketing visível para Função Marketing - Cliente",
+      "active": true,
+      "object": "Ticket",
+      "priority": 522,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "11"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.group_id": {
+          "operator": "add_option",
+          "add_option": [
+            "6"
+          ],
+          "add_option_completion": ""
+        }
+      }
+    },
+    {
+      "id": 31,
+      "name": "Grupo Manutenção visível para Função Manutenção - Cliente",
+      "active": true,
+      "object": "Ticket",
+      "priority": 521,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "10"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.group_id": {
+          "operator": "add_option",
+          "add_option": [
+            "1"
+          ],
+          "add_option_completion": ""
+        }
+      }
+    },
+    {
+      "id": 32,
+      "name": "Grupo Tecnologia visível para Função Tecnologia - Cliente",
+      "active": true,
+      "object": "Ticket",
+      "priority": 523,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "12"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.group_id": {
+          "operator": "add_option",
+          "add_option": [
+            "2",
+            "19",
+            "20",
+            "21"
+          ],
+          "add_option_completion": ""
+        }
+      }
+    },
+    {
+      "id": 33,
+      "name": "Grupo Recursos Humanos visível para Função Recursos Humanos - Cliente",
+      "active": true,
+      "object": "Ticket",
+      "priority": 524,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "14"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.group_id": {
+          "operator": "add_option",
+          "add_option": [
+            "11",
+            "16",
+            "17",
+            "14",
+            "15"
+          ],
+          "add_option_completion": ""
+        }
+      }
+    },
+    {
+      "id": 34,
+      "name": "Prioridade - Somente leitura para todos",
+      "active": true,
+      "object": "Ticket",
+      "priority": 611,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "edit"
+        ]
+      },
+      "condition_selected": {},
+      "condition_saved": {},
+      "perform": {
+        "ticket.priority_id": {
+          "operator": [
+            "show",
+            "set_readonly"
+          ],
+          "show": "true",
+          "set_readonly": "true"
+        }
+      }
+    },
+    {
+      "id": 35,
+      "name": "Estado - Habilitado para funções de Manutenção - Agente",
+      "active": true,
+      "object": "Ticket",
+      "priority": 602,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "ticket.group_id": {
+          "operator": "is",
+          "value": [
+            "1"
+          ],
+          "value_completion": ""
+        },
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "2"
+          ]
+        },
+        "ticket.state_id": {
+          "operator": "is",
+          "value": [
+            "6",
+            "8"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.state_id": {
+          "operator": [
+            "unset_readonly",
+            "set_fixed_to"
+          ],
+          "unset_readonly": "true",
+          "set_fixed_to": [
+            "6",
+            "8"
+          ]
+        }
+      }
+    },
+    {
+      "id": 36,
+      "name": "Estado - Habilitado para funções de Marketing - Administrador",
+      "active": true,
+      "object": "Ticket",
+      "priority": 603,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "ticket.group_id": {
+          "operator": "is",
+          "value": [
+            "6"
+          ],
+          "value_completion": ""
+        },
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "7"
+          ]
+        },
+        "ticket.state_id": {
+          "operator": "is",
+          "value": [
+            "7",
+            "2",
+            "3",
+            "1"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.state_id": {
+          "operator": "unset_readonly",
+          "unset_readonly": "true"
+        }
+      }
+    },
+    {
+      "id": 37,
+      "name": "Estado - Habilitado para funções de Marketing - Agente",
+      "active": true,
+      "object": "Ticket",
+      "priority": 604,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "ticket.group_id": {
+          "operator": "is",
+          "value": [
+            "6"
+          ],
+          "value_completion": ""
+        },
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "6"
+          ]
+        },
+        "ticket.state_id": {
+          "operator": "is",
+          "value": [
+            "6",
+            "8"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.state_id": {
+          "operator": "unset_readonly",
+          "unset_readonly": "true"
+        }
+      }
+    },
+    {
+      "id": 38,
+      "name": "Estado - Habilitado para funções de Tecnologia - Administrador",
+      "active": true,
+      "object": "Ticket",
+      "priority": 605,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "ticket.group_id": {
+          "operator": "is",
+          "value": [
+            "2",
+            "19",
+            "20",
+            "21"
+          ],
+          "value_completion": ""
+        },
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "13"
+          ]
+        },
+        "ticket.state_id": {
+          "operator": "is",
+          "value": [
+            "7",
+            "2",
+            "3",
+            "1"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.state_id": {
+          "operator": "unset_readonly",
+          "unset_readonly": "true"
+        }
+      }
+    },
+    {
+      "id": 39,
+      "name": "Estado - Habilitado para funções de Tecnologia - Agente",
+      "active": true,
+      "object": "Ticket",
+      "priority": 606,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "ticket.group_id": {
+          "operator": "is",
+          "value": [
+            "2",
+            "19",
+            "20",
+            "21"
+          ],
+          "value_completion": ""
+        },
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "4"
+          ]
+        },
+        "ticket.state_id": {
+          "operator": "is",
+          "value": [
+            "6",
+            "8"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.state_id": {
+          "operator": "unset_readonly",
+          "unset_readonly": "true"
+        }
+      }
+    },
+    {
+      "id": 40,
+      "name": "Estado - Habilitado para funções de Recursos Humanos - Administrador",
+      "active": true,
+      "object": "Ticket",
+      "priority": 608,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "ticket.group_id": {
+          "operator": "is",
+          "value": [
+            "11",
+            "17",
+            "16",
+            "14",
+            "15"
+          ],
+          "value_completion": ""
+        },
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "16"
+          ]
+        },
+        "ticket.state_id": {
+          "operator": "is",
+          "value": [
+            "7",
+            "2",
+            "3",
+            "1"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.state_id": {
+          "operator": "unset_readonly",
+          "unset_readonly": "true"
+        }
+      }
+    },
+    {
+      "id": 41,
+      "name": "Estado - Habilitado para funções de Recursos Humanos - Agente",
+      "active": true,
+      "object": "Ticket",
+      "priority": 607,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "ticket.group_id": {
+          "operator": "is",
+          "value": [
+            "11",
+            "17",
+            "16",
+            "14",
+            "15"
+          ],
+          "value_completion": ""
+        },
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "4"
+          ]
+        },
+        "ticket.state_id": {
+          "operator": "is",
+          "value": [
+            "6",
+            "8"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.state_id": {
+          "operator": "unset_readonly",
+          "unset_readonly": "true"
+        }
+      }
+    },
+    {
+      "id": 42,
+      "name": "Prioridade - Editável para agentes e administradores",
+      "active": true,
+      "object": "Ticket",
+      "priority": 612,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "8",
+            "7",
+            "16",
+            "13"
+          ]
+        },
+        "ticket.customer_id": {
+          "operator": "is not",
+          "pre_condition": "current_user.id",
+          "value": [],
+          "value_completion": ""
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.priority_id": {
+          "operator": "unset_readonly",
+          "unset_readonly": "true"
+        }
+      }
+    },
+    {
+      "id": 43,
+      "name": "Prioridade sugerida - Mostrar para clientes na criação",
+      "active": true,
+      "object": "Ticket",
+      "priority": 610,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle"
+        ]
+      },
+      "condition_selected": {},
+      "condition_saved": {},
+      "perform": {
+        "ticket.prioridade_cliente": {
+          "operator": "show",
+          "show": "true"
+        }
+      }
+    },
+    {
+      "id": 44,
+      "name": "Estado - Mostrar todos os estados para clientes",
+      "active": true,
+      "object": "Ticket",
+      "priority": 599,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "10",
+            "11",
+            "14",
+            "12"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.state_id": {
+          "operator": "add_option",
+          "add_option": [
+            "7",
+            "6",
+            "2",
+            "8",
+            "4",
+            "5",
+            "3",
+            "1",
+            "9",
+            "11"
+          ]
+        }
+      }
+    },
+    {
+      "id": 45,
+      "name": "Tempo previsto - Somente leitura para todos",
+      "active": true,
+      "object": "Ticket",
+      "priority": 613,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "edit"
+        ]
+      },
+      "condition_selected": {},
+      "condition_saved": {},
+      "perform": {
+        "ticket.tempo_previsto": {
+          "operator": [
+            "show",
+            "set_readonly"
+          ],
+          "show": "true",
+          "set_readonly": "true"
+        }
+      }
+    },
+    {
+      "id": 46,
+      "name": "Tempo previsto - Editável para administradores",
+      "active": true,
+      "object": "Ticket",
+      "priority": 615,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "8",
+            "7",
+            "16",
+            "13"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.tempo_previsto": {
+          "operator": "unset_readonly",
+          "unset_readonly": "true"
+        }
+      }
+    },
+    {
+      "id": 47,
+      "name": "Motivo da pausa - Oculto por padrão",
+      "active": true,
+      "object": "Ticket",
+      "priority": 502,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "edit"
+        ]
+      },
+      "condition_selected": {},
+      "condition_saved": {},
+      "perform": {
+        "ticket.motivo_pausa": {
+          "operator": "hide",
+          "hide": "true"
+        }
+      }
+    },
+    {
+      "id": 48,
+      "name": "Motivo da pausa - Obrigatório em Em pausa",
+      "active": true,
+      "object": "Ticket",
+      "priority": 800,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "ticket.state_id": {
+          "operator": "is",
+          "value": [
+            "11"
+          ]
+        },
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "1",
+            "2",
+            "4",
+            "6",
+            "7",
+            "8",
+            "13",
+            "15",
+            "16"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.motivo_pausa": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        }
+      }
+    },
+    {
+      "id": 49,
+      "name": "Prazo de entrega - Somente leitura para todos",
+      "active": true,
+      "object": "Ticket",
+      "priority": 614,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "edit"
+        ]
+      },
+      "condition_selected": {},
+      "condition_saved": {},
+      "perform": {
+        "ticket.prazo_entrega": {
+          "operator": [
+            "show",
+            "set_readonly"
+          ],
+          "show": "true",
+          "set_readonly": "true"
+        }
+      }
+    },
+    {
+      "id": 50,
+      "name": "Prazo de entrega - Editável para administradores",
+      "active": true,
+      "object": "Ticket",
+      "priority": 616,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "8",
+            "7",
+            "16",
+            "13"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.prazo_entrega": {
+          "operator": "unset_readonly",
+          "unset_readonly": "true"
+        }
+      }
+    },
+    {
+      "id": 51,
+      "name": "Estado - Em andamento pode ir para Em pausa (agentes)",
+      "active": true,
+      "object": "Ticket",
+      "priority": 650,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "2",
+            "4",
+            "6",
+            "15"
+          ]
+        }
+      },
+      "condition_saved": {
+        "ticket.state_id": {
+          "operator": "is",
+          "value": [
+            "8"
+          ]
+        }
+      },
+      "perform": {
+        "ticket.state_id": {
+          "operator": [
+            "unset_readonly",
+            "set_fixed_to"
+          ],
+          "unset_readonly": "true",
+          "set_fixed_to": [
+            "6",
+            "8",
+            "11"
+          ]
+        }
+      }
+    },
+    {
+      "id": 52,
+      "name": "Estado - Em pausa só volta para Em andamento (agentes)",
+      "active": true,
+      "object": "Ticket",
+      "priority": 651,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "2",
+            "4",
+            "6",
+            "15"
+          ]
+        }
+      },
+      "condition_saved": {
+        "ticket.state_id": {
+          "operator": "is",
+          "value": [
+            "11"
+          ]
+        }
+      },
+      "perform": {
+        "ticket.state_id": {
+          "operator": [
+            "unset_readonly",
+            "set_fixed_to"
+          ],
+          "unset_readonly": "true",
+          "set_fixed_to": [
+            "8",
+            "11"
+          ]
+        }
+      }
+    },
+    {
+      "id": 53,
+      "name": "Desenvolvimento - Campos ocultos por padrão",
+      "active": true,
+      "object": "Ticket",
+      "priority": 503,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {},
+      "condition_saved": {},
+      "perform": {
+        "ticket.tipo_demanda": {
+          "operator": "hide",
+          "hide": "true"
+        },
+        "ticket.sistema_afetado": {
+          "operator": "hide",
+          "hide": "true"
+        },
+        "ticket.ferramenta_portal": {
+          "operator": "hide",
+          "hide": "true"
+        },
+        "ticket.telas_afetadas": {
+          "operator": "hide",
+          "hide": "true"
+        }
+      }
+    },
+    {
+      "id": 54,
+      "name": "Formulário - Desenvolvimento",
+      "active": true,
+      "object": "Ticket",
+      "priority": 725,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "ticket.group_id": {
+          "operator": "is",
+          "value": [
+            "21"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.tipo_demanda": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        },
+        "ticket.sistema_afetado": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        },
+        "ticket.data_atendimento": {
+          "operator": "show",
+          "show": "true"
+        },
+        "ticket.local_fisico": {
+          "operator": "hide",
+          "hide": "true"
+        }
+      }
+    },
+    {
+      "id": 55,
+      "name": "Desenvolvimento - Ferramenta do Portal",
+      "active": true,
+      "object": "Ticket",
+      "priority": 726,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "ticket.group_id": {
+          "operator": "is",
+          "value": [
+            "21"
+          ]
+        },
+        "ticket.sistema_afetado": {
+          "operator": "is",
+          "value": [
+            "portal"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.ferramenta_portal": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        }
+      }
+    },
+    {
+      "id": 56,
+      "name": "Desenvolvimento - Telas de Broadcast",
+      "active": true,
+      "object": "Ticket",
+      "priority": 727,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "ticket.group_id": {
+          "operator": "is",
+          "value": [
+            "21"
+          ]
+        },
+        "ticket.sistema_afetado": {
+          "operator": "is",
+          "value": [
+            "broadcast"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.telas_afetadas": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        }
+      }
+    },
+    {
+      "id": 57,
+      "name": "Tempo e prazo - Obrigatórios ao atribuir ou iniciar",
+      "active": true,
+      "object": "Ticket",
+      "priority": 810,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "ticket.state_id": {
+          "operator": "is",
+          "value": [
+            "10",
+            "8"
+          ]
+        },
+        "session.role_ids": {
+          "operator": "is",
+          "value": [
+            "1",
+            "2",
+            "4",
+            "6",
+            "7",
+            "8",
+            "13",
+            "15",
+            "16"
+          ]
+        }
+      },
+      "condition_saved": {
+        "ticket.state_id": {
+          "operator": "is not",
+          "value": [
+            "10",
+            "8"
+          ]
+        }
+      },
+      "perform": {
+        "ticket.tempo_previsto": {
+          "operator": "set_mandatory",
+          "set_mandatory": "true"
+        },
+        "ticket.prazo_entrega": {
+          "operator": "set_mandatory",
+          "set_mandatory": "true"
+        }
+      }
+    },
+    {
+      "id": 58,
+      "name": "Tecnologia - Campos novos ocultos por padrão",
+      "active": true,
+      "object": "Ticket",
+      "priority": 504,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {},
+      "condition_saved": {},
+      "perform": {
+        "ticket.item_atendimento": {
+          "operator": "hide",
+          "hide": "true"
+        },
+        "ticket.identificacao_equipamento": {
+          "operator": "hide",
+          "hide": "true"
+        },
+        "ticket.natureza_chamado": {
+          "operator": "hide",
+          "hide": "true"
+        },
+        "ticket.servico_afetado": {
+          "operator": "hide",
+          "hide": "true"
+        },
+        "ticket.alcance": {
+          "operator": "hide",
+          "hide": "true"
+        },
+        "ticket.tipo_solicitacao": {
+          "operator": "hide",
+          "hide": "true"
+        },
+        "ticket.sistema_acesso": {
+          "operator": "hide",
+          "hide": "true"
+        },
+        "ticket.acesso_para_quem": {
+          "operator": "hide",
+          "hide": "true"
+        }
+      }
+    },
+    {
+      "id": 59,
+      "name": "Formulário - Tecnologia Suporte",
+      "active": true,
+      "object": "Ticket",
+      "priority": 728,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "ticket.group_id": {
+          "operator": "is",
+          "value": [
+            "19"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.item_atendimento": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        },
+        "ticket.identificacao_equipamento": {
+          "operator": "show",
+          "show": "true"
+        },
+        "ticket.local_fisico": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        },
+        "ticket.data_atendimento": {
+          "operator": "show",
+          "show": "true"
+        }
+      }
+    },
+    {
+      "id": 60,
+      "name": "Formulário - Tecnologia Infraestrutura",
+      "active": true,
+      "object": "Ticket",
+      "priority": 729,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "ticket.group_id": {
+          "operator": "is",
+          "value": [
+            "20"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.natureza_chamado": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        },
+        "ticket.servico_afetado": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        },
+        "ticket.alcance": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        },
+        "ticket.local_fisico": {
+          "operator": "show",
+          "show": "true"
+        },
+        "ticket.data_atendimento": {
+          "operator": "show",
+          "show": "true"
+        }
+      }
+    },
+    {
+      "id": 61,
+      "name": "Formulário - Tecnologia Acesso a sistemas",
+      "active": true,
+      "object": "Ticket",
+      "priority": 730,
+      "stop_after_match": false,
+      "preferences": {
+        "screen": [
+          "create_middle",
+          "edit"
+        ]
+      },
+      "condition_selected": {
+        "ticket.group_id": {
+          "operator": "is",
+          "value": [
+            "22"
+          ]
+        }
+      },
+      "condition_saved": {},
+      "perform": {
+        "ticket.tipo_solicitacao": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        },
+        "ticket.sistema_acesso": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        },
+        "ticket.acesso_para_quem": {
+          "operator": [
+            "show",
+            "set_mandatory"
+          ],
+          "show": "true",
+          "set_mandatory": "true"
+        },
+        "ticket.data_atendimento": {
+          "operator": "show",
+          "show": "true"
+        }
+      }
+    }
+  ],
+  "fetchedAt": "2026-11-27T15:41:48.232Z"
+}

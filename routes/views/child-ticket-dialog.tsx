@@ -21,9 +21,10 @@ import {
   Textarea,
   cn,
 } from "@venore/plugin-sdk/ui";
-import type { AnswerValue, WizardField } from "../../contracts/types";
+import type { AnswerValue, FieldPresentation, FormRules } from "../../contracts/types";
 import { DESCRIPTION_MAX, TITLE_MAX, validateDescription, validateFields, validateTitle, type Answers } from "../../shared/answers";
 import type { ChildMode } from "../../shared/children";
+import { resolveForm } from "../../shared/form";
 import { createChildTicketAction, getChildFormAction } from "../public/actions";
 import { FieldInput } from "../public/field-input";
 
@@ -39,7 +40,7 @@ type FormState =
   | { status: "idle" }
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; fields: WizardField[] };
+  | { status: "ready"; groupId: number; rules: FormRules; presentation: FieldPresentation };
 
 // "Criar chamado filho": subtarefa no meu setor (já autorizada, com responsável) ou pedido a outro setor (entra
 // em Novo na fila do gestor de lá). Quem cria é o solicitante do filho. Os campos do setor de destino vêm do Zammad
@@ -76,7 +77,7 @@ export function ChildTicketDialog({ parentId, isSupervisor, assignees, groups }:
           setForm({ status: "error", message: result.error });
           return;
         }
-        setForm({ status: "ready", fields: result.data.fields });
+        setForm({ status: "ready", groupId: result.data.groupId, rules: result.data.rules, presentation: result.data.presentation });
         setAnswers(result.data.defaults);
       })
       .catch(() => {
@@ -84,7 +85,8 @@ export function ChildTicketDialog({ parentId, isSupervisor, assignees, groups }:
       });
   }
 
-  const fields = useMemo(() => (form.status === "ready" ? form.fields : []), [form]);
+  // Campos reavaliados com as respostas: o que depende de outra resposta aparece e some na hora.
+  const fields = useMemo(() => (form.status === "ready" ? resolveForm(form.rules, form.groupId, form.presentation, answers).fields : []), [form, answers]);
   const errors = useMemo(() => {
     const next: Record<string, string> = {};
     const titleError = validateTitle(title);
@@ -118,8 +120,12 @@ export function ChildTicketDialog({ parentId, isSupervisor, assignees, groups }:
     loadForm(next, groupId);
   }
 
+  // Resposta de campo que voltou a ficar oculto sai junto (resolveForm devolve só as que valem).
   function setAnswer(name: string, value: AnswerValue | null) {
-    setAnswers((current) => ({ ...current, [name]: value }));
+    setAnswers((current) => {
+      const next = { ...current, [name]: value };
+      return form.status === "ready" ? resolveForm(form.rules, form.groupId, form.presentation, next).answers : next;
+    });
     touch(`field:${name}`);
   }
 

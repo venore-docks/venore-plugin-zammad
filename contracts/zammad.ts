@@ -9,8 +9,8 @@ export type ZammadGroup = {
   note?: string | null;
 };
 
-// `screens.create_middle["ticket.customer" | "ticket.agent" | "-all-"]`
-export type ZammadScreenConfig = { shown?: boolean; required?: boolean; null?: boolean };
+// `screens.create_middle["ticket.customer" | "ticket.agent" | "-all-"]` (`item_class` é layout, ignorado)
+export type ZammadScreenConfig = { shown?: boolean; required?: boolean; null?: boolean; item_class?: string };
 
 export type ZammadAttribute = {
   name: string;
@@ -26,7 +26,7 @@ export type ZammadAttribute = {
 
 // Condição simples ({ "ticket.group_id": { operator: "is", value: ["6"] } }) — o modo "expert"
 // ({ operator: "AND", conditions: [...] }) também é aceito pelo avaliador.
-export type ZammadCondition = { operator: string; value?: unknown; name?: string; conditions?: ZammadCondition[] };
+export type ZammadCondition = { operator: string; value?: unknown; name?: string; pre_condition?: string; conditions?: ZammadCondition[] };
 
 export type ZammadWorkflow = {
   id: number;

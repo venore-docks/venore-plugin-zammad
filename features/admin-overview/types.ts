@@ -3,7 +3,8 @@ import type { FieldType, GroupWizardConfig } from "../../contracts/types";
 import type { AudienceBadge } from "../../shared/audience";
 import type { PeopleGroupSummary } from "../manage-people-groups/types";
 
-export type AdminField = { name: string; label: string; type: FieldType; required: boolean };
+// conditional: só aparece conforme outra resposta (Core Workflow condicionado a valor).
+export type AdminField = { name: string; label: string; type: FieldType; required: boolean; conditional: boolean };
 
 export type AdminSector = {
   groupId: number;

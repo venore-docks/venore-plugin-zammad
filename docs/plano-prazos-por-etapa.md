@@ -1,6 +1,7 @@
 # Prazos por etapa — plano
 
-Status: **aprovado em 26/11/2026** (todas as decisões, inclusive as duas propostas abaixo). Os issues estão prontos
+Status: **SUBSTITUÍDO em 27/11/2026 por `plano-colabora-v2.md`** (pausa pelo estado Em pausa, intervalos gravados pelo
+plugin, horas úteis pelo calendário do Zammad). Mantido como histórico. Era: aprovado em 26/11/2026. Os issues estavam prontos
 para criar no GitHub (épico + 7).
 
 ## O pedido

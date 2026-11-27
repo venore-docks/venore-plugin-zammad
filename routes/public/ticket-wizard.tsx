@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, Textarea, cn } from "@venore/plugin-sdk/ui";
-import type { CreatedTicket, SectorForm, WizardData, WizardStep } from "../../contracts/types";
+import type { CreatedTicket, FormRules, SectorForm, WizardData, WizardStep } from "../../contracts/types";
 import {
   DESCRIPTION_MIN,
   SECTOR_REQUIRED_MESSAGE,
@@ -36,6 +36,7 @@ import {
   type Answers,
 } from "../../shared/answers";
 import { matchesSearch } from "../../shared/customer-stats";
+import { resolveForm } from "../../shared/form";
 import { APP_SURFACE, PORTAL_SURFACE } from "../../shared/routes";
 import { createTicketAction } from "./actions";
 import { FieldError, FieldInput, OptionChip } from "./field-input";
@@ -59,12 +60,9 @@ const SEARCH_FROM = 8;
 // Espaço do cabeçalho fixo (casca do site ou cabeçalho do app) + respiro, ao rolar até o topo do formulário.
 const HEADER_OFFSET = 88;
 
-function initialAnswers(sector: SectorForm | undefined): Answers {
-  const answers: Answers = {};
-  for (const step of sector?.steps ?? []) {
-    for (const field of step.fields) answers[field.name] = field.defaultValue;
-  }
-  return answers;
+// Respostas iniciais: o padrão do Zammad nos campos visíveis (com as regras condicionais já aplicadas).
+function initialAnswers(rules: FormRules, sector: SectorForm | undefined): Answers {
+  return sector ? resolveForm(rules, sector.groupId, sector.presentation).answers : {};
 }
 
 // surface: onde o wizard roda — decide para onde levam "Cancelar" e "Acompanhar este chamado" (função não
@@ -83,7 +81,7 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
 
   const [groupId, setGroupId] = useState<number | null>(initialSector?.groupId ?? null);
   const [parentId, setParentId] = useState<number | null>(requestedIsParent ? (requested?.groupId ?? null) : parentOf(initialSector));
-  const [answers, setAnswers] = useState<Answers>(() => initialAnswers(initialSector));
+  const [answers, setAnswers] = useState<Answers>(() => initialAnswers(data.rules, initialSector));
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -98,11 +96,15 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
   // Subgrupo (ex.: "Eventos::Som e Projeção") usa a cor do setor-pai.
   const rootId = sector ? (sector.parentId !== null && byId.has(sector.parentId) ? sector.parentId : sector.groupId) : 0;
   const accent = accentFor(rootId);
-  const hasQuestions = (sector?.steps.length ?? 0) > 0;
+  // Etapas reavaliadas a cada resposta: um campo liberado por outra resposta (ex.: "Ferramenta do portal" quando o
+  // sistema é o Portal) aparece na mesma etapa, logo abaixo da pergunta que o liberou.
+  // (o React Compiler memoiza o cálculo)
+  const sectorSteps = sector ? resolveForm(data.rules, sector.groupId, sector.presentation, answers).steps : [];
+  const hasQuestions = sectorSteps.length > 0;
 
   const steps: StepDef[] = [
     { kind: "sector", title: "Com qual setor você precisa falar?" },
-    ...(sector?.steps ?? []).map((step): StepDef => ({ kind: "fields", title: step.title, step })),
+    ...sectorSteps.map((step): StepDef => ({ kind: "fields", title: step.title, step })),
     { kind: "details", title: "Agora, conte o que está precisando" },
     { kind: "review", title: "Tudo certo? Confira e envie" },
   ];
@@ -143,10 +145,18 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
     if (id !== groupId) {
       setGroupId(id);
       setParentId(parentOf(byId.get(id)));
-      setAnswers(initialAnswers(byId.get(id)));
+      setAnswers(initialAnswers(data.rules, byId.get(id)));
       setErrors({});
     }
     if (advance) goTo(1);
+  }
+
+  // Grava a resposta e reavalia: resposta de campo que voltou a ficar oculto (ou opção que deixou de valer) sai.
+  function setAnswer(name: string, value: Answers[string]) {
+    setAnswers((prev) => {
+      const next = { ...prev, [name]: value };
+      return sector ? resolveForm(data.rules, sector.groupId, sector.presentation, next).answers : next;
+    });
   }
 
   function validateCurrent(): boolean {
@@ -256,7 +266,7 @@ export function TicketWizard({ data, initialGroupId, surface = "portal" }: { dat
                 showLabel={current.step.fields.length > 1 || current.step.title !== field.label}
                 value={answers[field.name]}
                 error={errors[field.name]}
-                onChange={(value) => setAnswers((prev) => ({ ...prev, [field.name]: value }))}
+                onChange={(value) => setAnswer(field.name, value)}
               />
             ))}
           </div>
@@ -603,14 +613,12 @@ function ReviewStep({
   const detailsIndex = indexOf((step) => step.kind === "details");
   const rows: { label: string; value: string; stepIndex: number }[] = [
     { label: "Setor", value: sector.label, stepIndex: 0 },
-    ...sector.steps.flatMap((step) =>
-      step.fields
-        .filter((field) => field.required || !isEmptyAnswer(answers[field.name]))
-        .map((field) => ({
-          label: field.label,
-          value: displayAnswer(field, answers[field.name]),
-          stepIndex: indexOf((candidate) => candidate.kind === "fields" && candidate.step.key === step.key),
-        })),
+    ...steps.flatMap((def, stepIndex) =>
+      def.kind !== "fields"
+        ? []
+        : def.step.fields
+            .filter((field) => field.required || !isEmptyAnswer(answers[field.name]))
+            .map((field) => ({ label: field.label, value: displayAnswer(field, answers[field.name]), stepIndex })),
     ),
   ];
 

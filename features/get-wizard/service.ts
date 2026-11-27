@@ -11,6 +11,6 @@ export async function getWizard(requester: Requester, viewer: AudienceViewer): P
   const schema = await loadSchema();
   if (!schema.success) return schema;
   const config = await readWizardConfig();
-  const { sectors } = buildSectorForms(schema.data, config, { roleIds: requester.zammadUser.role_ids, viewer });
-  return { success: true, data: { intro: config.intro, sectors, limits: ATTACHMENT_LIMITS } };
+  const { sectors, rules } = buildSectorForms(schema.data, config, { roleIds: requester.zammadUser.role_ids, viewer });
+  return { success: true, data: { intro: config.intro, sectors, rules, limits: ATTACHMENT_LIMITS } };
 }

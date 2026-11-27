@@ -5,6 +5,7 @@ import { resolveChildTarget } from "../../shared/child-target";
 import { childOrigin } from "../../shared/children";
 import { assigneesFor } from "../../shared/directory";
 import { flowStepOf } from "../../shared/flow";
+import { resolveForm } from "../../shared/form";
 import { loadAgentOptions } from "../../shared/own-ticket";
 import type { Requester } from "../../shared/requester";
 import { failure } from "../../shared/results";
@@ -42,16 +43,18 @@ export async function createChildTicket(requester: Requester, input: CreateChild
   const { parent, supervisor, groupId, form } = target.data;
   const meId = requester.zammadUser.id;
 
-  const answers = input.answers ?? {};
-  const fieldErrors = validateFields(form.fields, answers);
+  // Campos remontados COM as respostas (regras condicionadas a valores valem aqui também).
+  const resolved = resolveForm(form.rules, form.groupId, form.presentation, input.answers ?? {});
+  const { fields, answers } = resolved;
+  const fieldErrors = validateFields(fields, answers);
   const firstError = Object.entries(fieldErrors)[0];
   if (firstError) {
-    const label = form.fields.find((field) => field.name === firstError[0])?.label ?? firstError[0];
+    const label = fields.find((field) => field.name === firstError[0])?.label ?? firstError[0];
     return finish(failure("invalid_answer", `"${label}": ${firstError[1]}`));
   }
 
   const title = input.title.trim();
-  const payload: Record<string, unknown> = { title, customer_id: meId, group_id: groupId, ...toZammadValues(form.fields, answers) };
+  const payload: Record<string, unknown> = { title, customer_id: meId, group_id: groupId, ...resolved.fixed, ...toZammadValues(fields, answers) };
   if (input.mode === "subtask") {
     let ownerId = meId;
     if (supervisor && input.ownerId) {
@@ -76,7 +79,7 @@ export async function createChildTicket(requester: Requester, input: CreateChild
   const origin = childOrigin({ number: String(parent.number), title: parent.title });
   payload.article = {
     subject: title,
-    body: `<p><em>${escapeHtml(origin)}</em></p>${composeBody(input.description, form.fields, answers, `Aberto pelo ${brand.siteName}.`)}`,
+    body: `<p><em>${escapeHtml(origin)}</em></p>${composeBody(input.description, fields, answers, `Aberto pelo ${brand.siteName}.`)}`,
     content_type: "text/html",
     type: "web",
     sender: "Customer",

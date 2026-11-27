@@ -2,6 +2,42 @@
 
 Versões anteriores: ver o histórico do git (tags `vX.Y.Z`).
 
+## v1.11.0
+
+### Correções
+- **Campos condicionais por valor (Core Workflows).** O formulário era montado uma vez só, com o setor, e regras como
+  "Sistema afetado = Portal do Colaborador → pergunta Ferramenta do portal" ou "= Broadcast e TVs → Telas afetadas"
+  nunca casavam: o assistente não perguntava, o servidor também não, e o Zammad recusava (422). Agora o assistente
+  reavalia as regras a cada resposta e o campo liberado aparece **na mesma etapa, logo abaixo** da pergunta que o
+  liberou. Resposta de campo que volta a ficar oculto (ou opção que deixa de valer) é descartada. O servidor refaz a
+  mesma avaliação com as respostas finais antes de criar o chamado. Vale também para o **chamado filho**, que herda do
+  pai o valor que libera o campo e o próprio campo condicional.
+
+### Novidades
+- **Avaliador dos Core Workflows completo**: condições do ticket em edição e do ticket salvo (`condition_saved`), pela
+  função (`session.role_ids`), com os operadores is / is not (e `is_not`, is any of, is none of), is set / not set,
+  contains (all, one, not), starts/ends with e regex; ações show, hide, set_mandatory, set_optional, set_readonly,
+  unset_readonly, set_fixed_to, add_option e remove_option, por prioridade (o número maior roda depois e vence).
+- **Admin → Setores**: a lista de perguntas mostra também os campos condicionais ("condicional"), para receberem
+  texto de ajuda e número de etapa.
+- **Prioridade sugerida** (`prioridade_cliente`): o assistente pergunta quando o Zammad a torna obrigatória para quem
+  abre; opcional, continua de fora.
+- `scripts/export-zammad-schema.mjs`: exporta o recorte do Zammad (grupos, atributos, Core Workflows; só leituras e
+  sem dados pessoais) para os testes.
+
+### Segurança
+- Toda escrita no Zammad exige, no tipo e na execução, a pessoa que age (`X-On-Behalf-Of`): o histórico do Zammad
+  mostra sempre o autor real.
+
+### Atenção
+- **A Prioridade sugerida passa a ser perguntada ao solicitante**: no Zammad da FEM ela é obrigatória para o cliente
+  na criação (o portal não a enviava, e o Zammad a exigia).
+- Conferido contra o recorte REAL do Zammad da FEM de 27/11/2026 (`shared/__fixtures__/fem-schema-live.ts`, testes em
+  `form-live.test.ts`): Desenvolvimento (ferramenta e telas condicionais), Suporte, Infraestrutura e Acesso a sistemas,
+  e as regras da tela de edição que a próxima versão usa (tempo/prazo ao atribuir ou iniciar, motivo da pausa).
+- `pre_condition: current_user.id` nas condições (regra 612 da FEM) passa a ser avaliada.
+- `tempo_previsto`, `prazo_entrega` e `motivo_pausa` nunca são perguntados na abertura (nem no chamado filho).
+
 ## v1.10.1
 
 ### Correções

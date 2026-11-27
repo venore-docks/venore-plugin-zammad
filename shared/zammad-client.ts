@@ -53,16 +53,19 @@ function notifyWrite(): void {
 export const NOT_CONFIGURED_MESSAGE =
   "A integração com o Zammad não está configurada (variáveis ZAMMAD_URL e ZAMMAD_API_TOKEN).";
 
-type RequestOptions = {
-  method?: "GET" | "POST" | "PUT";
-  body?: unknown;
-  onBehalfOf?: string;
-  timeoutMs?: number;
-};
+// Escrita (POST/PUT) EXIGE `onBehalfOf`: o histórico do Zammad precisa mostrar a pessoa real como autora, não o dono
+// do token. O tipo garante isso em tempo de compilação; uma escrita sem pessoa nem chega ao Zammad.
+type ReadOptions = { method?: "GET"; body?: undefined; onBehalfOf?: string; timeoutMs?: number };
+type WriteOptions = { method: "POST" | "PUT"; body?: unknown; onBehalfOf: string; timeoutMs?: number };
+type RequestOptions = ReadOptions | WriteOptions;
+
+export const MISSING_ACTOR_MESSAGE = "Escrita no Zammad sem a pessoa que age (X-On-Behalf-Of).";
 
 export async function zammadRequest<T>(path: string, options: RequestOptions = {}): Promise<OperationResult<T>> {
   const connection = readConnection();
   if (!connection) return failure("not_configured", NOT_CONFIGURED_MESSAGE);
+  // Reforço em tempo de execução (o tipo já exige): e-mail vazio também não serve.
+  if (options.method && options.method !== "GET" && !options.onBehalfOf?.trim()) return failure("missing_actor", MISSING_ACTOR_MESSAGE);
 
   const headers: Record<string, string> = {
     Authorization: `Token token=${connection.token}`,
